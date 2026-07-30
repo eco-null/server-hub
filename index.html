@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Server Hub — Self-Hosted Services</title>
+  <meta name="description" content="Launchpad for self-hosted apps and services." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235E6AD2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7' height='7' rx='1'/%3E%3Crect x='14' y='3' width='7' height='7' rx='1'/%3E%3Crect x='3' y='14' width='7' height='7' rx='1'/%3E%3Crect x='14' y='14' width='7' height='7' rx='1'/%3E%3C/svg%3E" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['Fira Code', 'ui-monospace', 'monospace'],
+      },
+    }}};
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="categorize.js"></script>
+  <script src="settings.js"></script>
+  <style>
+    /* ============================================================
+       Theme tokens — DARK (default) and LIGHT via html.light
+       ============================================================ */
+    :root {
+      --bg-deep: #020203; --bg-base: #050506; --bg-elev: #0a0a0c;
+      --surface: rgba(255,255,255,0.05);    --surface-hi: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.08);    --border-hi: rgba(255,255,255,0.16);
+      --fg: #EDEDEF; --fg-muted: #8A8F98;
+      --accent: #5E6AD2; --accent-glow: rgba(94,106,210,0.20);
+      --green: #22C55E; --red: #EF4444; --amber: #EAB308;
+      --blob-a: #5E6AD2; --blob-b: #8B5CF6; --blob-c: #22C55E;
+      --blob-opacity: 0.18;
+      --surface-glass: 0.05; --surface-glass-hi: 0.08;
+      --scrim: rgba(0,0,0,0.55);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    html.light {
+      --bg-deep: #f4f6fb; --bg-base: #ffffff; --bg-elev: #fbfcfe;
+      --surface: rgba(15,23,42,0.04);   --surface-hi: rgba(15,23,42,0.08);
+      --border: rgba(15,23,42,0.10);    --border-hi: rgba(15,23,42,0.20);
+      --fg: #0F172A; --fg-muted: #5a6072;
+      --accent: #4f56c0; --accent-glow: rgba(79,86,192,0.18);
+      --green: #16a34a; --red: #dc2626; --amber: #ca8a04;
+      --blob-a: #818cf8; --blob-b: #c4b5fd; --blob-c: #86efac;
+      --blob-opacity: 0.35;
+      --scrim: rgba(15,23,42,0.40);
+    }
+    html, body { background-color: var(--bg-deep); color: var(--fg); }
+    body {
+      background:
+        radial-gradient(1200px 800px at 12% -8%, color-mix(in srgb, var(--blob-a) 16%, transparent), transparent 60%),
+        radial-gradient(900px 700px at 92% 8%,  color-mix(in srgb, var(--blob-b) 12%, transparent), transparent 55%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-elev) 80%, var(--bg-deep)) 0%, var(--bg-deep) 70%);
+      min-height: 100vh;
+      transition: background-color 400ms var(--ease), color 400ms var(--ease);
+    }
+    .blob {
+      position: fixed; border-radius: 9999px; filter: blur(60px);
+      opacity: var(--blob-opacity); pointer-events: none; z-index: 0;
+      animation: drift 22s var(--ease) infinite alternate;
+    }
+    .blob.a { width: 420px; height: 420px; background: var(--blob-a); top: -120px; left: -80px; }
+    .blob.b { width: 360px; height: 360px; background: var(--blob-b); top: 10vh;  right: -120px; animation-delay: -6s; }
+    .blob.c { width: 320px; height: 320px; background: var(--blob-c); bottom: -120px; left: 35%; opacity: calc(var(--blob-opacity) * 0.55); animation-delay: -12s; }
+    @keyframes drift {
+      0%   { transform: translate3d(0,0,0) scale(1); }
+      50%  { transform: translate3d(40px,30px,0) scale(1.08); }
+      100% { transform: translate3d(-30px,-20px,0) scale(0.96); }
+    }
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(20px) saturate(140%);
+      -webkit-backdrop-filter: blur(20px) saturate(140%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .glass:hover { background: var(--surface-hi); border-color: var(--border-hi); }
+    .card { transition: transform 250ms var(--ease), background-color 250ms var(--ease), border-color 250ms var(--ease), box-shadow 250ms var(--ease); }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px -16px var(--accent-glow), 0 0 0 1px var(--border-hi);
+    }
+    .accent-bar { background: linear-gradient(180deg, var(--accent), transparent); box-shadow: 0 0 12px var(--accent-glow); }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 9999px; display: inline-block;
+      transition: background-color 300ms var(--ease), box-shadow 300ms var(--ease);
+    }
+    .status-up    { background-color: var(--green); box-shadow: 0 0 8px color-mix(in srgb, var(--green) 65%, transparent); }
+    .status-down  { background-color: var(--red);   box-shadow: 0 0 8px color-mix(in srgb, var(--red) 65%, transparent); }
+    .status-wait  { background-color: var(--amber); box-shadow: 0 0 8px color-mix(in srgb, var(--amber) 65%, transparent); }
+    .status-idle  { background-color: var(--fg-muted); }
+    .skel { background: linear-gradient(90deg, color-mix(in srgb, var(--border) 40%, transparent), color-mix(in srgb, var(--border) 80%, transparent), color-mix(in srgb, var(--border) 40%, transparent)); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: 6px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skeleton-card { height: 92px; }
+    .reveal { opacity: 0; transform: translateY(8px); }
+    .reveal.shown { opacity: 1; transform: none; transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
+    .group-header { color: var(--fg-muted); letter-spacing: 0.08em; }
+    input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
+    .focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* Theme toggle button — 3-state cycle */
+    .theme-btn {
+      width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 10px; border: 1px solid var(--border); color: var(--fg);
+      background: var(--surface); cursor: pointer;
+      transition: background-color 200ms var(--ease), border-color 200ms var(--ease), transform 200ms var(--ease);
+    }
+    .theme-btn:hover { background: var(--surface-hi); border-color: var(--border-hi); transform: scale(1.04); }
+    .theme-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* Add-service form */
+    .form-inline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    @media (max-width: 640px) { .form-inline { grid-template-columns: 1fr; } }
+    .form-input {
+      background: transparent; border: 1px solid var(--border); border-radius: 10px;
+      color: var(--fg); padding: 0.55rem 0.75rem; font-size: 0.875rem; width: 100%;
+      transition: border-color 200ms var(--ease), background-color 200ms var(--ease);
+    }
+    .form-input::placeholder { color: var(--fg-muted); }
+    .form-input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+    .btn-primary {
+      background: var(--accent); color: white; border: none; padding: 0.55rem 1rem;
+      border-radius: 10px; font-size: 0.875rem; font-weight: 500; cursor: pointer;
+      transition: background-color 200ms var(--ease), transform 150ms var(--ease);
+    }
+    .btn-primary:hover { background: color-mix(in srgb, var(--accent) 88%, white); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-ghost {
+      background: transparent; color: var(--fg-muted); border: 1px solid var(--border);
+      padding: 0.55rem 0.85rem; border-radius: 10px; font-size: 0.875rem; cursor: pointer;
+      transition: color 200ms var(--ease), border-color 200ms var(--ease);
+    }
+    .btn-ghost:hover { color: var(--fg); border-color: var(--border-hi); }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px;
+      border-radius: 9999px; font-size: 11px; font-family: 'Fira Code', monospace;
+      border: 1px solid var(--border); color: var(--fg-muted); background: var(--surface);
+    }
+    .chip-user { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, var(--border)); }
+
+    [data-removable] .remove-btn { opacity: 0; transition: opacity 200ms var(--ease); }
+    .card:hover .remove-btn { opacity: 1; }
+    .remove-btn { color: var(--fg-muted); }
+
+    @media (prefers-reduced-motion: reduce) {
+      .blob { animation: none; }
+      .card, .reveal, .skel, body { transition: none; }
+      .reveal { opacity: 1; transform: none; }
+      .skel { animation: none; }
+    }
+    #fab-add:hover { transform: scale(1.06); }
+    #fab-add:active { transform: scale(0.96); }
+    #fab-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    #fab-settings:hover { transform: scale(1.06); }
+    #fab-settings:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    /* When search feature is disabled, push settings FAB to the lower-left so it
+       doesn't sit against the empty search row on narrow viewports. */
+    body:not(:has([data-feature="search"]:not([style*="display: none"]))) #fab-settings { right: auto; left: 1.5rem; }
+  </style>
+</head>
+<body class="font-sans antialiased">
+  <div data-feature="blobs">
+    <div class="blob a" aria-hidden="true"></div>
+    <div class="blob b" aria-hidden="true"></div>
+    <div class="blob c" aria-hidden="true"></div>
+  </div>
+
+  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+
+    <!-- Header -->
+    <header class="flex flex-col gap-6 sm:gap-8">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div class="flex items-start gap-3">
+          <button id="theme-toggle" class="theme-btn shrink-0" title="Toggle theme" aria-label="Toggle color theme">
+            <svg id="theme-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+          </button>
+          <div data-feature="greeting">
+            <p class="text-sm text-[color:var(--fg-muted)] font-mono" id="greeting" data-greeting-name>Hello</p>
+            <h1 class="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight" data-dynamic="true">Server Hub</h1>
+            <p class="mt-2 text-[color:var(--fg-muted)] max-w-md" data-dynamic-subtitle>Your self-hosted apps and services, reachable from one place.</p>
+            <div class="mt-3 flex flex-wrap gap-2 items-center">
+              <span id="cf-chip" class="chip chip-user hidden"></span>
+              <span id="theme-chip" class="chip"></span>
+            </div>
+          </div>
+        </div>
+        <div class="text-right" data-feature="clock">
+          <p id="clock" class="font-mono text-2xl sm:text-3xl tabular-nums" aria-live="polite">--:--:--</p>
+          <p id="date" class="text-sm text-[color:var(--fg-muted)] mt-1">—</p>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div data-feature="search" class="glass px-4 py-3 flex items-center gap-3">
+        <svg class="w-5 h-5 text-[color:var(--fg-muted)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="search" type="search" inputmode="search" autocomplete="off" spellcheck="false"
+          placeholder="Filter services by name or description…" aria-label="Filter services"
+          class="flex-1 bg-transparent outline-none placeholder:text-[color:var(--fg-muted)] text-base focus-ring" />
+        <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-[color:var(--fg-muted)] border border-[color:var(--border)] rounded-md font-mono">/</kbd>
+      </div>
+
+      <!-- Add service form -->
+      <section aria-label="Add a service" class="glass p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-semibold uppercase group-header">Add service — category auto-detected</h2>
+          <button id="add-toggle" class="btn-ghost text-xs" aria-expanded="false" aria-controls="add-form">
+            <span id="add-toggle-label">+ Add</span>
+          </button>
+        </div>
+        <form id="add-form" class="hidden form-inline" autocomplete="off" novalidate>
+          <input id="add-name" class="form-input" placeholder="Name (e.g. Grafana)" required />
+          <input id="add-url"  class="form-input" placeholder="URL (https://…)" required type="url" />
+          <input id="add-desc" class="form-input" placeholder="Short description (optional)" />
+          <div class="flex items-center gap-2 col-span-full flex-wrap">
+            <button type="submit" class="btn-primary">Add &amp; auto-categorize</button>
+            <span id="add-preview" class="text-xs text-[color:var(--fg-muted)] font-mono"></span>
+          </div>
+        </form>
+      </section>
+
+      <!-- System stats -->
+      <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xs font-semibold uppercase group-header">System</h2>
+          <span id="stats-host" class="text-xs text-[color:var(--fg-muted)] font-mono">—</span>
+        </div>
+        <div class="grid grid-cols-3 gap-3 sm:gap-4" id="stats-grid">
+          <div class="space-y-1.5">
+            <div class="flex items-baseline justify-between">
+              <span class="text-xs text-[color:var(--fg-muted)]">CPU</span>
+              <span id="stat-cpu-val" class="font-mono text-sm tabular-nums">—</span>
+            </div>
+            <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-cpu-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex items-baseline justify-between">
+              <span class="text-xs text-[color:var(--fg-muted)]">Memory</span>
+              <span id="stat-mem-val" class="font-mono text-sm tabular-nums">—</span>
+            </div>
+            <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-mem-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+          </div>
+          <div class="space-y-1.5">
+            <div class="flex items-baseline justify-between">
+              <span class="text-xs text-[color:var(--fg-muted)]">Disk</span>
+              <span id="stat-disk-val" class="font-mono text-sm tabular-nums">—</span>
+            </div>
+            <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-disk-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+          </div>
+        </div>
+      </section>
+    </header>
+
+    <!-- Services container -->
+    <div id="root" class="mt-10 space-y-10">
+      <div id="skeletons" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
+        <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
+        <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
+      </div>
+      <div id="groups" class="space-y-10"></div>
+    </div>
+
+    <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
+
+    <footer class="mt-16 pt-6 border-t border-[color:var(--border)] text-center text-xs text-[color:var(--fg-muted)] font-mono space-y-1">
+      <p>Edit the <code class="text-[color:var(--fg)]">SERVICES</code> array in <code class="text-[color:var(--fg)]">index.html</code>, or use the “+ Add” form to append at runtime (saved to localStorage).</p>
+      <p>Categories driven by <code class="text-[color:var(--fg)]">categorize.js</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a> · <a href="SETUP.md" class="underline hover:text-[color:var(--accent)]">Cloudflare Access setup</a> · <a href="settings.html" class="underline hover:text-[color:var(--accent)]">Settings</a></p>
+    </footer>
+  </main>
+
+  <!-- Floating action button: quick add -->
+  <button id="fab-add" type="button" aria-label="Add service (opens the add form)"
+    title="Add service"
+    class="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center cursor-pointer"
+    style="background: var(--accent); box-shadow: 0 8px 28px -8px var(--accent-glow); transition: transform 200ms var(--ease), background-color 200ms var(--ease);">
+    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+
+  <!-- Floating action button: settings -->
+  <a href="settings.html" id="fab-settings" aria-label="Open settings"
+    title="Settings"
+    class="fixed bottom-6 right-24 z-30 w-12 h-12 rounded-full glass flex items-center justify-center cursor-pointer"
+    style="transition: transform 200ms var(--ease); color: var(--fg);">
+    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+  </a>
+
+<script>
+  /* ============================================================
+     SERVICES — flat list. Category is AUTO-INFERRED by categorize.js.
+     Each entry: { name, url, desc, icon?, ping?, categoryOverride? }
+       - icon: key from ICONS map below (default: 'terminal')
+       - ping: false to skip status checks
+       - categoryOverride: force a category (rarely needed; auto usually correct)
+     ============================================================ */
+  const SERVICES_DEFAULT = [
+    { name: 'Grafana',        url: 'https://grafana.example.com',    desc: 'Metrics & dashboards',          icon: 'chart',     ping: true },
+    { name: 'Uptime Kuma',    url: 'https://status.example.com',     desc: 'Uptime & incident tracking',    icon: 'pulse',     ping: true },
+    { name: 'Prometheus',     url: 'https://prometheus.example.com', desc: 'Time-series metrics store',     icon: 'database',  ping: true },
+
+    { name: 'Vaultwarden',    url: 'https://vault.example.com',      desc: 'Password manager',              icon: 'shield',    ping: true },
+    { name: 'Authelia',       url: 'https://auth.example.com',      desc: 'SSO & 2FA gateway',             icon: 'key',       ping: true },
+    { name: 'Tor Proxy',      url: 'http://tor-proxy.local:9050',    desc: 'Onion routing relay',           icon: 'lock',      ping: false },
+
+    { name: 'Nextcloud',      url: 'https://cloud.example.com',    desc: 'Files, calendar & contacts',    icon: 'cloud',     ping: true },
+    { name: 'Joplin Server',  url: 'https://notes.example.com',    desc: 'Synchronized notes',            icon: 'note',      ping: true },
+    { name: 'Paperless-ngx',  url: 'https://docs.example.com',     desc: 'Document OCR & archive',       icon: 'file',      ping: true },
+
+    { name: 'Jellyfin',       url: 'https://media.example.com',    desc: 'Movies & music streaming',      icon: 'film',      ping: true },
+    { name: 'Navidrome',      url: 'https://music.example.com',    desc: 'Self-hosted music server',      icon: 'music',     ping: true },
+    { name: 'Audiobookshelf', url: 'https://books.example.com',    desc: 'Audiobooks & podcasts',         icon: 'headphones',ping: true },
+
+    { name: 'Gitea',          url: 'https://git.example.com',      desc: 'Lightweight Git host',          icon: 'git',       ping: true },
+    { name: 'Woodpecker CI',  url: 'https://ci.example.com',       desc: 'Continuous integration',       icon: 'branch',    ping: true },
+    { name: 'Coder',          url: 'https://code.example.com',    desc: 'Browser VS Code',               icon: 'terminal',  ping: true },
+
+    { name: 'Pi-hole',        url: 'https://pihole.example.com',  desc: 'Network-wide ad blocking',      icon: 'shield-check', ping: true },
+    { name: 'WireGuard',      url: 'https://vpn.example.com',    desc: 'VPN access portal',              icon: 'lock-key',  ping: true },
+    { name: 'AdGuard Home',   url: 'https://dns.example.com',     desc: 'DNS filtering & DHCP',           icon: 'globe',     ping: true },
+
+    { name: 'Home Assistant', url: 'https://home.example.com',    desc: 'Smart home automation',         icon: 'home',      ping: true },
+    { name: 'Mosquitto',      url: 'http://mqtt.local:9001',       desc: 'MQTT broker',                  icon: 'broadcast',ping: false },
+  ];
+
+  /* ============================================================
+     Inline SVG icon set (Phosphor-style outline, 24px).
+     ============================================================ */
+  const ICONS = {
+    chart:        '<path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-5"/>',
+    pulse:        '<path d="M3 12h4l2-7 4 14 2-7h6"/>',
+    database:     '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/>',
+    shield:       '<path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6Z"/>',
+    'shield-check':'<path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6Z"/><path d="m9 12 2 2 4-4"/>',
+    key:          '<circle cx="7.5" cy="15.5" r="3.5"/><path d="m10 13 9-9"/><path d="m15 8 2 2"/><path d="m18 5 2 2"/>',
+    lock:         '<rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    'lock-key':    '<rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 7-2.7"/><circle cx="12" cy="15.5" r="1.5"/>',
+    cloud:        '<path d="M7 18a5 5 0 0 1 .5-9.98A6 6 0 0 1 19 9a4 4 0 0 1-1 8Z"/>',
+    note:         '<path d="M4 4h16v12l-4 4H4Z"/><path d="M16 20v-4h4"/><path d="M8 9h8M8 13h5"/>',
+    file:         '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/>',
+    film:         '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"/>',
+    music:        '<circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M9 18V5l12-2v13"/>',
+    headphones:   '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H4Z"/><path d="M20 14a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h-2-2Z"/>',
+    git:          '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M6 8.5v7"/><path d="M15 12H8.5"/><path d="m11 9 3 3-3 3"/>',
+    branch:       '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7"/><path d="M18 10.5c0 4-4 3.5-7 5.5"/>',
+    terminal:     '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3"/><path d="M13 15h4"/>',
+    globe:        '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9Z"/>',
+    home:         '<path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+    broadcast:    '<path d="M4.9 4.9a16 16 0 0 0 0 14.2"/><path d="M19.1 4.9a16 16 0 0 1 0 14.2"/><path d="M7.8 7.8a10 10 0 0 0 0 8.4"/><path d="M16.2 7.8a10 10 0 0 1 0 8.4"/><circle cx="12" cy="12" r="2"/>',
+    cog:          '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>',
+    box:          '<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/>',
+    shopping:     '<circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 3h3l3 13h12l2-9H6"/><path d="M5 6h17"/>',
+    flask:        '<path d="M9 3h6"/><path d="M10 3v6L5 18a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.5 14h9"/>',
+    sparkles:     '<path d="M12 2v6M9 5l3 3 3-3M5 9h14M3 12v6M6 15l-3 3 3 3M21 12v6M18 15l3 3-3 3"/>',
+  };
+
+  function svgFor(name, cls = 'w-6 h-6') {
+    const path = (ICONS[name] || ICONS.box);
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
+  }
+
+  /* ============================================================
+     State
+     ============================================================ */
+  const LS_SERVICES = 'server-hub:services'; // legacy key — migrated once into HubSettings
+  const LS_THEME    = 'server-hub:theme';        // legacy key — migrated once into HubSettings
+
+  // Merge defaults with user additions (from HubSettings.services; legacy LS migrated once).
+  function loadServices() {
+    const legacy = (() => {
+      try { return JSON.parse((window.localStorage || localStorage).getItem(LS_SERVICES) || '[]'); }
+      catch { return []; }
+    })();
+    if (legacy.length) {
+      // one-time migration from old standalone key → HubSettings.services
+      window.HubSettings.set({ services: legacy });
+      try { (window.localStorage || localStorage).removeItem(LS_SERVICES); } catch {}
+    }
+    const extra = window.HubSettings.get().services || [];
+    const seen = new Set(SERVICES_DEFAULT.map(s => s.url + '|' + s.name));
+    const merged = [...SERVICES_DEFAULT];
+    for (const s of extra) {
+      const k = (s.url || '') + '|' + (s.name || '');
+      if (s && s.name && s.url && !seen.has(k)) { merged.push({ ...s, _userAdded: true }); seen.add(k); }
+    }
+    return merged;
+  }
+  function saveExtraServices(extra) {
+    window.HubSettings.set({ services: extra });
+  }
+  function getExtraServices() {
+    return window.HubSettings.get().services || [];
+  }
+
+  let SERVICES = loadServices();
+
+  // Categorize at render time using categorize.js
+  function categorized() {
+    return SERVICES.map(s => {
+      const override = s.categoryOverride;
+      const auto = override ? { category: override, matched: '(override)' } : window.autoCategorize(s.name, s.url, s.desc);
+      return { ...s, category: auto.category, matched: auto.matched };
+    });
+  }
+
+  const groupsEl    = document.getElementById('groups');
+  const skeletonsEl = document.getElementById('skeletons');
+  const emptyEl     = document.getElementById('empty');
+  const emptyTerm   = document.getElementById('empty-term');
+  const searchInput = document.getElementById('search');
+
+  function renderGroups() {
+    const items = categorized();
+    const grouped = items.reduce((acc, s, i) => {
+      (acc[s.category] = acc[s.category] || []).push({ ...s, idx: i });
+      return acc;
+    }, {});
+    const order = Object.keys(grouped).sort((a, b) => grouped[b].length - grouped[a].length || a.localeCompare(b));
+
+    let html = '';
+    for (const cat of order) {
+      const list = grouped[cat];
+      html += '<section class="group space-y-4" data-category="' + cat + '">'
+        + '<h2 class="group-header text-xs font-semibold uppercase">' + cat
+        + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
+        + '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
+      for (const s of list) {
+        html += renderCard(s);
+      }
+      html += '</div></section>';
+    }
+    groupsEl.innerHTML = html;
+    skeletonsEl.classList.add('hidden');
+
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.card.reveal').forEach((el, i) => {
+        setTimeout(() => el.classList.add('shown'), Math.min(i * 25, 500));
+      });
+    });
+
+    document.querySelectorAll('[data-ping-url]').forEach(el => pingService(el));
+
+    // Re-apply current filter
+    filter(searchInput.value);
+  }
+
+  function renderCard(s) {
+    const target = s.url.startsWith('http') ? s.url : 'https://' + s.url;
+    const removable = s._userAdded ? 'data-removable' : '';
+    return '<a href="' + target + '" target="_blank" rel="noopener noreferrer" '
+      + 'class="card reveal glass flex items-start gap-3 p-4 focus-ring cursor-pointer relative overflow-hidden" '
+      + 'data-name="' + esc(s.name.toLowerCase()) + '" data-desc="' + esc((s.desc || '').toLowerCase()) + '" '
+      + 'data-category="' + esc(s.category) + '" data-ping-url="' + (s.ping !== false ? esc(s.url) : '') + '" '
+      + 'data-key="' + esc((s.url + '|' + s.name)) + '" ' + removable + '>'
+      + '<span class="accent-bar absolute left-0 top-0 h-full w-[3px] opacity-70" aria-hidden="true"></span>'
+      + '<span class="shrink-0 mt-0.5 text-[color:var(--fg)]">' + svgFor(s.icon) + '</span>'
+      + '<span class="min-w-0 flex-1">'
+      + '<span class="flex items-center gap-2">'
+      + '<span class="text-sm font-medium text-[color:var(--fg)] truncate">' + esc(s.name) + '</span>'
+      + '<span class="status-dot status-idle" data-status role="img" aria-label="checking status"></span>'
+      + '</span>'
+      + '<span class="block text-xs text-[color:var(--fg-muted)] mt-0.5 truncate">' + esc(s.desc || '') + '</span>'
+      + '<span class="block text-[11px] text-[color:var(--fg-muted)]/70 font-mono mt-1 truncate">' + esc(hostOf(s.url)) + '</span>'
+      + '</span>'
+      + (s._userAdded
+        ? '<button class="remove-btn shrink-0 mt-1 p-1" type="button" title="Remove" aria-label="Remove ' + esc(s.name) + '" onclick="event.preventDefault(); window.__HUB__.remove(\'' + esc(s.url + '|' + s.name) + '\')">'
+            + '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+          + '</button>'
+        : '<svg class="w-4 h-4 text-[color:var(--fg-muted)] shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>')
+      + '</a>';
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function hostOf(url) {
+    if (!url) return '';
+    try { return new URL(url.startsWith('http') ? url : 'https://' + url).host; } catch { return url; }
+  }
+
+  /* ============================================================
+     Add-service form
+     ============================================================ */
+  const addToggle = document.getElementById('add-toggle');
+  const addForm    = document.getElementById('add-form');
+  const addName    = document.getElementById('add-name');
+  const addUrl      = document.getElementById('add-url');
+  const addDesc     = document.getElementById('add-desc');
+  const addPreview  = document.getElementById('add-preview');
+  const addToggleLabel = document.getElementById('add-toggle-label');
+
+  addToggle.addEventListener('click', () => {
+    const open = !addForm.classList.contains('hidden');
+    addForm.classList.toggle('hidden');
+    addToggle.setAttribute('aria-expanded', String(!open));
+    addToggleLabel.textContent = open ? '+ Add' : 'Close';
+    if (!open) addName.focus();
+  });
+
+  addForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = addName.value.trim();
+    const url  = addUrl.value.trim();
+    const desc = addDesc.value.trim();
+    if (!name || !url) return;
+    const result = window.autoCategorize(name, url, desc);
+    const icon = pickIcon(result.category, name.toLowerCase());
+
+    const extra = getExtraServices();
+    const entry = { name, url, desc, icon, ping: true, _userAdded: true, categoryOverride: result.category };
+    extra.push(entry);
+    saveExtraServices(extra);
+    SERVICES = loadServices();
+    renderGroups();
+
+    addName.value = ''; addUrl.value = ''; addDesc.value = '';
+    addPreview.textContent = '✓ Added to ' + result.category;
+    setTimeout(() => addPreview.textContent = '', 2500);
+  });
+
+  function pickIcon(category, name) {
+    const ic = {
+      Monitoring: 'chart', Security: 'shield', Network: 'globe', Media: 'film',
+      Productivity: 'note', Files: 'file', Dev: 'git', Communication: 'broadcast',
+      Home: 'home', Finance: 'shopping', AI: 'sparkles', Search: 'pulse',
+      Database: 'database', Other: 'box',
+    };
+    if (/git|coder|code-server/.test(name)) return 'git';
+    if (/music|navidrome/.test(name)) return 'music';
+    if (/torrent|deluge|sab/.test(name)) return 'box';
+    return ic[category] || 'box';
+  }
+
+  /* ============================================================
+     Remove (only user-added services)
+     ============================================================ */
+  function remove(key) {
+    const extra = getExtraServices().filter(s => (s.url + '|' + s.name) !== key);
+    saveExtraServices(extra);
+    SERVICES = loadServices();
+    renderGroups();
+  }
+
+  /* ============================================================
+     Search filter
+     ============================================================ */
+  searchInput.addEventListener('input', e => filter(e.target.value));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== searchInput) {
+      e.preventDefault(); searchInput.focus();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.value = ''; filter(''); searchInput.blur();
+    }
+  });
+
+  function filter(q) {
+    q = q.trim().toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.group').forEach(group => {
+      let gv = 0;
+      group.querySelectorAll('.card').forEach(card => {
+        const match = !q || card.dataset.name.includes(q) || card.dataset.desc.includes(q);
+        card.style.display = match ? '' : 'none';
+        if (match) gv++;
+      });
+      group.style.display = gv ? '' : 'none';
+      visible += gv;
+    });
+    emptyEl.classList.toggle('hidden', visible !== 0);
+    if (visible === 0) emptyTerm.textContent = q;
+  }
+
+  /* ============================================================
+     Status ping
+     ============================================================ */
+  function pingService(card) {
+    const url = card.dataset.pingUrl;
+    if (!url) return;
+    const dot = card.querySelector('[data-status]');
+    const ctrl = new AbortController();
+    const tmo  = setTimeout(() => ctrl.abort(), 6000);
+    dot.classList.remove('status-idle'); dot.classList.add('status-wait');
+    dot.setAttribute('aria-label', 'checking ' + hostOf(url));
+    fetch(url, { mode: 'no-cors', signal: ctrl.signal, cache: 'no-store', redirect: 'follow' })
+      .then(() => mark(dot, true, hostOf(url)))
+      .catch(err => mark(dot, !(err instanceof DOMException && err.name === 'AbortError') ? false : 'timeout', hostOf(url)))
+      .finally(() => clearTimeout(tmo));
+  }
+  function mark(dot, up, host) {
+    dot.classList.remove('status-wait');
+    if (up === true)            { dot.classList.add('status-up');   dot.setAttribute('aria-label', host + ' is up'); }
+    else if (up === 'timeout')  { dot.classList.add('status-idle'); dot.setAttribute('aria-label', host + ' check timed out'); }
+    else                        { dot.classList.add('status-down'); dot.setAttribute('aria-label', host + ' is down'); }
+  }
+
+  /* ============================================================
+     Clock + greeting
+     ============================================================ */
+  const clockEl = document.getElementById('clock');
+  const dateEl  = document.getElementById('date');
+  const greetEl = document.getElementById('greeting');
+  const pad = n => String(n).padStart(2, '0');
+  function tick() {
+    const d = new Date();
+    clockEl.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    dateEl.textContent  = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    const h = d.getHours();
+    const part = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    greetEl.textContent = part + (greetEl.dataset.userName ? ', ' + greetEl.dataset.userName : '') + ' — ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+  tick(); setInterval(tick, 1000);
+
+  /* ============================================================
+     System stats — wire to /api/stats { host, cpu, mem, disk }
+     ============================================================ */
+  const STAT_ENDPOINT = '/api/stats';
+  const cpuBar= document.getElementById('stat-cpu-bar'); const cpuVal= document.getElementById('stat-cpu-val');
+  const memBar= document.getElementById('stat-mem-bar'); const memVal= document.getElementById('stat-mem-val');
+  const diskBar=document.getElementById('stat-disk-bar');const diskVal=document.getElementById('stat-disk-val');
+  const hostEl = document.getElementById('stats-host');
+
+  function setBar(bar, val, label) {
+    if (val == null || isNaN(val)) { bar.style.width = '0%'; label.textContent = '—'; return; }
+    const v = Math.max(0, Math.min(100, val));
+    bar.style.width = v.toFixed(0) + '%';
+    bar.style.background = v >= 90 ? 'var(--red)' : v >= 75 ? 'var(--amber)' : 'var(--accent)';
+    label.textContent = v.toFixed(0) + '%';
+  }
+  async function pollStats() {
+    try {
+      const r = await fetch(STAT_ENDPOINT, { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.host) hostEl.textContent = d.host;
+      setBar(cpuBar, d.cpu, cpuVal);
+      setBar(memBar, d.mem, memVal);
+      setBar(diskBar, d.disk, diskVal);
+    } catch {}
+  }
+  pollStats(); setInterval(pollStats, 15000);
+
+  /* ============================================================
+     Theme — auto / light / dark, persisted
+     ============================================================ */
+  const themeBtn  = document.getElementById('theme-toggle');
+  const themeIcon = document.getElementById('theme-icon');
+  const themeChip = document.getElementById('theme-chip');
+
+  const THEME_ICON_AUTO  = '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z"/>';
+  const THEME_ICON_LIGHT = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+  const THEME_ICON_DARK  = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>';
+
+  function preferredDark() { return window.matchMedia('(prefers-color-scheme: dark)').matches; }
+
+  function applyTheme(mode) {
+    const dark = mode === 'dark' || (mode === 'auto' && preferredDark());
+    document.documentElement.classList.toggle('light', !dark);
+    document.documentElement.classList.toggle('dark', dark);
+    themeIcon.innerHTML = dark ? THEME_ICON_DARK : THEME_ICON_LIGHT;
+    themeBtn.setAttribute('aria-label', 'Theme: ' + mode + ' (click to toggle)');
+    themeBtn.setAttribute('title', 'Theme: ' + mode + ' — click to cycle');
+    themeChip.textContent = 'theme: ' + mode;
+  }
+  function cycleTheme() {
+    const cur = window.HubSettings.get().theme;
+    const next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+    window.HubSettings.set({ theme: next });
+    applyTheme(next);
+  }
+  themeBtn.addEventListener('click', cycleTheme);
+
+  // Apply persisted settings on boot + subscribe to live changes (from settings.html in another tab)
+  const bootSettings = window.HubSettings.get();
+  // One-time migration of legacy theme key
+  const legacyTheme = (() => { try { return localStorage.getItem(LS_THEME); } catch { return null; } })();
+  const curSettingsKey = (() => { try { return localStorage.getItem(window.HubSettings.KEY); } catch { return null; } })();
+  if (legacyTheme && !curSettingsKey) {
+    window.HubSettings.set({ theme: legacyTheme });
+  } else if (legacyTheme) {
+    try { localStorage.removeItem(LS_THEME); } catch {}
+  }
+  const effectiveSettings = window.HubSettings.get();
+  window.HubSettings.apply(effectiveSettings);
+  applyTheme(effectiveSettings.theme);
+  window.HubSettings.subscribe(s => { applyTheme(s.theme); window.HubSettings.apply(s); });
+
+  // FAB: opens the add-service form
+  document.getElementById('fab-add').addEventListener('click', () => {
+    if (addForm.classList.contains('hidden')) addToggle.click();
+    addName.focus();
+    addForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  // Re-render when services list changes in another tab (e.g. settings.html)
+  window.addEventListener('storage', e => {
+    if (e.key === window.HubSettings.KEY) { SERVICES = loadServices(); renderGroups(); }
+  });
+
+  // React to OS theme change when in auto mode
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (window.HubSettings.get().theme === 'auto') applyTheme('auto');
+  });
+
+  /* ============================================================
+     Cloudflare Access — show signed-in user chip if backend exposes /api/me
+     (See SETUP.md. CF Access protects at the edge; this is UX-only.)
+     ============================================================ */
+  const cfChip = document.getElementById('cf-chip');
+  async function pollIdentity() {
+    try {
+      const r = await fetch('/api/me', { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d && d.email) {
+        cfChip.textContent = '👤 signed in: ' + d.email;
+        cfChip.classList.remove('hidden');
+      }
+    } catch {}
+  }
+  pollIdentity();
+
+  /* ============================================================
+     Expose for tests (tests.html loads index.html in iframe)
+     ============================================================ */
+  window.__HUB__ = {
+    SERVICES, SERVICES_DEFAULT,
+    renderGroups, filter, applyTheme, cycleTheme, remove,
+    autoCategorize: (n,u,d) => window.autoCategorize(n,u,d),
+    categorized, setServices: arr => { SERVICES = arr; },
+    reloadServices: () => { SERVICES = loadServices(); return SERVICES; },
+    getSearchInput: () => searchInput,
+  };
+
+  /* ============================================================
+     Boot
+     ============================================================ */
+  renderGroups();
+</script>
+</body>
+</html>

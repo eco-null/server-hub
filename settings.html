@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings — Server Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['Fira Code', 'ui-monospace', 'monospace'],
+      },
+    }}};
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="settings.js"></script>
+  <script src="categorize.js"></script>
+  <style>
+    :root {
+      --bg-deep: #020203; --bg-elev: #0a0a0c;
+      --surface: rgba(255,255,255,0.05); --surface-hi: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.08); --border-hi: rgba(255,255,255,0.16);
+      --fg: #EDEDEF; --fg-muted: #8A8F98;
+      --accent: #5E6AD2; --accent-glow: rgba(94,106,210,0.20);
+      --green: #22C55E; --red: #EF4444;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    html.light {
+      --bg-deep: #f4f6fb; --bg-elev: #fbfcfe;
+      --surface: rgba(15,23,42,0.04); --surface-hi: rgba(15,23,42,0.08);
+      --border: rgba(15,23,42,0.10); --border-hi: rgba(15,23,42,0.20);
+      --fg: #0F172A; --fg-muted: #5a6072;
+      --accent: #4f56c0; --accent-glow: rgba(79,86,192,0.18);
+      --green: #16a34a; --red: #dc2626;
+    }
+    html, body { background-color: var(--bg-deep); color: var(--fg); }
+    body {
+      background:
+        radial-gradient(1000px 600px at 80% -10%, var(--accent-glow), transparent 60%),
+        linear-gradient(180deg, var(--bg-elev), var(--bg-deep));
+      min-height: 100vh;
+      transition: background-color 400ms var(--ease), color 400ms var(--ease);
+    }
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border: 1px solid var(--border); border-radius: 16px;
+    }
+    .field {
+      background: transparent; border: 1px solid var(--border); border-radius: 10px;
+      color: var(--fg); padding: 0.55rem 0.75rem; font-size: 0.875rem; width: 100%;
+      transition: border-color 200ms var(--ease), background-color 200ms var(--ease);
+    }
+    .field:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+    .field::placeholder { color: var(--fg-muted); }
+    .btn {
+      padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.875rem; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+      transition: background-color 200ms var(--ease), border-color 200ms var(--ease), transform 150ms var(--ease);
+    }
+    .btn:hover { background: var(--surface-hi); border-color: var(--border-hi); }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: white; border-color: transparent; }
+    .btn-primary:hover { background: color-mix(in srgb, var(--accent) 88%, white); }
+    .btn-danger { color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, var(--border)); }
+    .btn-danger:hover { background: color-mix(in srgb, var(--red) 12%, var(--surface)); }
+    .section { padding: 1.25rem; }
+    .h2 { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-muted); }
+    .switch {
+      position: relative; width: 42px; height: 24px; border-radius: 9999px;
+      background: var(--surface-hi); border: 1px solid var(--border); cursor: pointer;
+      transition: background-color 200ms var(--ease); flex-shrink: 0;
+    }
+    .switch.on { background: var(--accent); border-color: transparent; }
+    .switch::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+      background: var(--fg); border-radius: 9999px; transition: transform 200ms var(--ease);
+    }
+    .switch.on::after { transform: translateX(18px); background: white; }
+    .swatch {
+      width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+      border: 2px solid transparent; transition: transform 150ms var(--ease), border-color 150ms var(--ease);
+    }
+    .swatch:hover { transform: scale(1.1); }
+    .swatch.active { border-color: var(--fg); }
+    .pill {
+      display: inline-block; padding: 2px 8px; border-radius: 9999px;
+      font-size: 11px; font-family: 'Fira Code', monospace;
+      border: 1px solid var(--border); color: var(--fg-muted); background: var(--surface);
+    }
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+      padding: 0.6rem 1.1rem; border-radius: 10px; font-size: 0.85rem;
+      background: var(--accent); color: white; box-shadow: 0 8px 24px -8px var(--accent-glow);
+      opacity: 0; pointer-events: none; transition: opacity 300ms var(--ease), transform 300ms var(--ease);
+      z-index: 50;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, -8px); }
+    .row-grid { display: grid; gap: 0.65rem; }
+    .focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .svc-row {
+      display: grid; grid-template-columns: 1.4fr 2fr 2fr auto auto; gap: 8px; align-items: center;
+    }
+    @media (max-width: 720px) { .svc-row { grid-template-columns: 1fr; } .svc-row .hide-sm { display: none; } }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body class="font-sans antialiased">
+  <main class="mx-auto w-full max-w-3xl px-4 sm:px-6 py-10 space-y-6">
+
+    <header class="flex items-center justify-between gap-3">
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">Settings</h1>
+        <p class="text-sm text-[color:var(--fg-muted)] mt-1">Personalize Server Hub. Saved to your browser (localStorage) — no server required.</p>
+      </div>
+      <a href="index.html" class="btn focus-ring" aria-label="Back to dashboard">← Back</a>
+    </header>
+
+    <!-- Appearance -->
+    <section class="glass section">
+      <h2 class="h2 mb-4">Appearance</h2>
+
+      <!-- Theme -->
+      <div class="row-grid">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="font-medium text-sm">Theme</p>
+            <p class="text-xs text-[color:var(--fg-muted)]">Auto follows your system preference.</p>
+          </div>
+          <div class="flex gap-2" role="radiogroup" aria-label="Theme">
+            <button class="btn theme-opt focus-ring" data-theme="auto">Auto</button>
+            <button class="btn theme-opt focus-ring" data-theme="light">Light</button>
+            <button class="btn theme-opt focus-ring" data-theme="dark">Dark</button>
+          </div>
+        </div>
+
+        <!-- Accent color -->
+        <div class="flex items-center justify-between pt-2">
+          <div>
+            <p class="font-medium text-sm">Accent color</p>
+            <p class="text-xs text-[color:var(--fg-muted)]">Used for buttons, bars, and the FAB.</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <div class="flex gap-1.5" id="swatches" role="group" aria-label="Accent presets"></div>
+            <label class="flex items-center gap-1.5">
+              <input id="accent-custom" type="color" class="w-9 h-9 rounded-lg cursor-pointer border-0 bg-transparent focus-ring" aria-label="Custom accent color" />
+              <span class="text-xs text-[color:var(--fg-muted)]">custom</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Personalization -->
+    <section class="glass section">
+      <h2 class="h2 mb-4">Personalization</h2>
+      <div class="row-grid">
+        <label class="block">
+          <span class="text-sm font-medium">Your name <span class="text-[color:var(--fg-muted)] text-xs">(optional, shown in greeting)</span></span>
+          <input id="user-name" class="field mt-1.5" placeholder="e.g. Can" autocomplete="off" />
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Page title</span>
+          <input id="page-title" class="field mt-1.5" placeholder="Server Hub" maxlength="60" />
+        </label>
+        <label class="block">
+          <span class="text-sm font-medium">Subtitle</span>
+          <input id="subtitle" class="field mt-1.5" placeholder="Your self-hosted apps…" maxlength="120" />
+        </label>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="glass section">
+      <h2 class="h2 mb-4">Features</h2>
+      <div class="space-y-3" id="feature-list">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- Services editor -->
+    <section class="glass section">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="h2">Your links</h2>
+        <button id="add-svc" class="btn btn-primary focus-ring text-xs">+ Add link</button>
+      </div>
+      <p class="text-xs text-[color:var(--fg-muted)] mb-4">These are stored on top of the bundled <code class="text-[color:var(--fg)]">SERVICES_DEFAULT</code> list. To remove a bundled link, edit <code class="text-[color:var(--fg)]">index.html</code>.</p>
+
+      <div id="svc-list" class="space-y-2"></div>
+
+      <!-- Add new link form (collapsible) -->
+      <div id="add-form" class="hidden mt-4 pt-4 border-t border-[color:var(--border)]">
+        <div class="svc-row">
+          <input id="new-name" class="field focus-ring" placeholder="Name (e.g. Grafana)" />
+          <input id="new-url"  class="field focus-ring" placeholder="URL (https://…)" type="url" />
+          <input id="new-desc" class="field focus-ring" placeholder="Description (optional)" />
+          <span class="hide-sm text-xs text-[color:var(--fg-muted)]">→ <span id="new-cat" class="pill">auto</span></span>
+          <button id="new-save" class="btn btn-primary focus-ring text-xs">Add</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Danger zone -->
+    <section class="glass section">
+      <h2 class="h2 mb-3">Reset</h2>
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <p class="text-sm text-[color:var(--fg-muted)] max-w-md">Wipe all settings and added links. Bundled defaults remain.</p>
+        <button id="reset" class="btn btn-danger focus-ring">Reset all settings</button>
+      </div>
+    </section>
+
+    <footer class="pt-2 pb-8 text-center text-xs text-[color:var(--fg-muted)] font-mono">
+      Settings stored locally at <code class="text-[color:var(--fg)]">server-hub:settings</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite">Saved</div>
+
+<script>
+  /* ============================================================
+     Wire settings UI to HubSettings
+     ============================================================ */
+  const S = window.HubSettings;
+  const cur = S.get();
+
+  // Apply theme + accent to THIS page so previews match
+  S.apply(cur);
+
+  const ACCENT_PRESETS = ['#5E6AD2', '#22C55E', '#EAB308', '#F97316', '#EF4444', '#EC4899', '#8B5CF6', '#14B8A6', '#0EA5E9', '#64748B'];
+
+  function setThemeOpt(mode) {
+    document.querySelectorAll('.theme-opt').forEach(b => {
+      b.classList.toggle('btn-primary', b.dataset.theme === mode);
+      b.setAttribute('aria-pressed', String(b.dataset.theme === mode));
+    });
+    S.set({ theme: mode });
+    S.apply(S.get()); // refresh tokens on this page too
+  }
+  document.querySelectorAll('.theme-opt').forEach(b => {
+    b.addEventListener('click', () => setThemeOpt(b.dataset.theme));
+  });
+  setThemeOpt(cur.theme);
+
+  // Accent swatches
+  const swatchEl = document.getElementById('swatches');
+  ACCENT_PRESETS.forEach(c => {
+    const s = document.createElement('button');
+    s.className = 'swatch focus-ring';
+    s.style.background = c;
+    s.setAttribute('aria-label', 'Accent ' + c);
+    s.dataset.color = c;
+    s.addEventListener('click', () => { S.set({ accent: c }); refreshAccent(); toast('Accent updated'); });
+    swatchEl.appendChild(s);
+  });
+  const customInput = document.getElementById('accent-custom');
+  customInput.value = cur.accent;
+  customInput.addEventListener('input', e => { S.set({ accent: e.target.value }); refreshAccent(); });
+  function refreshAccent() {
+    const a = S.get().accent;
+    document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color.toLowerCase() === a.toLowerCase()));
+    document.documentElement.style.setProperty('--accent', a);
+    customInput.value = a;
+  }
+  refreshAccent();
+
+  // Personalization fields
+  const nameInput = document.getElementById('user-name');
+  const titleInput = document.getElementById('page-title');
+  const subInput = document.getElementById('subtitle');
+  nameInput.value  = cur.userName;
+  titleInput.value = cur.pageTitle;
+  subInput.value   = cur.subtitle;
+  nameInput.addEventListener('input',  e => S.set({ userName:  e.target.value }));
+  titleInput.addEventListener('input', e => S.set({ pageTitle: e.target.value }));
+  subInput.addEventListener('input',   e => S.set({ subtitle:  e.target.value }));
+
+  // Features toggles
+  const FEATURE_META = [
+    { key: 'clock',      label: 'Clock & date',          desc: 'Show current time and date in the header.' },
+    { key: 'greeting',   label: 'Greeting',              desc: 'Show personalized "Good morning, …" line.' },
+    { key: 'stats',      label: 'System stats widget',   desc: 'CPU / Memory / Disk bars (requires /api/stats).' },
+    { key: 'search',     label: 'Search & filter',       desc: 'Filter box to find a service by name.' },
+    { key: 'statusPings',label: 'Status indicators',    desc: 'Ping each service to show up/down dots.' },
+    { key: 'blobs',      label: 'Ambient blobs',         desc: 'Decorative gradient blobs in the background.' },
+  ];
+  const featureList = document.getElementById('feature-list');
+  function renderFeatures() {
+    const f = S.get().features;
+    featureList.innerHTML = '';
+    for (const meta of FEATURE_META) {
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between gap-3';
+      row.innerHTML =
+        '<div class="min-w-0"><p class="text-sm font-medium">' + meta.label + '</p>'
+        + '<p class="text-xs text-[color:var(--fg-muted)]">' + meta.desc + '</p></div>'
+        + '<button class="switch focus-ring ' + (f[meta.key] ? 'on' : '') + '" data-feat="' + meta.key + '" '
+        + 'role="switch" aria-checked="' + (f[meta.key] ? 'true' : 'false') + '" aria-label="Toggle ' + meta.label + '"></button>';
+      featureList.appendChild(row);
+    }
+    featureList.querySelectorAll('.switch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        const k = sw.dataset.feat;
+        const next = !S.get().features[k];
+        S.set({ features: { ...S.get().features, [k]: next } });
+        sw.classList.toggle('on', next);
+        sw.setAttribute('aria-checked', String(next));
+        toast(next ? meta(k) + ' on' : meta(k) + ' off');
+      });
+      function meta(k) { return FEATURE_META.find(m => m.key === k).label; }
+    });
+  }
+  renderFeatures();
+
+  /* ============================================================
+     Services editor
+     ============================================================ */
+  const svcListEl = document.getElementById('svc-list');
+  const addBtn    = document.getElementById('add-svc');
+  const addForm   = document.getElementById('add-form');
+  const newName   = document.getElementById('new-name');
+  const newUrl    = document.getElementById('new-url');
+  const newDesc   = document.getElementById('new-desc');
+  const newCat    = document.getElementById('new-cat');
+  const newSave   = document.getElementById('new-save');
+
+  function renderServices() {
+    const svcs = S.get().services || [];
+    if (svcs.length === 0) {
+      svcListEl.innerHTML = '<p class="text-xs text-[color:var(--fg-muted)] py-3">No custom links yet. Click “+ Add link”.</p>';
+      return;
+    }
+    svcListEl.innerHTML = '';
+    svcs.forEach((s, i) => {
+      const auto = s.categoryOverride || window.autoCategorize(s.name, s.url, s.desc).category;
+      const row = document.createElement('div');
+      row.className = 'svc-row';
+      row.innerHTML =
+        '<input class="field focus-ring svc-name" data-i="' + i + '" value="' + esc(s.name) + '" placeholder="Name" />'
+        + '<input class="field focus-ring svc-url"  data-i="' + i + '" value="' + esc(s.url) + '" placeholder="URL" />'
+        + '<input class="field focus-ring svc-desc" data-i="' + i + '" value="' + esc(s.desc || '') + '" placeholder="Description" />'
+        + '<span class="hide-sm text-xs text-[color:var(--fg-muted)]">→ <span class="pill">' + esc(auto) + '</span></span>'
+        + '<button class="btn btn-danger focus-ring text-xs svc-del" data-i="' + i + '" aria-label="Delete ' + esc(s.name) + '">✕</button>';
+      svcListEl.appendChild(row);
+    });
+
+    svcListEl.querySelectorAll('.svc-name').forEach(el => el.addEventListener('change', onEdit));
+    svcListEl.querySelectorAll('.svc-url').forEach(el => {
+      el.addEventListener('change', onEdit);
+      el.addEventListener('input', e => {
+        const i = +e.target.dataset.i;
+        const sv = S.get().services[i];
+        const autoCat = window.autoCategorize(sv.name, e.target.value, sv.desc).category;
+        const pill = e.target.closest('.svc-row').querySelector('.pill');
+        if (pill) pill.textContent = autoCat;
+      });
+    });
+    svcListEl.querySelectorAll('.svc-desc').forEach(el => el.addEventListener('change', onEdit));
+    svcListEl.querySelectorAll('.svc-del').forEach(el => el.addEventListener('click', onDelete));
+  }
+
+  function onEdit(e) {
+    const i = +e.target.dataset.i;
+    const field = e.target.classList.contains('svc-name') ? 'name'
+      : e.target.classList.contains('svc-url') ? 'url' : 'desc';
+    const svcs = S.get().services;
+    if (!svcs[i]) return;
+    svcs[i][field] = e.target.value.trim();
+    S.set({ services: svcs });
+    if (field !== 'desc') renderServices();
+  }
+  function onDelete(e) {
+    const i = +e.currentTarget.dataset.i;
+    const svcs = S.get().services;
+    svcs.splice(i, 1);
+    S.set({ services: svcs });
+    renderServices();
+    toast('Link removed');
+  }
+
+  addBtn.addEventListener('click', () => {
+    const open = !addForm.classList.contains('hidden');
+    addForm.classList.toggle('hidden');
+    addBtn.textContent = open ? '+ Add link' : 'Cancel';
+    if (!open) newName.focus();
+  });
+  [newName, newUrl, newDesc].forEach(el => el.addEventListener('input', () => {
+    newCat.textContent = window.autoCategorize(newName.value, newUrl.value, newDesc.value).category;
+  }));
+  function addNew() {
+    const name = newName.value.trim();
+    const url  = newUrl.value.trim();
+    if (!name || !url) { toast('Name and URL required'); return; }
+    const desc = newDesc.value.trim();
+    const cat = window.autoCategorize(name, url, desc).category;
+    const svcs = S.get().services;
+    svcs.push({ name, url, desc, ping: true, categoryOverride: cat });
+    S.set({ services: svcs });
+    newName.value = ''; newUrl.value = ''; newDesc.value = ''; newCat.textContent = 'auto';
+    renderServices();
+    toast('Link added to ' + cat);
+  }
+  newSave.addEventListener('click', addNew);
+  addForm.addEventListener('submit', e => { e.preventDefault(); addNew(); });
+
+  renderServices();
+
+  /* ============================================================
+     Reset
+     ============================================================ */
+  document.getElementById('reset').addEventListener('click', () => {
+    if (!confirm('Reset ALL settings and remove custom links?')) return;
+    try { localStorage.removeItem(S.KEY); } catch {}
+    location.reload();
+  });
+
+  /* ============================================================
+     Toast
+     ============================================================ */
+  const toastEl = document.getElementById('toast');
+  let toastT;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => toastEl.classList.remove('show'), 1600);
+  }
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+</script>
+</body>
+</html>

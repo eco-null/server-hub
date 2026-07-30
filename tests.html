@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tests — Server Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="settings.js"></script>
+  <script src="categorize.js"></script>
+  <style>
+    body { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; padding: 24px; max-width: 900px; margin: 0 auto; background: #0b0c10; color: #d8dee9; }
+    h1 { font-size: 1.4rem; margin-bottom: 8px; }
+    .summary { margin: 12px 0 20px; font-size: 0.95rem; }
+    .results { list-style: none; padding: 0; margin: 0; }
+    li { padding: 8px 12px; border-left: 3px solid; margin-bottom: 6px; border-radius: 4px; background: #14151b; font-size: 0.85rem; }
+    .pass { border-color: #22C55E; color: #86efac; }
+    .fail { border-color: #EF4444; color: #fca5a5; }
+    .skip { border-color: #64748b; color: #94a3b8; }
+    .grp  { margin-top: 18px; font-weight: 600; color: #818cf8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    pre { white-space: pre-wrap; }
+    a { color: #818cf8; }
+    button { margin: 4px 0; padding: 6px 14px; background: #5E6AD2; color: white; border: 0; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Server Hub — test suite</h1>
+  <p class="summary" id="summary">Running…</p>
+  <a href="index.html">← back to dashboard</a>
+  <ul class="results" id="results"></ul>
+
+<script>
+  let passed = 0, failed = 0, skipped = 0;
+  const results = document.getElementById('results');
+  const summary = document.getElementById('summary');
+
+  function out(name, ok, detail) {
+    const li = document.createElement('li');
+    li.className = ok ? 'pass' : 'fail';
+    li.textContent = (ok ? '✓ ' : '✗ ') + name + (detail ? ' — ' + detail : '');
+    results.appendChild(li);
+    if (ok) passed++; else failed++;
+  }
+  function skip(name, why) {
+    const li = document.createElement('li');
+    li.className = 'skip';
+    li.textContent = '↦ ' + name + (why ? ' (skipped: ' + why + ')' : '');
+    results.appendChild(li);
+    skipped++;
+  }
+  function group(name) {
+    const h = document.createElement('div');
+    h.className = 'grp'; h.textContent = name;
+    results.appendChild(h);
+  }
+  function eq(a, b, name) {
+    const ok = JSON.stringify(a) === JSON.stringify(b);
+    out(name, ok, ok ? '' : 'got ' + JSON.stringify(a) + ' ≠ expected ' + JSON.stringify(b));
+  }
+  function ok(cond, name, detail) { out(name, !!cond, detail || ''); }
+
+  /* ============================================================
+     1. categorize.js — auto-categorization heuristic
+     ============================================================ */
+  group('categorize.js — autoCategorize');
+  const C = window.autoCategorize;
+  ok(typeof C === 'function', 'autoCategorize is a function');
+
+  const CASES = [
+    // name, url, desc, expected-category
+    ['Grafana',         'https://grafana.example.com',  'Metrics & dashboards',  'Monitoring'],
+    ['Uptime Kuma',     'https://status.example.com',   'Uptime tracker',        'Monitoring'],
+    ['Prometheus',      'https://prometheus.local',     'Time-series store',     'Monitoring'],
+    ['Vaultwarden',     'https://vault.example.com',    'Password manager',      'Security'],
+    ['Authelia',        'https://auth.example.com',     'SSO gateway',           'Security'],
+    ['tor-proxy',       'http://tor-proxy.local:9050',  'Onion relay',           'Security'],
+    ['Pi-hole',         'https://pihole.example.com',   'Ad blocking',           'Network'],
+    ['WireGuard',       'https://vpn.example.com',      'VPN portal',            'Network'],
+    ['AdGuard Home',    'https://dns.example.com',      'DNS filter',            'Network'],
+    ['Nextcloud',       'https://cloud.example.com',   'Files & calendar',      'Productivity'],
+    ['Joplin Server',   'https://notes.example.com',   'Notes sync',            'Productivity'],
+    ['Paperless-ngx',   'https://docs.example.com',    'OCR archive',           'Productivity'],
+    ['Jellyfin',        'https://media.example.com',   'Movies & music',        'Media'],
+    ['Navidrome',       'https://music.example.com',   'Music server',          'Media'],
+    ['Audiobookshelf',  'https://books.example.com',   'Audiobooks',            'Media'],
+    ['immich',          'https://photos.example.com',   'Photo library',        'Media'],
+    ['Gitea',           'https://git.example.com',      'Git host',              'Dev'],
+    ['Woodpecker CI',   'https://ci.example.com',       'CI',                    'Dev'],
+    ['code-server',     'https://code.example.com',     'Browser VS Code',      'Dev'],
+    ['Home Assistant',  'https://home.example.com',    'Smart home',            'Home'],
+    ['Mosquitto',       'http://mqtt.local:9001',       'MQTT broker',          'Home'],
+    ['Ollama',          'https://llm.example.com',      'Local LLM server',     'AI'],
+    ['Open WebUI',      'https://chat.example.com',     'Chat UI for LLMs',     'AI'],
+    ['SearXNG',         'https://search.example.com',  'Meta search',           'Search'],
+    ['pgAdmin',         'https://pgadmin.example.com',  'Postgres admin',       'Database'],
+    ['Mattermost',      'https://chat.example.com/mm',  'Team chat',             'Communication'],
+  ];
+  for (const [n, u, d, exp] of CASES) {
+    const got = C(n, u, d).category;
+    eq(got, exp, 'categorize "' + n + '" → ' + exp);
+  }
+
+  // Fallback to Other
+  eq(C('Mystery App', 'https://mystery.local', 'does something weird').category, 'Other', 'unknown app → Other');
+  ok(C('Mystery App', 'https://mystery.local', '').matched === null, 'Other has matched=null');
+
+  // Match by URL host alone
+  eq(C('service', 'https://grafana.mydomain.com', '').category, 'Monitoring', 'match on host substring');
+  // Match by URL path
+  eq(C('relay', 'https://example.com/git', '').category, 'Dev', 'match on path');
+
+  // Specificity: 'pihole' hits Network even if desc mentions 'security'
+  eq(C('Pi-hole', 'https://pihole.local', 'DNS security filtering').category, 'Network', 'specificity overrides generic');
+
+  /* ============================================================
+     2. settings.js — storage layer
+     ============================================================ */
+  group('settings.js — HubSettings');
+
+  // Reset to clean state for deterministic tests
+  try { localStorage.removeItem(window.HubSettings.KEY); } catch {}
+  let s = window.HubSettings.get();
+  eq(s.theme, 'auto', 'default theme is auto');
+  eq(s.accent, '#5E6AD2', 'default accent');
+  eq(s.userName, '', 'default userName empty');
+  eq(s.features.statusPings, true, 'default feature flag true');
+  ok(Array.isArray(s.services) && s.services.length === 0, 'default services array empty');
+
+  // set + persist
+  window.HubSettings.set({ theme: 'dark', accent: '#22C55E', userName: 'Tester' });
+  s = window.HubSettings.get();
+  eq(s.theme, 'dark',   'set theme persisted');
+  eq(s.accent, '#22C55E', 'set accent persisted');
+  eq(s.userName, 'Tester', 'set userName persisted');
+
+  // partial merge preserves other keys
+  window.HubSettings.set({ userName: 'Changed' });
+  s = window.HubSettings.get();
+  eq(s.userName, 'Changed', 'partial update to userName');
+  eq(s.theme, 'dark', 'theme preserved across partial update');
+  eq(s.accent, '#22C55E', 'accent preserved across partial update');
+
+  // nested feature merge
+  window.HubSettings.set({ features: { statusPings: false } });
+  s = window.HubSettings.get();
+  eq(s.features.statusPings, false, 'nested feature flag updated');
+  eq(s.features.clock, true, 'sibling feature preserved under nested merge');
+
+  // services round-trip
+  window.HubSettings.set({ services: [{ name: 'X', url: 'https://x.local', desc: 'd' }] });
+  s = window.HubSettings.get();
+  ok(s.services.length === 1 && s.services[0].url === 'https://x.local', 'services round-trip');
+
+  // subscribe fires on set
+  let fired = 0;
+  const unsub = window.HubSettings.subscribe(() => fired++);
+  window.HubSettings.set({ userName: 'Subbed' });
+  ok(fired === 1, 'subscribe fired once on set');
+  unsub();
+  window.HubSettings.set({ userName: 'unsubscribed' });
+  ok(fired === 1, 'unsubscribe stops further fires');
+
+  // hexToRgba helper
+  const rgba = window.HubSettings.hexToRgba('#5E6AD2', 0.2);
+  eq(rgba, 'rgba(94,106,210,0.2)', 'hexToRgba roundtrip');
+  ok(window.HubSettings.hexToRgba('#abc', 0.5).startsWith('rgba('), 'hexToRgba handles 3-digit hex');
+  ok(window.HubSettings.hexToRgba('garbage', 0.5).startsWith('rgba(94,106,210'), 'hexToRgba falls back on invalid');
+
+  // isDark
+  ok(window.HubSettings.isDark({ theme: 'dark' }) === true, 'isDark true for dark');
+  ok(window.HubSettings.isDark({ theme: 'light' }) === false, 'isDark false for light');
+
+  // cleanup
+  try { localStorage.removeItem(window.HubSettings.KEY); } catch {}
+
+  /* ============================================================
+     3. index.html — DOM behaviour (loaded in iframe)
+     ============================================================ */
+  group('index.html — DOM integration (iframe)');
+
+  const iframe = document.createElement('iframe');
+  iframe.src = 'index.html';
+  iframe.style.cssText = 'position:fixed; bottom:0; right:0; width:480px; height:600px; opacity:0.6; border:1px solid #444; z-index:50;';
+  iframe.id = 'hub';
+  // We run these async; tests resume from iframe load.
+  document.body.appendChild(iframe);
+  document.getElementById('hub-removed') || null;
+
+  let hubWin, runDomTests;
+  iframe.addEventListener('load', () => {
+    hubWin = iframe.contentWindow;
+    try { runDomTests(); }
+    catch (e) { out('iframe DOM tests ran', false, String(e)); }
+    finally { finish(); }
+  });
+
+  // Safety timeout in case iframe load never fires
+  setTimeout(() => { if (!hubWin) { skip('iframe DOM tests', 'iframe did not load (open via http/file)'); finish(); } }, 4000);
+
+  let finished = false;
+  function finish() {
+    if (finished) return; finished = true;
+    summary.textContent =
+      passed + ' passed · ' + failed + ' failed · ' + skipped + ' skipped '
+      + (failed === 0 ? '— ✅ ALL GREEN' : '— ❌ FAILURES');
+    summary.style.color = failed === 0 ? '#22C55E' : '#EF4444';
+    if (window.__testAuto) console.log('done');
+  }
+
+  runDomTests = function () {
+    const w = hubWin;
+    ok(typeof w.__HUB__ === 'object', '__HUB__ exported on index.html window');
+
+    // SERVICES loaded from defaults (clean storage)
+    try { localStorage.removeItem(window.HubSettings.KEY); } catch {}
+    const svcs = w.__HUB__.reloadServices();
+    ok(svcs.length >= 18, 'default SERVICES count ≥ 18', 'got ' + svcs.length);
+
+    // Auto-categorization applied at render: each rendered card has data-category
+    w.__HUB__.setServices(svcs);
+    w.__HUB__.renderGroups();
+    const cards = w.document.querySelectorAll('.card');
+    ok(cards.length === svcs.length, 'rendered cards count == services', cards.length + ' vs ' + svcs.length);
+    const withCat = w.document.querySelectorAll('.card[data-category]');
+    ok(withCat.length === cards.length, 'every card tagged with category');
+
+    // Search filter: type "grafana" → only cards matching remain visible
+    const input = w.__HUB__.getSearchInput();
+    input.value = 'grafana';
+    w.__HUB__.filter('grafana');
+    const visible = Array.from(w.document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
+    ok(visible.length === 1 && visible[0].dataset.name.includes('grafana'), 'search "grafana" narrows to 1', 'visible=' + visible.length);
+
+    // Clear filter
+    input.value = '';
+    w.__HUB__.filter('');
+    const allVisible = Array.from(w.document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
+    ok(allVisible.length === svcs.length, 'clearing filter restores all cards', allVisible.length);
+
+    // Theme: applyTheme flips html.light/dark classes
+    w.document.documentElement.classList.remove('light', 'dark');
+    w.HubSettings.set({ theme: 'light' });
+    w.__HUB__.applyTheme('light');
+    ok(w.document.documentElement.classList.contains('light'), 'applyTheme(light) adds html.light');
+    w.__HUB__.applyTheme('dark');
+    ok(w.document.documentElement.classList.contains('dark') && !w.document.documentElement.classList.contains('light'), 'applyTheme(dark) sets html.dark, removes light');
+
+    // autoCategorize passthrough
+    eq(w.__HUB__.autoCategorize('Jellyfin', 'https://media.local', 'Movies').category, 'Media', '__HUB__.autoCategorize passthrough');
+
+    // Add new service via setServices; ensure renderGroups reflects it
+    w.__HUB__.setServices([...svcs, { name: 'AuditTest', url: 'https://audit.local', desc: 'audit stub', icon: 'box' }]);
+    w.__HUB__.renderGroups();
+    const hasAudit = Array.from(w.document.querySelectorAll('.card')).some(c => c.dataset.name === 'audittest');
+    ok(hasAudit, 'new service rendered after setServices+renderGroups');
+
+    // Status dot exists on each pingable card
+    const dots = w.document.querySelectorAll('.status-dot');
+    ok(dots.length > 0, 'status dots present on cards');
+
+    // Restore default state for any subsequent test runs
+    w.HubSettings.set({ theme: 'auto', features: {}, services: [] });
+  };
+</script>
+</body>
+</html>
