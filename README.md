@@ -116,8 +116,4 @@ A green `ALL GREEN` summary at the top means everything passed.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE) (or add one if you prefer another).
-
-## Acknowledgements
-
-UI patterns distilled from the [ui-ux-pro-max](https://github.com/anomalyco/ui-ux-pro-max) skill — glassmorphism, ambient blobs, dark-mode-first color scales, and the 150–300 ms micro-interaction rule.
+MIT — see [`LICENSE`](LICENSE)
