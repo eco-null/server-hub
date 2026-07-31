@@ -2,3 +2,5 @@ node_modules/
 .opencode/
 graphify-out/
 *.log
+__pycache__/
+*.pyc
