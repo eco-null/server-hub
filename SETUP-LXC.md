@@ -108,6 +108,10 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8642/login   # → 200
 
 That's it — the login page is served at `/login`, unauthenticated requests to `/` are redirected there, and `/api/stats` / `/api/me` return `401` until you sign in. Auth is enforced by `server.py` itself, so there is no nginx config and no edge-side policy to write.
 
+### Services data
+
+Added links are stored in `services.json` in the same directory as `server.py` (`/srv/server-hub/services.json`). It is created on first write and is **not** part of the git repo — `git pull` will never overwrite it. Back it up alongside your other VPS data; if you ever rebuild the container, copy it back before starting `server-hub`.
+
 ---
 
 ## 4. Make it reachable

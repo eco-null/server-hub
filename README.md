@@ -58,7 +58,7 @@ A single Debian 12 LXC running `server.py`: 4 GB disk, 512 MB RAM (idle ~30 MB).
 
 ## Customizing
 
-- **Default services** — edit the `SERVICES_DEFAULT` array near the top of `index.html`. Each entry: `{ name, url, desc, icon, ping }`. Icons are inline SVGs in the `ICONS` map just below.
+- **Services** — added via the "+ Add" form on the dashboard or in `settings.html` → "Your links". Every link is stored permanently on the server in `services.json` (next to `server.py`) and shared across all devices. Edit a link (name / URL / description / icon / category) or delete it via the pencil / trash buttons that appear when you hover a card.
 - **Auto-categorize rules** — edit `KEYWORD_RULES` in `categorize.js`. Add keywords to an existing category or add a new category. Order in `RANK` controls match precedence.
 - **Theme / accent / features / personal links** — open `settings.html` and tweak. Settings persist per-browser via `localStorage`.
 
@@ -97,7 +97,8 @@ A green `ALL GREEN` summary at the top means everything passed.
 
 ## Known limits
 
-- Adding a service via the **+** button saves to your browser's `localStorage` — so additions are per-device. To make a link permanent for everyone, add it to `SERVICES_DEFAULT` in `index.html`.
+- Adding, editing, and deleting services requires the server (`server.py`) to be running and you to be signed in — the links live in `services.json` on the server, not in your browser. If the API is unreachable, the dashboard shows an empty grid.
+- Service CRUD API: `GET|POST /api/services`, `PUT|DELETE /api/services/<id>` (authenticated). Back up `services.json` with your other server data.
 - `file://` preview doesn't preserve settings (browsers block `localStorage` on opaque origins). Use an http(s) origin — even `python -m http.server` does the job.
 - System stats come from `server.py`'s `/api/stats` (reads `/proc`), so they work on Linux hosts and return `null` elsewhere (bars show `—`). They're only served to signed-in sessions.
 - Auth is single-user — one `HUB_USER` / `HUB_PASSWORD` pair for everyone who signs in.
