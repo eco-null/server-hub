@@ -188,7 +188,7 @@
         <h2 class="h2">Your links</h2>
         <button id="add-svc" class="btn btn-primary focus-ring text-xs">+ Add link</button>
       </div>
-      <p class="text-xs text-[color:var(--fg-muted)] mb-4">These are saved to this browser. To make a link permanent for everyone, add it to <code class="text-[color:var(--fg)]">SERVICES_DEFAULT</code> in <code class="text-[color:var(--fg)]">index.html</code>.</p>
+      <p class="text-xs text-[color:var(--fg-muted)] mb-4">Links are stored permanently on the server (<code class="text-[color:var(--fg)]">services.json</code>) and shared across all devices.</p>
 
       <div id="svc-list" class="space-y-2"></div>
 
@@ -208,13 +208,13 @@
     <section class="glass section">
       <h2 class="h2 mb-3">Reset</h2>
       <div class="flex items-center justify-between gap-3 flex-wrap">
-        <p class="text-sm text-[color:var(--fg-muted)] max-w-md">Wipe all settings and added links. Bundled defaults remain.</p>
+        <p class="text-sm text-[color:var(--fg-muted)] max-w-md">Wipe all settings (theme, accent, features). Links live on the server and are managed here.</p>
         <button id="reset" class="btn btn-danger focus-ring">Reset all settings</button>
       </div>
     </section>
 
     <footer class="pt-2 pb-8 text-center text-xs text-[color:var(--fg-muted)] font-mono">
-      Settings stored locally at <code class="text-[color:var(--fg)]">server-hub:settings</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a>
+      Links stored server-side in <code class="text-[color:var(--fg)]">services.json</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a>
     </footer>
   </main>
 
@@ -316,7 +316,7 @@
   renderFeatures();
 
   /* ============================================================
-     Services editor
+     Services editor (server-persisted via /api/services)
      ============================================================ */
   const svcListEl = document.getElementById('svc-list');
   const addBtn    = document.getElementById('add-svc');
@@ -327,10 +327,36 @@
   const newCat    = document.getElementById('new-cat');
   const newSave   = document.getElementById('new-save');
 
+  const API_SERVICES = '/api/services';
+  let svcs = [];
+
+  async function apiJson(method, url, body) {
+    const opts = { method, cache: 'no-store' };
+    if (body !== undefined) {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify(body);
+    }
+    const r = await fetch(url, opts);
+    if (!r.ok) {
+      let msg = 'request failed (' + r.status + ')';
+      try { msg = (await r.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    return r.json();
+  }
+
+  async function loadServices() {
+    try {
+      svcs = (await apiJson('GET', API_SERVICES)).services || [];
+    } catch {
+      svcs = [];
+    }
+    renderServices();
+  }
+
   function renderServices() {
-    const svcs = S.get().services || [];
     if (svcs.length === 0) {
-      svcListEl.innerHTML = '<p class="text-xs text-[color:var(--fg-muted)] py-3">No custom links yet. Click “+ Add link”.</p>';
+      svcListEl.innerHTML = '<p class="text-xs text-[color:var(--fg-muted)] py-3">No links yet. Click “+ Add link”.</p>';
       return;
     }
     svcListEl.innerHTML = '';
@@ -352,7 +378,8 @@
       el.addEventListener('change', onEdit);
       el.addEventListener('input', e => {
         const i = +e.target.dataset.i;
-        const sv = S.get().services[i];
+        const sv = svcs[i];
+        if (!sv) return;
         const autoCat = window.autoCategorize(sv.name, e.target.value, sv.desc).category;
         const pill = e.target.closest('.svc-row').querySelector('.pill');
         if (pill) pill.textContent = autoCat;
@@ -362,23 +389,37 @@
     svcListEl.querySelectorAll('.svc-del').forEach(el => el.addEventListener('click', onDelete));
   }
 
-  function onEdit(e) {
+  async function onEdit(e) {
     const i = +e.target.dataset.i;
     const field = e.target.classList.contains('svc-name') ? 'name'
       : e.target.classList.contains('svc-url') ? 'url' : 'desc';
-    const svcs = S.get().services;
-    if (!svcs[i]) return;
-    svcs[i][field] = e.target.value.trim();
-    S.set({ services: svcs });
+    const s = svcs[i];
+    if (!s) return;
+    s[field] = e.target.value.trim();
+    try {
+      svcs = (await apiJson('PUT', API_SERVICES + '/' + encodeURIComponent(s.id), {
+        name: s.name, url: s.url, desc: s.desc || '', icon: s.icon || 'box',
+        ping: s.ping !== false, categoryOverride: s.categoryOverride || null,
+      })).services || svcs;
+      toast('Saved');
+    } catch (err) {
+      toast('Save failed: ' + err.message);
+    }
     if (field !== 'desc') renderServices();
   }
-  function onDelete(e) {
+
+  async function onDelete(e) {
     const i = +e.currentTarget.dataset.i;
-    const svcs = S.get().services;
-    svcs.splice(i, 1);
-    S.set({ services: svcs });
-    renderServices();
-    toast('Link removed');
+    const s = svcs[i];
+    if (!s) return;
+    if (!confirm('Delete "' + s.name + '"?')) return;
+    try {
+      svcs = (await apiJson('DELETE', API_SERVICES + '/' + encodeURIComponent(s.id))).services || svcs;
+      renderServices();
+      toast('Link removed');
+    } catch (err) {
+      toast('Delete failed: ' + err.message);
+    }
   }
 
   addBtn.addEventListener('click', () => {
@@ -390,29 +431,33 @@
   [newName, newUrl, newDesc].forEach(el => el.addEventListener('input', () => {
     newCat.textContent = window.autoCategorize(newName.value, newUrl.value, newDesc.value).category;
   }));
-  function addNew() {
+  async function addNew() {
     const name = newName.value.trim();
     const url  = newUrl.value.trim();
     if (!name || !url) { toast('Name and URL required'); return; }
     const desc = newDesc.value.trim();
     const cat = window.autoCategorize(name, url, desc).category;
-    const svcs = S.get().services;
-    svcs.push({ name, url, desc, ping: true, categoryOverride: cat });
-    S.set({ services: svcs });
-    newName.value = ''; newUrl.value = ''; newDesc.value = ''; newCat.textContent = 'auto';
-    renderServices();
-    toast('Link added to ' + cat);
+    try {
+      svcs = (await apiJson('POST', API_SERVICES, {
+        name, url, desc, icon: 'box', ping: true, categoryOverride: cat,
+      })).services || svcs;
+      newName.value = ''; newUrl.value = ''; newDesc.value = ''; newCat.textContent = 'auto';
+      renderServices();
+      toast('Link added to ' + cat);
+    } catch (err) {
+      toast('Add failed: ' + err.message);
+    }
   }
   newSave.addEventListener('click', addNew);
   addForm.addEventListener('submit', e => { e.preventDefault(); addNew(); });
 
-  renderServices();
+  loadServices();
 
   /* ============================================================
      Reset
      ============================================================ */
   document.getElementById('reset').addEventListener('click', () => {
-    if (!confirm('Reset ALL settings and remove custom links?')) return;
+    if (!confirm('Reset ALL settings?')) return;
     try { localStorage.removeItem(S.KEY); } catch {}
     location.reload();
   });
