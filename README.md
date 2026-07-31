@@ -1,110 +1,158 @@
+<p align="center">
+  <img src="https://img.shields.io/badge/python-%3E%3D3.8-5E6AD2?logo=python&logoColor=white" alt="Python >=3.8">
+  <img src="https://img.shields.io/badge/dependencies-0-22C55E" alt="Zero dependencies">
+  <img src="https://img.shields.io/badge/tests-85%20client%20%2B%2028%20server-22C55E" alt="Tests: 113 passing">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License">
+  <img src="https://img.shields.io/badge/stack-HTML%20%2B%20Tailwind-5E6AD2" alt="Stack: HTML + Tailwind">
+</p>
+
 # Server Hub
 
-A single-file homepage for all your self-hosted apps and services. Drop it on a VPS or LXC container and get a glassmorphism dashboard with auto-categorization, search, status pings, live clock, system stats, dark/light theme, and personal-link management — all from one static HTML page, served by a stdlib-only Python server behind a styled login page. No build step. No `node_modules`. No third-party packages.
+> A self-hosted launchpad for your apps and services. One page, zero build step, zero dependencies.
 
-![Server Hub](https://img.shields.io/badge/stack-HTML%20%2B%20Tailwind-5E6AD2) ![Files](https://img.shields.io/badge/files-7-22C55E) ![Tests](https://img.shields.io/badge/tests-76%20passing-22C55E)
+Server Hub is a single-file dashboard that turns a list of links into a polished glassmorphism homepage — auto-categorized, searchable, pingable, and personalized. A stdlib-only Python server serves it behind a styled login page, so it runs anywhere Python 3 does, in a container as small as ~30 MB RAM.
 
-## Files
-
-| File | Purpose |
-|------|---------|
-| `index.html`        | Dashboard — service grid with search, status pings, clock, stats, FAB add + settings |
-| `categorize.js`     | Auto-categorization heuristic (keyword rules → category) |
-| `settings.js`       | Shared settings layer (localStorage with opaque-origin fallback) |
-| `settings.html`     | Settings page — theme, accent, name, features, links editor |
-| `tests.html`        | 76-assertion test suite — categorizer, settings, DOM integration |
-| `server.py`         | Auth + static server + `/api/stats` + `/api/me` + `/api/services` CRUD (stdlib only) |
-| `login.html`        | Styled login page, served by `server.py` |
-
-Open `tests.html` in a browser; you should see the green `ALL GREEN` line.
-
-## Features
-
-- **Glassmorphism dark / light theme** — three-state (auto / light / dark), cookie-free via `prefers-color-scheme` + `localStorage`.
-- **Auto-categorizing** — services land in the right group automatically by keyword rules (`categorize.js`). Edit rules inline; no API key, no LLM.
-- **Search/filter** — type `/`, filter by name or description; empty groups hide.
-- **Status pings** — best-effort `no-cors` fetch per service (green up / red down / amber checking); set `ping:false` for local-only apps.
-- **System stats widget** — polls `GET /api/stats` for `{ host, cpu, mem, disk }` 0–100; bars auto-color at thresholds.
-- **Clock + greeting** — live time + dynamic "Good morning, <name>".
-- **Personalize** — your name, page title, subtitle, accent color (presets + custom), per-feature toggles (clock / greeting / stats / search / status / ambient blobs).
-- **Add links** at runtime via the floating **+** button — they're saved to the server (`services.json`) and persist across all devices.
-- **Floating settings** button — opens `settings.html` for full personalization.
-- **Secure login** — `server.py` enforces a single-user login (`HUB_USER` / `HUB_PASSWORD`) with an `HttpOnly` session cookie and a 5-attempt per-IP lockout; `/api/stats` and `/api/me` return `401` until you sign in.
-
-## Host it (TL;DR)
-
-1. Set `HUB_PASSWORD` (and optionally `HUB_USER`, `HUB_PORT`, `HUB_HOST`).
-2. Run `python3 server.py`.
-3. Visit `http://<host>:8642` — sign in at `/login`, dashboard after.
-
-## Quick start (local)
-
-```bash
-HUB_PASSWORD=change-me python3 server.py
-# visit http://localhost:8642
-```
-
-## Quick start (public, with secure login)
-
-[`SETUP-LXC.md`](SETUP-LXC.md) is the full Proxmox LXC walkthrough: a ≤5 minute path from "fresh Proxmox node" to a login-protected dashboard served from a ~30 MB RAM container — a systemd unit runs `server.py` on port 8642, and TLS can be added later via a Cloudflare Tunnel from the Zero Trust panel (no nginx required).
+No bundler. No `node_modules`. No framework lock-in. Just static files you can open in a browser.
 
 ---
 
-## Documentation
+## Table of Contents
 
-### SETUP-LXC.md — Proxmox LXC deployment
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [API](#api)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Known Limits](#known-limits)
+- [License](#license)
 
-A single Debian 12 LXC running `server.py`: 4 GB disk, 512 MB RAM (idle ~30 MB). Step-by-step from `Create CT` to `systemctl enable --now server-hub`, including the systemd unit with `HUB_PASSWORD`, how to make it reachable (router port-forward, or a Cloudflare Tunnel from the Zero Trust panel), security notes, an update checklist, and a troubleshooting table.
+---
 
-## Customizing
+## Features
 
-- **Services** — added via the "+ Add" form on the dashboard or in `settings.html` → "Your links". Every link is stored permanently on the server in `services.json` (next to `server.py`) and shared across all devices. Edit a link (name / URL / description / icon / category) or delete it via the pencil / trash buttons that appear when you hover a card.
-- **Auto-categorize rules** — edit `KEYWORD_RULES` in `categorize.js`. Add keywords to an existing category or add a new category. Order in `RANK` controls match precedence.
-- **Theme / accent / features** — open `settings.html` and tweak. Settings persist per-browser via `localStorage`.
+| | |
+|---|---|
+| **Glassmorphism UI** | Dark / light / auto theme, three accent modes, ambient background blobs. Cookie-free — honors `prefers-color-scheme`. |
+| **Auto-categorization** | Services are grouped automatically by keyword rules (`categorize.js`). No API key, no LLM — instant and offline. |
+| **Search & filter** | Press `/` to focus search; filter by name or description; empty groups collapse. |
+| **Status pings** | Best-effort `no-cors` health checks per service (up / down / checking). Disable per link for local-only apps. |
+| **System stats** | CPU / memory / disk bars from `GET /api/stats`, auto-colored at thresholds. |
+| **Live clock & greeting** | Real-time clock plus a "Good morning, \<name\>" greeting. |
+| **Personalization** | Page title, subtitle, accent color (presets + custom), per-feature toggles — all persisted in `localStorage`. |
+| **Server-persisted links** | Add, edit, and delete links from the dashboard or the settings page. Stored in `services.json` and shared across every device. |
+| **Secure login** | `HttpOnly` session cookie, per-IP brute-force lockout, signed-in user chip. |
 
-## How the pieces fit
+---
 
+## Quick Start
+
+```bash
+# 1. Clone
+git clone https://github.com/eco-null/server-hub.git
+cd server-hub
+
+# 2. Run (HUB_PASSWORD is required — the server refuses to start without it)
+HUB_PASSWORD=change-me python3 server.py
 ```
-┌───────────────────────────────────────────────────────────┐
-│ Browser  (your laptop / phone)                            │
-│  index.html  ──►  categorize.js  (assigns category)        │
-│             └─►  settings.js    (localStorage + pub/sub)  │
-│                                                           │
-│  settings.html  ──►  same settings.js  (live sync)        │
-│  tests.html     ──►  loads index in an iframe, asserts    │
-└───────────────────────────────────────────────────────────┘
-              │ fetch (no-cors status pings, /api/stats, /api/services, /api/me)
-              │ login POST → session cookie
-              ▼
-┌───────────────────────────────────┐
-│ Origin (server.py on :8642)        │
-│  static files + styled login page  │
-│  /login      (serve login.html)    │
-│  /api/stats  (JSON, requires login)│
-│  /api/services (CRUD, requires login) │
-│  /api/me     (JSON, requires login)│
-└───────────────────────────────────┘
+
+Open <http://localhost:8642> — sign in at `/login`, land on the dashboard.
+
+| Variable | Default | Description |
+|---|---|---|
+| `HUB_USER` | `admin` | Sign-in username. |
+| `HUB_PASSWORD` | *(required)* | Sign-in password. Server exits if unset/empty. |
+| `HUB_PORT` | `8642` | Port to listen on. |
+| `HUB_HOST` | `0.0.0.0` | Bind address (`0.0.0.0` for containers/tunnels, `127.0.0.1` for local-only). |
+
+> Generate a strong password: `openssl rand -base64 24`
+
+---
+
+## API
+
+All endpoints are JSON and require an active session cookie (except `POST /login`).
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/login` | Sign in with `HUB_USER` / `HUB_PASSWORD`. Sets a 30-day `HttpOnly` session cookie. |
+| `GET` | `/api/services` | List all services. |
+| `POST` | `/api/services` | Create a service. |
+| `PUT` | `/api/services/<id>` | Update a service. |
+| `DELETE` | `/api/services/<id>` | Delete a service. |
+| `GET` | `/api/stats` | System stats: `{ host, cpu, mem, disk }` (Linux `/proc`, signed-in only). |
+| `GET` | `/api/me` | Current session info (drives the signed-in user chip). |
+
+Service object: `{ id, name, url, desc, icon, ping, categoryOverride }`. Request bodies are capped at 64 KB.
+
+---
+
+## Project Structure
+
+| File | Purpose |
+|---|---|
+| `index.html` | Dashboard — service grid, search, pings, clock, stats, add/edit/delete. |
+| `settings.html` | Settings page — theme, accent, features, links editor. |
+| `login.html` | Styled login page. |
+| `categorize.js` | Auto-categorization keyword rules + matcher. |
+| `settings.js` | Shared settings layer (`localStorage` with opaque-origin fallback). |
+| `server.py` | Auth + static server + services CRUD + stats (Python stdlib only). |
+| `test_server.py` | 28-assertion server test suite (`unittest`). |
+| `tests.html` | 85-assertion browser suite — categorizer, settings, DOM integration. |
+| `SETUP-LXC.md` | Full Proxmox LXC deployment walkthrough (systemd + tunnel). |
+| `SETUP.md` | Cloudflare Access guide for public domains. |
+
+---
+
+## Testing
+
+Server suite (Python 3, no dependencies):
+
+```bash
+python3 -m unittest test_server
 ```
 
-## Tests
+Browser suite — open `tests.html` in any browser (served over HTTP, not `file://`):
 
-Open `tests.html` in any browser. It runs 76 assertions in three groups:
+```bash
+python3 -m http.server 8000
+# then visit http://localhost:8000/tests.html
+```
 
-1. `categorize.js` — 32 assertions (26 known services → expected categories, fallback to `Other`, URL-host and URL-path matching, specificity overrides).
-2. `settings.js` — 21 storage-layer assertions (defaults, partial merges, nested feature merges, subscribe/unsubscribe, hexToRgba, isDark).
-3. `index.html` — 23 DOM-integration assertions via iframe (cards rendered, search narrows + restores, theme flips `html.light`/`html.dark`, passthrough auto-categorize, setServices re-renders, edit/delete via stubbed API, status dots present).
+A green `ALL GREEN` summary means everything passed: 28 server + 85 client assertions.
 
-A green `ALL GREEN` summary at the top means everything passed.
+---
 
-## Known limits
+## Deployment
 
-- Adding, editing, and deleting services requires the server (`server.py`) to be running and you to be signed in — the links live in `services.json` on the server, not in your browser. If the API is unreachable, the dashboard shows an empty grid.
-- Service CRUD API: `GET|POST /api/services`, `PUT|DELETE /api/services/<id>` (authenticated). Back up `services.json` with your other server data.
-- `file://` preview doesn't preserve settings (browsers block `localStorage` on opaque origins). Use an http(s) origin — even `python -m http.server` does the job.
-- System stats come from `server.py`'s `/api/stats` (reads `/proc`), so they work on Linux hosts and return `null` elsewhere (bars show `—`). They're only served to signed-in sessions.
-- Auth is single-user — one `HUB_USER` / `HUB_PASSWORD` pair for everyone who signs in.
+- **[`SETUP-LXC.md`](SETUP-LXC.md)** — Deploy on a Proxmox LXC container in ~5 minutes: Debian 12, systemd unit, ~30 MB RAM idle, reachable via router port-forward or a Cloudflare Tunnel.
+- **[`SETUP.md`](SETUP.md)** — Put Cloudflare Access in front for edge-level SSO on a public domain.
+
+Both are optional — the server is entirely self-contained and works out of the box.
+
+---
+
+## Security
+
+- Password never ships in the repo — read from `HUB_PASSWORD` at startup.
+- `HttpOnly` session cookies (30-day TTL), per-IP lockout after 5 failed attempts (60 s).
+- Request body size caps (64 KB) on login and API routes.
+- Only `/login` is public; everything else returns `401` until signed in.
+- Single-user by design — one credential pair for everyone who signs in.
+
+---
+
+## Known Limits
+
+- Links live in `services.json` on the server, not the browser — the server must be running to add/edit/delete.
 - Sessions are held in memory; restarting `server.py` signs everyone out.
+- System stats read `/proc`, so they're Linux-only (bars render as `—` elsewhere).
+- `file://` preview can't persist settings (browsers block `localStorage` on opaque origins). Use any HTTP origin.
+
+---
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE)
+[MIT](LICENSE)
