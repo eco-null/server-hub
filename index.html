@@ -295,7 +295,7 @@
     <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
 
     <footer class="mt-16 pt-6 border-t border-[color:var(--border)] text-center text-xs text-[color:var(--fg-muted)] font-mono space-y-1">
-      <p>Add links with the “+ Add” form (saved to localStorage), or put permanent ones in the <code class="text-[color:var(--fg)]">SERVICES_DEFAULT</code> array in <code class="text-[color:var(--fg)]">index.html</code>.</p>
+      <p>Add links with the “+ Add” form — they’re stored on the server in <code class="text-[color:var(--fg)]">services.json</code>.</p>
       <p>Categories driven by <code class="text-[color:var(--fg)]">categorize.js</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a> · <a href="SETUP-LXC.md" class="underline hover:text-[color:var(--accent)]">Hosting setup</a> · <a href="settings.html" class="underline hover:text-[color:var(--accent)]">Settings</a></p>
     </footer>
   </main>
@@ -313,7 +313,7 @@
 
   <!-- API offline notice -->
   <div id="api-offline" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-40 glass px-4 py-2 rounded-xl text-xs text-[color:var(--fg-muted)]">
-    Can't reach the services API — showing saved list only. Edits won't persist until the server responds.
+    Can't reach the services API — showing the last loaded list. Edits won't persist until the server responds.
   </div>
 
   <!-- Edit modal -->

@@ -106,7 +106,7 @@ systemctl enable --now server-hub
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8642/login   # → 200
 ```
 
-That's it — the login page is served at `/login`, unauthenticated requests to `/` are redirected there, and `/api/stats` / `/api/me` return `401` until you sign in. Auth is enforced by `server.py` itself, so there is no nginx config and no edge-side policy to write.
+That's it — the login page is served at `/login`, unauthenticated requests to `/` are redirected there, and `/api/stats` / `/api/services` / `/api/me` return `401` until you sign in. Auth is enforced by `server.py` itself, so there is no nginx config and no edge-side policy to write.
 
 ### Services data
 

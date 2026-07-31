@@ -13,7 +13,7 @@ A single-file homepage for all your self-hosted apps and services. Drop it on a 
 | `settings.js`       | Shared settings layer (localStorage with opaque-origin fallback) |
 | `settings.html`     | Settings page — theme, accent, name, features, links editor |
 | `tests.html`        | 76-assertion test suite — categorizer, settings, DOM integration |
-| `server.py`         | Auth + static server + `/api/stats` + `/api/me` (stdlib only) |
+| `server.py`         | Auth + static server + `/api/stats` + `/api/me` + `/api/services` CRUD (stdlib only) |
 | `login.html`        | Styled login page, served by `server.py` |
 
 Open `tests.html` in a browser; you should see the green `ALL GREEN` line.
@@ -60,7 +60,7 @@ A single Debian 12 LXC running `server.py`: 4 GB disk, 512 MB RAM (idle ~30 MB).
 
 - **Services** — added via the "+ Add" form on the dashboard or in `settings.html` → "Your links". Every link is stored permanently on the server in `services.json` (next to `server.py`) and shared across all devices. Edit a link (name / URL / description / icon / category) or delete it via the pencil / trash buttons that appear when you hover a card.
 - **Auto-categorize rules** — edit `KEYWORD_RULES` in `categorize.js`. Add keywords to an existing category or add a new category. Order in `RANK` controls match precedence.
-- **Theme / accent / features / personal links** — open `settings.html` and tweak. Settings persist per-browser via `localStorage`.
+- **Theme / accent / features** — open `settings.html` and tweak. Settings persist per-browser via `localStorage`.
 
 ## How the pieces fit
 
@@ -73,7 +73,7 @@ A single Debian 12 LXC running `server.py`: 4 GB disk, 512 MB RAM (idle ~30 MB).
 │  settings.html  ──►  same settings.js  (live sync)        │
 │  tests.html     ──►  loads index in an iframe, asserts    │
 └───────────────────────────────────────────────────────────┘
-              │ fetch (no-cors status pings, /api/stats, /api/me)
+              │ fetch (no-cors status pings, /api/stats, /api/services, /api/me)
               │ login POST → session cookie
               ▼
 ┌───────────────────────────────────┐
@@ -81,6 +81,7 @@ A single Debian 12 LXC running `server.py`: 4 GB disk, 512 MB RAM (idle ~30 MB).
 │  static files + styled login page  │
 │  /login      (serve login.html)    │
 │  /api/stats  (JSON, requires login)│
+│  /api/services (CRUD, requires login) │
 │  /api/me     (JSON, requires login)│
 └───────────────────────────────────┘
 ```
