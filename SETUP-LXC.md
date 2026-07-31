@@ -92,9 +92,15 @@ WantedBy=multi-user.target
 
 > `HUB_PASSWORD` is required — `server.py` refuses to start without it. Generate a long random one: `openssl rand -base64 24`.
 
-Then start it:
+**The unit above ships with the placeholder `CHANGE_ME_LONG_RANDOM` — replace it with your real password before the first start:**
 
 ```bash
+# generate a password and paste it into the HUB_PASSWORD= line in the unit:
+openssl rand -base64 24
+nano /etc/systemd/system/server-hub.service
+
+# restrict the unit file to root, then start:
+chmod 600 /etc/systemd/system/server-hub.service
 systemctl daemon-reload
 systemctl enable --now server-hub
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8642/login   # → 200
@@ -116,11 +122,12 @@ Pick one:
 
 ## 5. Security notes
 
-- `HUB_PASSWORD` lives in the systemd unit, which is root-only readable — set it to a long random value (see §3).
+- `HUB_PASSWORD` lives in the systemd unit — restrict the file to root with `chmod 600 /etc/systemd/system/server-hub.service` (see §3) and set it to a long random value.
 - The session cookie is `HttpOnly` + `SameSite=Lax` with a 30-day lifetime.
 - Failed logins are locked out per IP after 5 attempts (60-second lockout).
 - There is a single user: `HUB_USER` (default `admin`). Everyone signs in with the same credentials.
 - When you add the tunnel (option B in §4), **keep `HUB_HOST=0.0.0.0`** — the tunnel connects from inside the container, so the server must listen on all interfaces, not just loopback.
+- Behind a Cloudflare Tunnel (option B in §4), every external client appears to come from cloudflared's single source IP, so the per-IP login lockout degrades to a global 5-attempt cap: any attacker can fire 5 bad logins and lock out the admin (and everyone else) for 60 seconds. Treat it as a rate limiter, not a per-user guard, once the tunnel is enabled.
 
 ---
 

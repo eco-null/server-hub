@@ -23,6 +23,7 @@ WEB_ROOT = os.path.dirname(os.path.abspath(__file__))
 SESSION_TTL = 30 * 24 * 60 * 60  # 30 days
 MAX_ATTEMPTS = 5
 LOCKOUT_SECONDS = 60
+MAX_LOGIN_BODY = 64 * 1024  # reject larger login POST bodies before reading them
 PUBLIC_PATHS = {"/login", "/login.html"}
 
 MIME = {
@@ -275,7 +276,14 @@ class HubHandler(BaseHTTPRequestHandler):
         path = urllib.parse.urlparse(self.path).path
         if path != "/login":
             return self.send_bytes("Not found", 404)
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            return self.send_bytes("Bad request", 400, "text/plain; charset=utf-8")
+        if length < 0:
+            return self.send_bytes("Bad request", 400, "text/plain; charset=utf-8")
+        if length > MAX_LOGIN_BODY:
+            return self.send_bytes("Payload too large", 413, "text/plain; charset=utf-8")
         raw = self.rfile.read(length).decode("utf-8", "replace")
         form = urllib.parse.parse_qs(raw)
         username = (form.get("username") or [""])[0]
