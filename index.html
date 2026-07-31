@@ -78,6 +78,14 @@
       border-radius: 16px;
     }
     .glass:hover { background: var(--surface-hi); border-color: var(--border-hi); }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--surface-hi); border: 1px solid var(--border-hi);
+      color: var(--fg); padding: 0.55rem 1rem; border-radius: 12px;
+      font-size: 0.8rem; box-shadow: 0 12px 32px -12px rgba(0,0,0,.5);
+      z-index: 60; transition: opacity 200ms var(--ease);
+    }
+    .toast.hidden { opacity: 0; pointer-events: none; }
     .card { transition: transform 250ms var(--ease), background-color 250ms var(--ease), border-color 250ms var(--ease), box-shadow 250ms var(--ease); }
     .card:hover {
       transform: translateY(-2px);
@@ -142,9 +150,29 @@
     }
     .chip-user { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, var(--border)); }
 
-    [data-removable] .remove-btn { opacity: 0; transition: opacity 200ms var(--ease); }
-    .card:hover .remove-btn { opacity: 1; }
-    .remove-btn { color: var(--fg-muted); }
+    .card-actions { opacity: 0; transition: opacity 200ms var(--ease); }
+    .card:hover .card-actions, .card:focus-within .card-actions { opacity: 1; }
+    .card-action {
+      color: var(--fg-muted); background: transparent; border: none; cursor: pointer;
+      padding: 4px; border-radius: 8px; transition: color 150ms var(--ease), background-color 150ms var(--ease);
+    }
+    .card-action:hover { color: var(--fg); background: var(--surface-hi); }
+    .card-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .icon-opt {
+      padding: 6px; border-radius: 10px; border: 1px solid var(--border);
+      color: var(--fg-muted); background: transparent; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: color 150ms var(--ease), border-color 150ms var(--ease), background-color 150ms var(--ease);
+    }
+    .icon-opt:hover { color: var(--fg); border-color: var(--border-hi); }
+    .icon-opt.selected { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 50; }
+    .modal-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: min(92vw, 420px); max-height: 88vh; overflow-y: auto;
+      background: var(--surface); border: 1px solid var(--border-hi); border-radius: 18px;
+      padding: 1.25rem; z-index: 51; box-shadow: 0 24px 64px -20px rgba(0,0,0,.6);
+    }
 
     @media (prefers-reduced-motion: reduce) {
       .blob { animation: none; }
@@ -280,6 +308,62 @@
     <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
   </button>
 
+  <!-- Toast -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- API offline notice -->
+  <div id="api-offline" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-40 glass px-4 py-2 rounded-xl text-xs text-[color:var(--fg-muted)]">
+    Can't reach the services API — showing saved list only. Edits won't persist until the server responds.
+  </div>
+
+  <!-- Edit modal -->
+  <div id="edit-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+    <div class="modal-backdrop" onclick="window.__HUB__.closeEdit()"></div>
+    <div class="modal-panel space-y-3">
+      <h2 id="edit-title" class="text-base font-semibold">Edit link</h2>
+      <label class="block">
+        <span class="text-xs text-[color:var(--fg-muted)]">Name</span>
+        <input id="edit-name" class="form-input mt-1" placeholder="e.g. Grafana" />
+      </label>
+      <label class="block">
+        <span class="text-xs text-[color:var(--fg-muted)]">URL</span>
+        <input id="edit-url" class="form-input mt-1" type="url" placeholder="https://…" />
+      </label>
+      <label class="block">
+        <span class="text-xs text-[color:var(--fg-muted)]">Description</span>
+        <input id="edit-desc" class="form-input mt-1" placeholder="Optional" />
+      </label>
+      <div>
+        <span class="text-xs text-[color:var(--fg-muted)]">Icon</span>
+        <div id="edit-icons" class="grid grid-cols-6 gap-2 mt-1"></div>
+      </div>
+      <label class="block">
+        <span class="text-xs text-[color:var(--fg-muted)]">Category</span>
+        <select id="edit-cat" class="form-input mt-1">
+          <option value="auto">Auto</option>
+          <option value="Monitoring">Monitoring</option>
+          <option value="Security">Security</option>
+          <option value="Network">Network</option>
+          <option value="Media">Media</option>
+          <option value="Productivity">Productivity</option>
+          <option value="Files">Files</option>
+          <option value="Dev">Dev</option>
+          <option value="Communication">Communication</option>
+          <option value="Home">Home</option>
+          <option value="Finance">Finance</option>
+          <option value="AI">AI</option>
+          <option value="Search">Search</option>
+          <option value="Database">Database</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+      <div class="flex justify-end gap-2 pt-1">
+        <button id="edit-cancel" class="btn-ghost focus-ring" type="button">Cancel</button>
+        <button id="edit-save" class="btn-primary focus-ring" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating action button: settings -->
   <a href="settings.html" id="fab-settings" aria-label="Open settings"
     title="Settings"
@@ -290,17 +374,12 @@
 
 <script>
   /* ============================================================
-     SERVICES — flat list. Category is AUTO-INFERRED by categorize.js.
-     Each entry: { name, url, desc, icon?, ping?, categoryOverride? }
-       - icon: key from ICONS map below (default: 'terminal')
-       - ping: false to skip status checks
-       - categoryOverride: force a category (rarely needed; auto usually correct)
-
-     Bundled defaults are intentionally empty — add your services via
-     the "+ Add" form (saved to localStorage) or put permanent ones here.
+     SERVICES — loaded from the server (services.json) via the API.
+     No bundled defaults; everything is added through the UI and
+     stored permanently on the server.
      ============================================================ */
-  const SERVICES_DEFAULT = [
-  ];
+  const SERVICES_DEFAULT = [];
+  const API_SERVICES = '/api/services';
 
   /* ============================================================
      Inline SVG icon set (Phosphor-style outline, 24px).
@@ -341,37 +420,71 @@
   /* ============================================================
      State
      ============================================================ */
-  const LS_SERVICES = 'server-hub:services'; // legacy key — migrated once into HubSettings
+  const LS_SERVICES = 'server-hub:services'; // legacy key — migrated to server once
   const LS_THEME    = 'server-hub:theme';        // legacy key — migrated once into HubSettings
 
-  // Merge defaults with user additions (from HubSettings.services; legacy LS migrated once).
-  function loadServices() {
-    const legacy = (() => {
+  let SERVICES = [];
+
+  async function fetchServices() {
+    const r = await fetch(API_SERVICES, { cache: 'no-store' });
+    if (!r.ok) throw new Error('services api ' + r.status);
+    const d = await r.json();
+    return Array.isArray(d.services) ? d.services : [];
+  }
+
+  async function loadServices() {
+    SERVICES = await fetchServices();
+    renderGroups();
+    return SERVICES;
+  }
+
+  async function migrateLegacyServices() {
+    const legacyRaw = (() => {
       try { return JSON.parse((window.localStorage || localStorage).getItem(LS_SERVICES) || '[]'); }
       catch { return []; }
     })();
-    if (legacy.length) {
-      // one-time migration from old standalone key → HubSettings.services
-      window.HubSettings.set({ services: legacy });
+    const settingsServices = (window.HubSettings.get().services || []);
+    const candidates = [...legacyRaw, ...settingsServices]
+      .filter(s => s && s.name && s.url);
+    if (!candidates.length) return false;
+    let serverList;
+    try { serverList = await fetchServices(); } catch { serverList = []; }
+    const existing = new Set(serverList.map(s => s.url + '|' + s.name));
+    let pushed = 0;
+    for (const s of candidates) {
+      const key = s.url + '|' + s.name;
+      if (existing.has(key)) continue;
+      existing.add(key);
+      try {
+        const r = await fetch(API_SERVICES, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: s.name, url: s.url, desc: s.desc || '',
+            icon: s.icon || 'box', ping: s.ping !== false,
+            categoryOverride: s.categoryOverride || null,
+          }),
+        });
+        if (r.ok) pushed++;
+      } catch {}
+    }
+    if (pushed > 0) {
+      window.HubSettings.set({ services: [] });
       try { (window.localStorage || localStorage).removeItem(LS_SERVICES); } catch {}
     }
-    const extra = window.HubSettings.get().services || [];
-    const seen = new Set(SERVICES_DEFAULT.map(s => s.url + '|' + s.name));
-    const merged = [...SERVICES_DEFAULT];
-    for (const s of extra) {
-      const k = (s.url || '') + '|' + (s.name || '');
-      if (s && s.name && s.url && !seen.has(k)) { merged.push({ ...s, _userAdded: true }); seen.add(k); }
-    }
-    return merged;
-  }
-  function saveExtraServices(extra) {
-    window.HubSettings.set({ services: extra });
-  }
-  function getExtraServices() {
-    return window.HubSettings.get().services || [];
+    return pushed > 0;
   }
 
-  let SERVICES = loadServices();
+  async function apiJson(method, url, body) {
+    const opts = { method, cache: 'no-store' };
+    if (body !== undefined) {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify(body);
+    }
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error('request failed (' + r.status + ')');
+    return r.json();
+  }
 
   // Categorize at render time using categorize.js
   function categorized() {
@@ -423,14 +536,26 @@
     filter(searchInput.value);
   }
 
+  const ICON_PENCIL = '<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17Z"/><path d="m13.5 6.5 3 3"/>';
+  const ICON_TRASH  = '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v5M14 11v5"/>';
+
   function renderCard(s) {
     const target = s.url.startsWith('http') ? s.url : 'https://' + s.url;
-    const removable = s._userAdded ? 'data-removable' : '';
+    const actions = s.id
+      ? '<span class="card-actions flex gap-0.5 shrink-0 mt-1">'
+          + '<button type="button" class="card-action" title="Edit" aria-label="Edit ' + esc(s.name) + '" '
+          + 'onclick="event.preventDefault(); event.stopPropagation(); window.__HUB__.edit(\'' + esc(s.id) + '\')">'
+          + '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICON_PENCIL + '</svg></button>'
+          + '<button type="button" class="card-action" title="Delete" aria-label="Delete ' + esc(s.name) + '" '
+          + 'onclick="event.preventDefault(); event.stopPropagation(); window.__HUB__.remove(\'' + esc(s.id) + '\')">'
+          + '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICON_TRASH + '</svg></button>'
+        + '</span>'
+      : '';
     return '<a href="' + target + '" target="_blank" rel="noopener noreferrer" '
       + 'class="card reveal glass flex items-start gap-3 p-4 focus-ring cursor-pointer relative overflow-hidden" '
       + 'data-name="' + esc(s.name.toLowerCase()) + '" data-desc="' + esc((s.desc || '').toLowerCase()) + '" '
       + 'data-category="' + esc(s.category) + '" data-ping-url="' + (s.ping !== false ? esc(s.url) : '') + '" '
-      + 'data-key="' + esc((s.url + '|' + s.name)) + '" ' + removable + '>'
+      + 'data-id="' + esc(s.id || '') + '">'
       + '<span class="accent-bar absolute left-0 top-0 h-full w-[3px] opacity-70" aria-hidden="true"></span>'
       + '<span class="shrink-0 mt-0.5 text-[color:var(--fg)]">' + svgFor(s.icon) + '</span>'
       + '<span class="min-w-0 flex-1">'
@@ -441,15 +566,20 @@
       + '<span class="block text-xs text-[color:var(--fg-muted)] mt-0.5 truncate">' + esc(s.desc || '') + '</span>'
       + '<span class="block text-[11px] text-[color:var(--fg-muted)]/70 font-mono mt-1 truncate">' + esc(hostOf(s.url)) + '</span>'
       + '</span>'
-      + (s._userAdded
-        ? '<button class="remove-btn shrink-0 mt-1 p-1" type="button" title="Remove" aria-label="Remove ' + esc(s.name) + '" onclick="event.preventDefault(); window.__HUB__.remove(\'' + esc(s.url + '|' + s.name) + '\')">'
-            + '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>'
-          + '</button>'
-        : '<svg class="w-4 h-4 text-[color:var(--fg-muted)] shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>')
+      + actions
       + '</a>';
   }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  let toastT;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(toastT);
+    toastT = setTimeout(() => t.classList.add('hidden'), 2000);
+  }
 
   function hostOf(url) {
     if (!url) return '';
@@ -475,7 +605,13 @@
     if (!open) addName.focus();
   });
 
-  addForm.addEventListener('submit', e => {
+  async function addService(entry) {
+    const data = await apiJson('POST', API_SERVICES, entry);
+    SERVICES = Array.isArray(data.services) ? data.services : SERVICES;
+    renderGroups();
+  }
+
+  addForm.addEventListener('submit', async e => {
     e.preventDefault();
     const name = addName.value.trim();
     const url  = addUrl.value.trim();
@@ -483,17 +619,16 @@
     if (!name || !url) return;
     const result = window.autoCategorize(name, url, desc);
     const icon = pickIcon(result.category, name.toLowerCase());
-
-    const extra = getExtraServices();
-    const entry = { name, url, desc, icon, ping: true, _userAdded: true, categoryOverride: result.category };
-    extra.push(entry);
-    saveExtraServices(extra);
-    SERVICES = loadServices();
-    renderGroups();
-
-    addName.value = ''; addUrl.value = ''; addDesc.value = '';
-    addPreview.textContent = '✓ Added to ' + result.category;
-    setTimeout(() => addPreview.textContent = '', 2500);
+    try {
+      await addService({ name, url, desc, icon, ping: true, categoryOverride: result.category });
+      addName.value = ''; addUrl.value = ''; addDesc.value = '';
+      addPreview.textContent = '✓ Added to ' + result.category;
+      setTimeout(() => addPreview.textContent = '', 2500);
+    } catch (err) {
+      addPreview.textContent = '✗ ' + err.message;
+      setTimeout(() => addPreview.textContent = '', 2500);
+      showToast('Failed to add link');
+    }
   });
 
   function pickIcon(category, name) {
@@ -510,14 +645,99 @@
   }
 
   /* ============================================================
-     Remove (only user-added services)
+     Remove (server-persisted)
      ============================================================ */
-  function remove(key) {
-    const extra = getExtraServices().filter(s => (s.url + '|' + s.name) !== key);
-    saveExtraServices(extra);
-    SERVICES = loadServices();
-    renderGroups();
+  async function remove(id) {
+    if (!id) return;
+    const svc = SERVICES.find(s => s.id === id);
+    const name = svc ? svc.name : 'this link';
+    if (!confirm('Delete "' + name + '"?')) return;
+    try {
+      const data = await apiJson('DELETE', API_SERVICES + '/' + encodeURIComponent(id));
+      SERVICES = Array.isArray(data.services) ? data.services : SERVICES;
+      renderGroups();
+      showToast('Link deleted');
+    } catch (err) {
+      showToast('Failed to delete link');
+    }
   }
+
+  /* ============================================================
+     Edit modal (hover edit button)
+     ============================================================ */
+  let editingId = null;
+  let selectedIcon = 'box';
+
+  const EDIT_CATEGORIES = ['Monitoring','Security','Network','Media','Productivity',
+    'Files','Dev','Communication','Home','Finance','AI','Search','Database','Other'];
+
+  function renderIconPicker(current) {
+    selectedIcon = ICONS[current] ? current : 'box';
+    const grid = document.getElementById('edit-icons');
+    grid.innerHTML = '';
+    for (const key of Object.keys(ICONS)) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'icon-opt focus-ring' + (key === selectedIcon ? ' selected' : '');
+      b.dataset.icon = key;
+      b.title = key;
+      b.innerHTML = svgFor(key, 'w-5 h-5');
+      b.addEventListener('click', () => {
+        selectedIcon = key;
+        grid.querySelectorAll('.icon-opt').forEach(x => x.classList.toggle('selected', x === b));
+      });
+      grid.appendChild(b);
+    }
+  }
+
+  function openEditModal(id) {
+    const s = SERVICES.find(x => x.id === id);
+    if (!s) return;
+    editingId = id;
+    document.getElementById('edit-name').value = s.name;
+    document.getElementById('edit-url').value = s.url;
+    document.getElementById('edit-desc').value = s.desc || '';
+    renderIconPicker(s.icon);
+    document.getElementById('edit-cat').value = s.categoryOverride || 'auto';
+    document.getElementById('edit-modal').classList.remove('hidden');
+    document.getElementById('edit-name').focus();
+  }
+
+  function closeEditModal() {
+    editingId = null;
+    document.getElementById('edit-modal').classList.add('hidden');
+  }
+
+  async function saveEditModal() {
+    if (!editingId) return;
+    const cur = SERVICES.find(s => s.id === editingId);
+    const name = document.getElementById('edit-name').value.trim();
+    const url  = document.getElementById('edit-url').value.trim();
+    const desc = document.getElementById('edit-desc').value.trim();
+    const cat  = document.getElementById('edit-cat').value;
+    if (!name || !url) { showToast('Name and URL are required'); return; }
+    try {
+      const data = await apiJson('PUT', API_SERVICES + '/' + encodeURIComponent(editingId), {
+        name, url, desc, icon: selectedIcon,
+        ping: cur ? cur.ping !== false : true,
+        categoryOverride: cat === 'auto' ? null : cat,
+      });
+      SERVICES = Array.isArray(data.services) ? data.services : SERVICES;
+      closeEditModal();
+      renderGroups();
+      showToast('Link updated');
+    } catch (err) {
+      showToast('Failed to save link');
+    }
+  }
+
+  document.getElementById('edit-save').addEventListener('click', saveEditModal);
+  document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('edit-modal').classList.contains('hidden')) {
+      closeEditModal();
+    }
+  });
 
   /* ============================================================
      Search filter
@@ -671,9 +891,12 @@
     addForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
-  // Re-render when services list changes in another tab (e.g. settings.html)
-  window.addEventListener('storage', e => {
-    if (e.key === window.HubSettings.KEY) { SERVICES = loadServices(); renderGroups(); }
+  // Re-render when settings change in another tab (services are server-side now)
+  window.addEventListener('storage', async e => {
+    if (e.key === window.HubSettings.KEY) {
+      try { SERVICES = await fetchServices(); } catch {}
+      renderGroups();
+    }
   });
 
   // React to OS theme change when in auto mode
@@ -705,16 +928,27 @@
   window.__HUB__ = {
     SERVICES, SERVICES_DEFAULT,
     renderGroups, filter, applyTheme, cycleTheme, remove,
+    edit: openEditModal, closeEdit: closeEditModal,
+    saveEdit: saveEditModal, openIconPicker: renderIconPicker,
+    loadServices, reloadServices: loadServices,
     autoCategorize: (n,u,d) => window.autoCategorize(n,u,d),
     categorized, setServices: arr => { SERVICES = arr; },
-    reloadServices: () => { SERVICES = loadServices(); return SERVICES; },
     getSearchInput: () => searchInput,
   };
 
   /* ============================================================
      Boot
      ============================================================ */
-  renderGroups();
+  (async function boot() {
+    try {
+      await migrateLegacyServices();           // pushes any legacy local links, clears local keys
+      SERVICES = await fetchServices();        // always re-fetch the authoritative list after migration
+      renderGroups();
+    } catch {
+      document.getElementById('api-offline').classList.remove('hidden');
+      renderGroups();
+    }
+  })();
 </script>
 </body>
 </html>
