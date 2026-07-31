@@ -450,7 +450,7 @@
     let serverList;
     try { serverList = await fetchServices(); } catch { serverList = []; }
     const existing = new Set(serverList.map(s => s.url + '|' + s.name));
-    let pushed = 0;
+    let pushed = 0, failed = 0;
     for (const s of candidates) {
       const key = s.url + '|' + s.name;
       if (existing.has(key)) continue;
@@ -465,10 +465,10 @@
             categoryOverride: s.categoryOverride || null,
           }),
         });
-        if (r.ok) pushed++;
-      } catch {}
+        if (r.ok) pushed++; else failed++;
+      } catch { failed++; }
     }
-    if (pushed > 0) {
+    if (pushed > 0 && failed === 0) {
       window.HubSettings.set({ services: [] });
       try { (window.localStorage || localStorage).removeItem(LS_SERVICES); } catch {}
     }
