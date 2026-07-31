@@ -51,6 +51,9 @@ Start it, then enter the console or `ssh` in.
 
 **A. From your desktop via scp (easiest):**
 ```bash
+# create the folder once on the container (it does not exist on a fresh install):
+ssh root@<container-ip> "mkdir -p /srv/server-hub"
+
 # from your workstation, in the project folder:
 scp index.html categorize.js settings.js settings.html tests.html login.html server.py \
   root@<container-ip>:/srv/server-hub/
