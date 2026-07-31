@@ -2,7 +2,7 @@
 
 A single-file homepage for all your self-hosted apps and services. Drop it on a VPS or LXC container and get a glassmorphism dashboard with auto-categorization, search, status pings, live clock, system stats, dark/light theme, and personal-link management — all from one static HTML page, served by a stdlib-only Python server behind a styled login page. No build step. No `node_modules`. No third-party packages.
 
-![Server Hub](https://img.shields.io/badge/stack-HTML%20%2B%20Tailwind-5E6AD2) ![Files](https://img.shields.io/badge/files-7-22C55E) ![Tests](https://img.shields.io/badge/tests-64%20passing-22C55E)
+![Server Hub](https://img.shields.io/badge/stack-HTML%20%2B%20Tailwind-5E6AD2) ![Files](https://img.shields.io/badge/files-7-22C55E) ![Tests](https://img.shields.io/badge/tests-76%20passing-22C55E)
 
 ## Files
 
@@ -12,7 +12,7 @@ A single-file homepage for all your self-hosted apps and services. Drop it on a 
 | `categorize.js`     | Auto-categorization heuristic (keyword rules → category) |
 | `settings.js`       | Shared settings layer (localStorage with opaque-origin fallback) |
 | `settings.html`     | Settings page — theme, accent, name, features, links editor |
-| `tests.html`        | 64-assertion test suite — categorizer, settings, DOM integration |
+| `tests.html`        | 76-assertion test suite — categorizer, settings, DOM integration |
 | `server.py`         | Auth + static server + `/api/stats` + `/api/me` (stdlib only) |
 | `login.html`        | Styled login page, served by `server.py` |
 
@@ -27,7 +27,7 @@ Open `tests.html` in a browser; you should see the green `ALL GREEN` line.
 - **System stats widget** — polls `GET /api/stats` for `{ host, cpu, mem, disk }` 0–100; bars auto-color at thresholds.
 - **Clock + greeting** — live time + dynamic "Good morning, <name>".
 - **Personalize** — your name, page title, subtitle, accent color (presets + custom), per-feature toggles (clock / greeting / stats / search / status / ambient blobs).
-- **Add links** at runtime via the floating **+** button — they survive reloads via `localStorage`.
+- **Add links** at runtime via the floating **+** button — they're saved to the server (`services.json`) and persist across all devices.
 - **Floating settings** button — opens `settings.html` for full personalization.
 - **Secure login** — `server.py` enforces a single-user login (`HUB_USER` / `HUB_PASSWORD`) with an `HttpOnly` session cookie and a 5-attempt per-IP lockout; `/api/stats` and `/api/me` return `401` until you sign in.
 
@@ -87,11 +87,11 @@ A single Debian 12 LXC running `server.py`: 4 GB disk, 512 MB RAM (idle ~30 MB).
 
 ## Tests
 
-Open `tests.html` in any browser. It runs 64 assertions in three groups:
+Open `tests.html` in any browser. It runs 76 assertions in three groups:
 
 1. `categorize.js` — 32 assertions (26 known services → expected categories, fallback to `Other`, URL-host and URL-path matching, specificity overrides).
 2. `settings.js` — 21 storage-layer assertions (defaults, partial merges, nested feature merges, subscribe/unsubscribe, hexToRgba, isDark).
-3. `index.html` — 11 DOM-integration assertions via iframe (cards rendered, search narrows + restores, theme flips `html.light`/`html.dark`, passthrough auto-categorize, setServices re-renders, status dots present).
+3. `index.html` — 23 DOM-integration assertions via iframe (cards rendered, search narrows + restores, theme flips `html.light`/`html.dark`, passthrough auto-categorize, setServices re-renders, edit/delete via stubbed API, status dots present).
 
 A green `ALL GREEN` summary at the top means everything passed.
 
