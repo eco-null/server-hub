@@ -210,10 +210,18 @@
     const w = hubWin;
     ok(typeof w.__HUB__ === 'object', '__HUB__ exported on index.html window');
 
-    // SERVICES loaded from defaults (clean storage)
+    // Defaults are intentionally empty (bundled links removed)
     try { localStorage.removeItem(window.HubSettings.KEY); } catch {}
-    const svcs = w.__HUB__.reloadServices();
-    ok(svcs.length >= 18, 'default SERVICES count ≥ 18', 'got ' + svcs.length);
+    const defaults = w.__HUB__.reloadServices();
+    ok(Array.isArray(defaults) && defaults.length === 0, 'no bundled default services', 'got ' + defaults.length);
+
+    // Inject a fixture set to exercise rendering/search/dots
+    const FIXTURE = [
+      { name: 'Grafana',        url: 'https://grafana.example.com', desc: 'Metrics & dashboards',       icon: 'chart',    ping: true },
+      { name: 'Uptime Kuma',    url: 'https://status.example.com',  desc: 'Uptime & incident tracking', icon: 'pulse',    ping: true },
+      { name: 'Jellyfin',       url: 'https://media.example.com',   desc: 'Movies & music streaming',   icon: 'film',     ping: true },
+    ];
+    const svcs = FIXTURE;
 
     // Auto-categorization applied at render: each rendered card has data-category
     w.__HUB__.setServices(svcs);

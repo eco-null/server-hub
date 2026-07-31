@@ -267,8 +267,8 @@
     <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
 
     <footer class="mt-16 pt-6 border-t border-[color:var(--border)] text-center text-xs text-[color:var(--fg-muted)] font-mono space-y-1">
-      <p>Edit the <code class="text-[color:var(--fg)]">SERVICES</code> array in <code class="text-[color:var(--fg)]">index.html</code>, or use the “+ Add” form to append at runtime (saved to localStorage).</p>
-      <p>Categories driven by <code class="text-[color:var(--fg)]">categorize.js</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a> · <a href="SETUP.md" class="underline hover:text-[color:var(--accent)]">Cloudflare Access setup</a> · <a href="settings.html" class="underline hover:text-[color:var(--accent)]">Settings</a></p>
+      <p>Add links with the “+ Add” form (saved to localStorage), or put permanent ones in the <code class="text-[color:var(--fg)]">SERVICES_DEFAULT</code> array in <code class="text-[color:var(--fg)]">index.html</code>.</p>
+      <p>Categories driven by <code class="text-[color:var(--fg)]">categorize.js</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a> · <a href="SETUP-LXC.md" class="underline hover:text-[color:var(--accent)]">Hosting setup</a> · <a href="settings.html" class="underline hover:text-[color:var(--accent)]">Settings</a></p>
     </footer>
   </main>
 
@@ -295,34 +295,11 @@
        - icon: key from ICONS map below (default: 'terminal')
        - ping: false to skip status checks
        - categoryOverride: force a category (rarely needed; auto usually correct)
+
+     Bundled defaults are intentionally empty — add your services via
+     the "+ Add" form (saved to localStorage) or put permanent ones here.
      ============================================================ */
   const SERVICES_DEFAULT = [
-    { name: 'Grafana',        url: 'https://grafana.example.com',    desc: 'Metrics & dashboards',          icon: 'chart',     ping: true },
-    { name: 'Uptime Kuma',    url: 'https://status.example.com',     desc: 'Uptime & incident tracking',    icon: 'pulse',     ping: true },
-    { name: 'Prometheus',     url: 'https://prometheus.example.com', desc: 'Time-series metrics store',     icon: 'database',  ping: true },
-
-    { name: 'Vaultwarden',    url: 'https://vault.example.com',      desc: 'Password manager',              icon: 'shield',    ping: true },
-    { name: 'Authelia',       url: 'https://auth.example.com',      desc: 'SSO & 2FA gateway',             icon: 'key',       ping: true },
-    { name: 'Tor Proxy',      url: 'http://tor-proxy.local:9050',    desc: 'Onion routing relay',           icon: 'lock',      ping: false },
-
-    { name: 'Nextcloud',      url: 'https://cloud.example.com',    desc: 'Files, calendar & contacts',    icon: 'cloud',     ping: true },
-    { name: 'Joplin Server',  url: 'https://notes.example.com',    desc: 'Synchronized notes',            icon: 'note',      ping: true },
-    { name: 'Paperless-ngx',  url: 'https://docs.example.com',     desc: 'Document OCR & archive',       icon: 'file',      ping: true },
-
-    { name: 'Jellyfin',       url: 'https://media.example.com',    desc: 'Movies & music streaming',      icon: 'film',      ping: true },
-    { name: 'Navidrome',      url: 'https://music.example.com',    desc: 'Self-hosted music server',      icon: 'music',     ping: true },
-    { name: 'Audiobookshelf', url: 'https://books.example.com',    desc: 'Audiobooks & podcasts',         icon: 'headphones',ping: true },
-
-    { name: 'Gitea',          url: 'https://git.example.com',      desc: 'Lightweight Git host',          icon: 'git',       ping: true },
-    { name: 'Woodpecker CI',  url: 'https://ci.example.com',       desc: 'Continuous integration',       icon: 'branch',    ping: true },
-    { name: 'Coder',          url: 'https://code.example.com',    desc: 'Browser VS Code',               icon: 'terminal',  ping: true },
-
-    { name: 'Pi-hole',        url: 'https://pihole.example.com',  desc: 'Network-wide ad blocking',      icon: 'shield-check', ping: true },
-    { name: 'WireGuard',      url: 'https://vpn.example.com',    desc: 'VPN access portal',              icon: 'lock-key',  ping: true },
-    { name: 'AdGuard Home',   url: 'https://dns.example.com',     desc: 'DNS filtering & DHCP',           icon: 'globe',     ping: true },
-
-    { name: 'Home Assistant', url: 'https://home.example.com',    desc: 'Smart home automation',         icon: 'home',      ping: true },
-    { name: 'Mosquitto',      url: 'http://mqtt.local:9001',       desc: 'MQTT broker',                  icon: 'broadcast',ping: false },
   ];
 
   /* ============================================================
