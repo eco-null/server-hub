@@ -19,7 +19,7 @@
 - Brute-force guard: 5 failed logins per client IP → 60s lockout.
 - `/api/stats` → `{ "host": str, "cpu": 0-100|None, "mem": 0-100|None, "disk": 0-100|None }`.
 - `/api/me` → `{ "email": "<username>" }` when authenticated (401 JSON otherwise).
-- All non-public paths redirect to `/login` when unauthenticated. Only `/login` and `/login.html` are served without a session.
+- All non-public page paths redirect to `/login` when unauthenticated. API paths (`/api/stats`, `/api/me`) return 401 JSON when unauthenticated instead. Only `/login` and `/login.html` are served without a session.
 - `login.html` self-contained inline CSS — no Tailwind/fonts CDN dependency.
 - `index.html`, `settings.js`, `categorize.js`, `settings.html`, `tests.html` must NOT be modified.
 
@@ -449,12 +449,16 @@ class HubHandler(BaseHTTPRequestHandler):
             self.server.sessions.delete(self.read_cookie("hub_session"))
             return self.redirect("/login", self.clear_cookie())
         user = self.session_user()
-        if not user:
-            return self.redirect("/login")
         if path == "/api/stats":
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
             return self.send_bytes(json.dumps(stats_payload()), 200, "application/json; charset=utf-8")
         if path == "/api/me":
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
             return self.send_bytes(json.dumps({"email": user}), 200, "application/json; charset=utf-8")
+        if not user:
+            return self.redirect("/login")
         if path == "/":
             return self.serve_file("index.html")
         return self.serve_file(path.lstrip("/"))
