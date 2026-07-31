@@ -12,6 +12,7 @@ Env vars:
 
 import json
 import os
+import re
 import secrets
 import socket
 import threading
@@ -25,6 +26,121 @@ MAX_ATTEMPTS = 5
 LOCKOUT_SECONDS = 60
 MAX_LOGIN_BODY = 64 * 1024  # reject larger login POST bodies before reading them
 PUBLIC_PATHS = {"/login", "/login.html"}
+
+MAX_API_BODY = 64 * 1024  # reject larger API JSON bodies before reading them
+SERVICES_FILE = os.path.join(WEB_ROOT, "services.json")
+
+KNOWN_ICONS = {
+    "chart", "pulse", "database", "shield", "shield-check", "key", "lock",
+    "lock-key", "cloud", "note", "file", "film", "music", "headphones", "git",
+    "branch", "terminal", "globe", "home", "broadcast", "cog", "box",
+    "shopping", "flask", "sparkles",
+}
+KNOWN_CATEGORIES = {
+    "Monitoring", "Security", "Network", "Media", "Productivity", "Files",
+    "Dev", "Communication", "Home", "Finance", "AI", "Search", "Database",
+    "Other",
+}
+
+
+def validate_service(data, partial=False):
+    """Validate a service object. Returns (fields, None) or (None, error)."""
+    if not isinstance(data, dict):
+        return None, "body must be a JSON object"
+    fields = {}
+    if "name" in data or not partial:
+        name = str(data.get("name") or "").strip()
+        if not name:
+            return None, "name is required"
+        if len(name) > 200:
+            return None, "name too long"
+        fields["name"] = name
+    if "url" in data or not partial:
+        url = str(data.get("url") or "").strip()
+        if not url:
+            return None, "url is required"
+        if len(url) > 2000:
+            return None, "url too long"
+        if not re.match(r"^https?://", url):
+            return None, "url must start with http:// or https://"
+        try:
+            if not urllib.parse.urlparse(url).netloc:
+                return None, "url must be a valid http(s) URL"
+        except ValueError:
+            return None, "url must be a valid http(s) URL"
+        fields["url"] = url
+    if "desc" in data or not partial:
+        desc = str(data.get("desc") or "").strip()
+        if len(desc) > 500:
+            return None, "desc too long"
+        fields["desc"] = desc
+    if "icon" in data or not partial:
+        icon = str(data.get("icon") or "box")
+        fields["icon"] = icon if icon in KNOWN_ICONS else "box"
+    if "ping" in data or not partial:
+        fields["ping"] = bool(data.get("ping", True))
+    if "categoryOverride" in data or not partial:
+        cat = data.get("categoryOverride") or None
+        if cat is not None and cat not in KNOWN_CATEGORIES:
+            return None, "unknown category: " + str(cat)
+        fields["categoryOverride"] = cat
+    return fields, None
+
+
+class ServiceStore:
+    """Thread-safe JSON-backed service list. Atomic writes (tmp + os.replace)."""
+
+    def __init__(self, path):
+        self._path = path
+        self._lock = threading.Lock()
+        self._services = self._load()
+
+    def _load(self):
+        try:
+            with open(self._path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            svcs = data.get("services", [])
+            if not isinstance(svcs, list):
+                return []
+            return [s for s in svcs if isinstance(s, dict) and s.get("id")]
+        except (OSError, ValueError):
+            return []
+
+    def _save(self):
+        tmp = self._path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"services": self._services}, f, indent=2)
+        os.replace(tmp, self._path)
+
+    def list(self):
+        with self._lock:
+            return [dict(s) for s in self._services]
+
+    def add(self, entry):
+        entry = dict(entry)
+        entry["id"] = secrets.token_urlsafe(12)
+        with self._lock:
+            self._services.append(entry)
+            self._save()
+        return dict(entry)
+
+    def update(self, sid, fields):
+        with self._lock:
+            for i, s in enumerate(self._services):
+                if s["id"] == sid:
+                    self._services[i] = {**s, **fields, "id": sid}
+                    self._save()
+                    return dict(self._services[i])
+        return None
+
+    def delete(self, sid):
+        with self._lock:
+            before = len(self._services)
+            self._services = [s for s in self._services if s["id"] != sid]
+            if len(self._services) != before:
+                self._save()
+                return True
+        return False
 
 MIME = {
     ".html": "text/html; charset=utf-8",
@@ -222,6 +338,21 @@ class HubHandler(BaseHTTPRequestHandler):
                 return part[len(name) + 1:]
         return None
 
+    def read_json_body(self):
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            return None, "bad content-length"
+        if length < 0:
+            return None, "bad content-length"
+        if length > MAX_API_BODY:
+            return None, "payload too large"
+        raw = self.rfile.read(length).decode("utf-8", "replace")
+        try:
+            return json.loads(raw), None
+        except ValueError:
+            return None, "invalid JSON"
+
     def session_user(self):
         return self.server.sessions.get(self.read_cookie("hub_session"))
 
@@ -230,6 +361,50 @@ class HubHandler(BaseHTTPRequestHandler):
 
     def clear_cookie(self):
         return {"Set-Cookie": "hub_session=; Path=/; Max-Age=0"}
+
+    # ---- services API helpers ----
+
+    def _api_services(self):
+        return self.server.services.list()
+
+    def _services_response(self, services):
+        return self.send_bytes(json.dumps({"services": services}), 200, "application/json; charset=utf-8")
+
+    def _api_error(self, status, message):
+        return self.send_bytes(json.dumps({"error": message}), status, "application/json; charset=utf-8")
+
+    def _handle_services_list(self):
+        return self._services_response(self._api_services())
+
+    def _handle_services_create(self):
+        data, err = self.read_json_body()
+        if err:
+            if err == "payload too large":
+                return self._api_error(413, err)
+            return self._api_error(400, err)
+        fields, err = validate_service(data, partial=False)
+        if err:
+            return self._api_error(400, err)
+        self.server.services.add(fields)
+        return self._services_response(self._api_services())
+
+    def _handle_services_update(self, sid):
+        data, err = self.read_json_body()
+        if err:
+            if err == "payload too large":
+                return self._api_error(413, err)
+            return self._api_error(400, err)
+        fields, err = validate_service(data, partial=True)
+        if err:
+            return self._api_error(400, err)
+        if self.server.services.update(sid, fields) is None:
+            return self._api_error(404, "service not found")
+        return self._services_response(self._api_services())
+
+    def _handle_services_delete(self, sid):
+        if not self.server.services.delete(sid):
+            return self._api_error(404, "service not found")
+        return self._services_response(self._api_services())
 
     def serve_file(self, rel):
         if not rel:
@@ -262,6 +437,10 @@ class HubHandler(BaseHTTPRequestHandler):
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
             return self.send_bytes(json.dumps(stats_payload()), 200, "application/json; charset=utf-8")
+        if path == "/api/services":
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_services_list()
         if path == "/api/me":
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
@@ -274,6 +453,11 @@ class HubHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urllib.parse.urlparse(self.path).path
+        if path == "/api/services":
+            user = self.session_user()
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_services_create()
         if path != "/login":
             return self.send_bytes("Not found", 404)
         try:
@@ -300,23 +484,44 @@ class HubHandler(BaseHTTPRequestHandler):
         guard.record_failure(ip)
         return self.redirect("/login?error=1")
 
+    def do_PUT(self):
+        path = urllib.parse.urlparse(self.path).path
+        m = re.match(r"^/api/services/([^/]+)$", path)
+        if not m:
+            return self.send_bytes("Not found", 404)
+        user = self.session_user()
+        if not user:
+            return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+        return self._handle_services_update(m.group(1))
+
+    def do_DELETE(self):
+        path = urllib.parse.urlparse(self.path).path
+        m = re.match(r"^/api/services/([^/]+)$", path)
+        if not m:
+            return self.send_bytes("Not found", 404)
+        user = self.session_user()
+        if not user:
+            return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+        return self._handle_services_delete(m.group(1))
+
 
 class HubServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, addr, handler, hub_user, hub_password):
+    def __init__(self, addr, handler, hub_user, hub_password, services_path=None):
         super().__init__(addr, handler)
         self.hub_user = hub_user
         self.hub_password = hub_password
         self.sessions = Sessions()
+        self.services = ServiceStore(services_path or SERVICES_FILE)
 
 
-def create_server(host="0.0.0.0", port=8642, user=None, password=None):
+def create_server(host="0.0.0.0", port=8642, user=None, password=None, services_path=None):
     user = user or read_env("HUB_USER", "admin")
     password = password or read_env("HUB_PASSWORD")
     if not password:
         raise SystemExit("HUB_PASSWORD must be set (and not empty).")
-    return HubServer((host, port), HubHandler, user, password)
+    return HubServer((host, port), HubHandler, user, password, services_path)
 
 
 def main():
