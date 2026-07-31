@@ -745,7 +745,10 @@
   searchInput.addEventListener('input', e => filter(e.target.value));
 
   document.addEventListener('keydown', e => {
-    if (e.key === '/' && document.activeElement !== searchInput) {
+    const el = document.activeElement;
+    const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
+      || el.tagName === 'SELECT' || el.isContentEditable);
+    if (e.key === '/' && !typing) {
       e.preventDefault(); searchInput.focus();
     }
     if (e.key === 'Escape' && document.activeElement === searchInput) {

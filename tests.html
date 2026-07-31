@@ -316,6 +316,17 @@
     const dots = w.document.querySelectorAll('.status-dot');
     ok(dots.length > 0, 'status dots present on cards');
 
+    // / shortcut does not steal focus while typing in an input
+    w.document.getElementById('add-form').classList.remove('hidden');
+    w.document.getElementById('add-name').focus();
+    ok(w.document.activeElement === w.document.getElementById('add-name'), 'add-name focused');
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: '/' }));
+    ok(w.document.activeElement === w.document.getElementById('add-name'), '/ while typing in an input does not focus search');
+    w.document.getElementById('add-form').classList.add('hidden');
+    w.document.body.focus();
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: '/' }));
+    ok(w.document.activeElement === w.document.getElementById('search'), '/ with no input focused focuses search');
+
     // Restore default state for any subsequent test runs
     w.HubSettings.set({ theme: 'auto', features: {}, services: [] });
   };
