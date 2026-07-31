@@ -289,7 +289,8 @@
     const modal = w.document.getElementById('edit-modal');
     ok(modal && !modal.classList.contains('hidden'), 'edit button opens the modal');
     eq(w.document.getElementById('edit-name').value, 'Grafana', 'modal prefills name');
-    eq(w.document.getElementById('edit-url').value, 'https://grafana.example.com', 'modal prefills url');
+    eq(w.document.getElementById('edit-scheme').value, 'https://', 'modal prefill sets scheme select');
+    eq(w.document.getElementById('edit-url').value, 'grafana.example.com', 'modal prefills url without scheme');
     const iconOpts = w.document.querySelectorAll('#edit-icons .icon-opt');
     ok(iconOpts.length > 0, 'icon picker grid rendered');
     ok(w.document.querySelector('#edit-icons .icon-opt.selected').dataset.icon === 'chart', 'current icon highlighted');
@@ -297,9 +298,20 @@
     // Save edit issues PUT and re-renders renamed card
     apiLog = [];
     stubFetch(CANNED);
+    let lastPutBody = null;
+    const prevFetch2 = w.fetch;
+    w.fetch = (url, opts = {}) => {
+      if ((opts.method || 'GET') === 'PUT' && String(url).includes('/api/services/')) {
+        lastPutBody = JSON.parse(opts.body);
+      }
+      return prevFetch2(url, opts);
+    };
     w.document.getElementById('edit-name').value = 'Grafana Ops';
+    w.document.getElementById('edit-scheme').value = 'https://';
+    w.document.getElementById('edit-url').value = 'grafana.example.com';
     await w.__HUB__.saveEdit();
     ok(apiLog.some(x => x === 'PUT /api/services/svc-1'), 'save issues PUT to /api/services/<id>');
+    ok(lastPutBody && lastPutBody.url === 'https://grafana.example.com', 'save PUTs scheme + host URL', lastPutBody && lastPutBody.url);
     ok(modal.classList.contains('hidden'), 'modal closes after save');
     const renamed = Array.from(w.document.querySelectorAll('.card')).some(c => c.dataset.name === 'grafana ops');
     ok(renamed, 'renamed card rendered after save');

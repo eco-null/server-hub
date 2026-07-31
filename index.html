@@ -333,7 +333,13 @@
       </label>
       <label class="block">
         <span class="text-xs text-[color:var(--fg-muted)]">URL</span>
-        <input id="edit-url" class="form-input mt-1" type="url" placeholder="https://…" />
+        <div class="flex gap-1 mt-1">
+          <select id="edit-scheme" class="form-input w-28 shrink-0" aria-label="URL scheme">
+            <option value="https://" selected>https://</option>
+            <option value="http://">http://</option>
+          </select>
+          <input id="edit-url" class="form-input min-w-0 flex-1" type="text" placeholder="host (e.g. immich.canzodal.com)" />
+        </div>
       </label>
       <label class="block">
         <span class="text-xs text-[color:var(--fg-muted)]">Description</span>
@@ -624,6 +630,15 @@
     }
   });
 
+  document.getElementById('edit-url').addEventListener('input', () => {
+    const el = document.getElementById('edit-url');
+    const scheme = schemeOf(el.value);
+    if (scheme) {
+      document.getElementById('edit-scheme').value = scheme;
+      el.value = el.value.slice(scheme.length);
+    }
+  });
+
   async function addService(entry) {
     const data = await apiJson('POST', API_SERVICES, entry);
     SERVICES = Array.isArray(data.services) ? data.services : SERVICES;
@@ -714,7 +729,9 @@
     if (!s) return;
     editingId = id;
     document.getElementById('edit-name').value = s.name;
-    document.getElementById('edit-url').value = s.url;
+    const scheme = schemeOf(s.url) || 'https://';
+    document.getElementById('edit-scheme').value = scheme;
+    document.getElementById('edit-url').value = s.url.slice(scheme.length);
     document.getElementById('edit-desc').value = s.desc || '';
     renderIconPicker(s.icon);
     document.getElementById('edit-cat').value = s.categoryOverride || 'auto';
@@ -731,7 +748,7 @@
     if (!editingId) return;
     const cur = SERVICES.find(s => s.id === editingId);
     const name = document.getElementById('edit-name').value.trim();
-    const url  = document.getElementById('edit-url').value.trim();
+    const url  = (document.getElementById('edit-scheme').value + document.getElementById('edit-url').value.trim()).trim();
     const desc = document.getElementById('edit-desc').value.trim();
     const cat  = document.getElementById('edit-cat').value;
     if (!name || !url) { showToast('Name and URL are required'); return; }
