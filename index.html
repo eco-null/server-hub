@@ -241,7 +241,13 @@
         </div>
         <form id="add-form" class="hidden form-inline" autocomplete="off" novalidate>
           <input id="add-name" class="form-input" placeholder="Name (e.g. Grafana)" required />
-          <input id="add-url"  class="form-input" placeholder="URL (https://…)" required type="url" />
+          <div class="flex gap-1 min-w-0">
+            <select id="add-scheme" class="form-input w-28 shrink-0" aria-label="URL scheme">
+              <option value="https://" selected>https://</option>
+              <option value="http://">http://</option>
+            </select>
+            <input id="add-url" class="form-input min-w-0 flex-1" type="text" placeholder="host (e.g. immich.canzodal.com)" required />
+          </div>
           <input id="add-desc" class="form-input" placeholder="Short description (optional)" />
           <div class="flex items-center gap-2 col-span-full flex-wrap">
             <button type="submit" class="btn-primary">Add &amp; auto-categorize</button>
@@ -597,12 +603,25 @@
   const addPreview  = document.getElementById('add-preview');
   const addToggleLabel = document.getElementById('add-toggle-label');
 
+  function schemeOf(v) {
+    const m = /^https?:\/\//.exec(v);
+    return m ? m[0] : null;
+  }
+
   addToggle.addEventListener('click', () => {
     const open = !addForm.classList.contains('hidden');
     addForm.classList.toggle('hidden');
     addToggle.setAttribute('aria-expanded', String(!open));
     addToggleLabel.textContent = open ? '+ Add' : 'Close';
     if (!open) addName.focus();
+  });
+
+  addUrl.addEventListener('input', () => {
+    const scheme = schemeOf(addUrl.value);
+    if (scheme) {
+      document.getElementById('add-scheme').value = scheme;
+      addUrl.value = addUrl.value.slice(scheme.length);
+    }
   });
 
   async function addService(entry) {
@@ -614,7 +633,7 @@
   addForm.addEventListener('submit', async e => {
     e.preventDefault();
     const name = addName.value.trim();
-    const url  = addUrl.value.trim();
+    const url  = (document.getElementById('add-scheme').value + addUrl.value.trim()).trim();
     const desc = addDesc.value.trim();
     if (!name || !url) return;
     const result = window.autoCategorize(name, url, desc);

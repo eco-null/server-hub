@@ -327,6 +327,38 @@
     w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: '/' }));
     ok(w.document.activeElement === w.document.getElementById('search'), '/ with no input focused focuses search');
 
+    // Scheme dropdown: pasting a full URL strips the scheme and sets the select
+    const addScheme = w.document.getElementById('add-scheme');
+    const addUrlField = w.document.getElementById('add-url');
+    addScheme.value = 'https://';
+    addUrlField.value = 'https://immich.canzodal.com';
+    addUrlField.dispatchEvent(new w.Event('input'));
+    eq(addScheme.value, 'https://', 'pasting https URL sets scheme select to https');
+    eq(addUrlField.value, 'immich.canzodal.com', 'pasting full URL strips the scheme');
+
+    // Submit builds scheme + host into the POST payload
+    apiLog = [];
+    stubFetch(CANNED);
+    let lastPostBody = null;
+    const prevFetch = w.fetch;
+    w.fetch = (url, opts = {}) => {
+      if ((opts.method || 'GET') === 'POST' && String(url).includes('/api/services')) {
+        lastPostBody = JSON.parse(opts.body);
+      }
+      return prevFetch(url, opts);
+    };
+    addScheme.value = 'http://';
+    addUrlField.value = '192.168.1.50:8096';
+    w.document.getElementById('add-name').value = 'Jellyfin';
+    w.document.getElementById('add-desc').value = 'Movies';
+    w.document.getElementById('add-form').dispatchEvent(new w.Event('submit'));
+    await new Promise(r => setTimeout(r, 10));
+    ok(apiLog.some(x => x === 'POST /api/services'), 'add form submits POST to /api/services');
+    ok(lastPostBody && lastPostBody.url === 'http://192.168.1.50:8096', 'submit builds full URL from scheme + host', lastPostBody && lastPostBody.url);
+    w.document.getElementById('add-name').value = '';
+    w.document.getElementById('add-desc').value = '';
+    addUrlField.value = '';
+
     // Restore default state for any subsequent test runs
     w.HubSettings.set({ theme: 'auto', features: {}, services: [] });
   };
