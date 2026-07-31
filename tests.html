@@ -181,16 +181,15 @@
   iframe.src = 'index.html';
   iframe.style.cssText = 'position:fixed; bottom:0; right:0; width:480px; height:600px; opacity:0.6; border:1px solid #444; z-index:50;';
   iframe.id = 'hub';
-  // We run these async; tests resume from iframe load.
   document.body.appendChild(iframe);
-  document.getElementById('hub-removed') || null;
 
   let hubWin, runDomTests;
   iframe.addEventListener('load', () => {
     hubWin = iframe.contentWindow;
-    try { runDomTests(); }
-    catch (e) { out('iframe DOM tests ran', false, String(e)); }
-    finally { finish(); }
+    runDomTests().then(finish).catch(e => {
+      out('iframe DOM tests ran', false, String(e));
+      finish();
+    });
   });
 
   // Safety timeout in case iframe load never fires
@@ -206,32 +205,61 @@
     if (window.__testAuto) console.log('done');
   }
 
-  runDomTests = function () {
+  runDomTests = async function () {
     const w = hubWin;
     ok(typeof w.__HUB__ === 'object', '__HUB__ exported on index.html window');
+    eq(w.__HUB__.SERVICES_DEFAULT, [], 'no bundled default services');
 
-    // Defaults are intentionally empty (bundled links removed)
-    try { localStorage.removeItem(window.HubSettings.KEY); } catch {}
-    const defaults = w.__HUB__.reloadServices();
-    ok(Array.isArray(defaults) && defaults.length === 0, 'no bundled default services', 'got ' + defaults.length);
-
-    // Inject a fixture set to exercise rendering/search/dots
-    const FIXTURE = [
-      { name: 'Grafana',        url: 'https://grafana.example.com', desc: 'Metrics & dashboards',       icon: 'chart',    ping: true },
-      { name: 'Uptime Kuma',    url: 'https://status.example.com',  desc: 'Uptime & incident tracking', icon: 'pulse',    ping: true },
-      { name: 'Jellyfin',       url: 'https://media.example.com',   desc: 'Movies & music streaming',   icon: 'film',     ping: true },
+    // Stub the API so DOM behaviour is deterministic
+    const CANNED = [
+      { id: 'svc-1', name: 'Grafana',    url: 'https://grafana.example.com', desc: 'Metrics & dashboards',       icon: 'chart', ping: true,  categoryOverride: null },
+      { id: 'svc-2', name: 'Uptime Kuma',url: 'https://status.example.com',  desc: 'Uptime & incident tracking', icon: 'pulse', ping: true,  categoryOverride: null },
+      { id: 'svc-3', name: 'Jellyfin',   url: 'https://media.example.com',   desc: 'Movies & music streaming',   icon: 'film',  ping: true,  categoryOverride: null },
     ];
-    const svcs = FIXTURE;
+    let apiLog = [];
+    function stubFetch(list) {
+      w.fetch = (url, opts = {}) => {
+        const method = opts.method || 'GET';
+        apiLog.push(method + ' ' + url);
+        const id = String(url).split('/').pop();
+        if (method === 'GET' && String(url).includes('/api/services')) {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ services: list }) });
+        }
+        if (method === 'DELETE') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ services: list.filter(s => s.id !== id) }) });
+        }
+        if (method === 'POST') {
+          const body = JSON.parse(opts.body);
+          const created = { id: 'svc-new', ...body, categoryOverride: body.categoryOverride || null };
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ services: [...list, created] }) });
+        }
+        if (method === 'PUT') {
+          const body = JSON.parse(opts.body);
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ services: list.map(s => s.id === id ? { ...s, ...body, id } : s) }) });
+        }
+        return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'nope' }) });
+      };
+    }
 
-    // Auto-categorization applied at render: each rendered card has data-category
-    w.__HUB__.setServices(svcs);
+    // reloadServices fetches from the (stubbed) API
+    stubFetch(CANNED);
+    const fetched = await w.__HUB__.reloadServices();
+    ok(Array.isArray(fetched) && fetched.length === CANNED.length,
+       'reloadServices loads from /api/services', 'got ' + fetched.length);
+
+    // Render fixture; every card must carry hover edit/delete buttons
+    w.__HUB__.setServices(fetched);
     w.__HUB__.renderGroups();
     const cards = w.document.querySelectorAll('.card');
-    ok(cards.length === svcs.length, 'rendered cards count == services', cards.length + ' vs ' + svcs.length);
+    ok(cards.length === fetched.length, 'rendered cards count == services', cards.length + ' vs ' + fetched.length);
     const withCat = w.document.querySelectorAll('.card[data-category]');
     ok(withCat.length === cards.length, 'every card tagged with category');
+    ok(cards.length > 0 && cards[0].querySelector('.card-action[title="Edit"]'),
+       'every card has an edit button');
+    ok(cards.length > 0 && cards[0].querySelector('.card-action[title="Delete"]'),
+       'every card has a delete button');
 
-    // Search filter: type "grafana" → only cards matching remain visible
+    // Search filter still works
     const input = w.__HUB__.getSearchInput();
     input.value = 'grafana';
     w.__HUB__.filter('grafana');
@@ -242,9 +270,9 @@
     input.value = '';
     w.__HUB__.filter('');
     const allVisible = Array.from(w.document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
-    ok(allVisible.length === svcs.length, 'clearing filter restores all cards', allVisible.length);
+    ok(allVisible.length === fetched.length, 'clearing filter restores all cards', allVisible.length);
 
-    // Theme: applyTheme flips html.light/dark classes
+    // Theme still works
     w.document.documentElement.classList.remove('light', 'dark');
     w.HubSettings.set({ theme: 'light' });
     w.__HUB__.applyTheme('light');
@@ -255,11 +283,34 @@
     // autoCategorize passthrough
     eq(w.__HUB__.autoCategorize('Jellyfin', 'https://media.local', 'Movies').category, 'Media', '__HUB__.autoCategorize passthrough');
 
-    // Add new service via setServices; ensure renderGroups reflects it
-    w.__HUB__.setServices([...svcs, { name: 'AuditTest', url: 'https://audit.local', desc: 'audit stub', icon: 'box' }]);
-    w.__HUB__.renderGroups();
-    const hasAudit = Array.from(w.document.querySelectorAll('.card')).some(c => c.dataset.name === 'audittest');
-    ok(hasAudit, 'new service rendered after setServices+renderGroups');
+    // Edit modal opens prefilled, icon grid renders, current icon selected
+    w.confirm = () => true; // no native dialogs in tests
+    w.__HUB__.edit('svc-1');
+    const modal = w.document.getElementById('edit-modal');
+    ok(modal && !modal.classList.contains('hidden'), 'edit button opens the modal');
+    eq(w.document.getElementById('edit-name').value, 'Grafana', 'modal prefills name');
+    eq(w.document.getElementById('edit-url').value, 'https://grafana.example.com', 'modal prefills url');
+    const iconOpts = w.document.querySelectorAll('#edit-icons .icon-opt');
+    ok(iconOpts.length > 0, 'icon picker grid rendered');
+    ok(w.document.querySelector('#edit-icons .icon-opt.selected').dataset.icon === 'chart', 'current icon highlighted');
+
+    // Save edit issues PUT and re-renders renamed card
+    apiLog = [];
+    stubFetch(CANNED);
+    w.document.getElementById('edit-name').value = 'Grafana Ops';
+    await w.__HUB__.saveEdit();
+    ok(apiLog.some(x => x === 'PUT /api/services/svc-1'), 'save issues PUT to /api/services/<id>');
+    ok(modal.classList.contains('hidden'), 'modal closes after save');
+    const renamed = Array.from(w.document.querySelectorAll('.card')).some(c => c.dataset.name === 'grafana ops');
+    ok(renamed, 'renamed card rendered after save');
+
+    // Delete issues DELETE and re-renders
+    apiLog = [];
+    stubFetch(CANNED);
+    await w.__HUB__.remove('svc-3');
+    ok(apiLog.some(x => x === 'DELETE /api/services/svc-3'), 'remove issues DELETE to /api/services/<id>');
+    const cardsAfter = w.document.querySelectorAll('.card');
+    ok(cardsAfter.length === CANNED.length - 1, 'card removed after delete', 'got ' + cardsAfter.length);
 
     // Status dot exists on each pingable card
     const dots = w.document.querySelectorAll('.status-dot');
