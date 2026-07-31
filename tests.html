@@ -323,7 +323,7 @@
     w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: '/' }));
     ok(w.document.activeElement === w.document.getElementById('add-name'), '/ while typing in an input does not focus search');
     w.document.getElementById('add-form').classList.add('hidden');
-    w.document.body.focus();
+    w.document.activeElement.blur();
     w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: '/' }));
     ok(w.document.activeElement === w.document.getElementById('search'), '/ with no input focused focuses search');
 
