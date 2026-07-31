@@ -4,3 +4,4 @@ graphify-out/
 *.log
 __pycache__/
 *.pyc
+.worktrees/
