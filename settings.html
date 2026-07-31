@@ -196,7 +196,13 @@
       <div id="add-form" class="hidden mt-4 pt-4 border-t border-[color:var(--border)]">
         <div class="svc-row">
           <input id="new-name" class="field focus-ring" placeholder="Name (e.g. Grafana)" />
-          <input id="new-url"  class="field focus-ring" placeholder="URL (https://…)" type="url" />
+          <div class="flex gap-1 min-w-0">
+            <select id="new-scheme" class="field focus-ring w-28 shrink-0" aria-label="URL scheme">
+              <option value="https://" selected>https://</option>
+              <option value="http://">http://</option>
+            </select>
+            <input id="new-url"  class="field focus-ring min-w-0 flex-1" type="text" placeholder="host (e.g. immich.canzodal.com)" />
+          </div>
           <input id="new-desc" class="field focus-ring" placeholder="Description (optional)" />
           <span class="hide-sm text-xs text-[color:var(--fg-muted)]">→ <span id="new-cat" class="pill">auto</span></span>
           <button id="new-save" class="btn btn-primary focus-ring text-xs">Add</button>
@@ -431,9 +437,17 @@
   [newName, newUrl, newDesc].forEach(el => el.addEventListener('input', () => {
     newCat.textContent = window.autoCategorize(newName.value, newUrl.value, newDesc.value).category;
   }));
+  const newScheme = document.getElementById('new-scheme');
+  newUrl.addEventListener('input', () => {
+    const m = /^https?:\/\//.exec(newUrl.value);
+    if (m) {
+      newScheme.value = m[0];
+      newUrl.value = newUrl.value.slice(m[0].length);
+    }
+  });
   async function addNew() {
     const name = newName.value.trim();
-    const url  = newUrl.value.trim();
+    const url  = (newScheme.value + newUrl.value.trim()).trim();
     if (!name || !url) { toast('Name and URL required'); return; }
     const desc = newDesc.value.trim();
     const cat = window.autoCategorize(name, url, desc).category;
