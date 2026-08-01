@@ -113,6 +113,10 @@ def validate_bookmark(data, partial=False):
     if "icon" in data or not partial:
         icon = str(data.get("icon") or "link").strip()
         fields["icon"] = icon or "link"
+    if "color" in data or not partial:
+        color = str(data.get("color") or "").strip()
+        if color:
+            fields["color"] = color[:64]
     return fields, None
 
 

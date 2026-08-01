@@ -369,6 +369,18 @@ class ServerHubTests(unittest.TestCase):
         status, _, _, _ = self.request("/api/bookmarks")
         self.assertEqual(status, 401)
 
+    def test_bookmark_color_roundtrip(self):
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/bookmarks", "POST", {"name": "Kick", "url": "https://kick.com", "color": "#22C55E"}, jar)
+        self.assertEqual(status, 200)
+        bm = data["bookmarks"][0]
+        self.assertEqual(bm["color"], "#22C55E")
+        # color is optional
+        status, data, _ = self.api("/api/bookmarks", "POST", {"name": "YouTube", "url": "https://youtube.com"}, jar)
+        self.assertEqual(status, 200)
+        self.assertNotIn("color", data["bookmarks"][1])
+
 
 class ServiceStoreBookmarks(unittest.TestCase):
     def setUp(self):
