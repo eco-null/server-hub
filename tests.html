@@ -307,6 +307,14 @@
     ok(cards.length > 0 && cards[0].querySelector('.card-action[title="Delete"]'),
        'every card has a delete button');
 
+    // Adaptive group layout: wrapper + big/small category classes
+    const groupsCols = w.document.getElementById('groups-cols');
+    ok(groupsCols && groupsCols.className.includes('flex flex-wrap'), 'groups wrapper is flex-wrap', groupsCols && groupsCols.className);
+    const groups = w.document.querySelectorAll('#groups-cols .group');
+    const anyBig = Array.from(groups).some(g => g.className.includes('w-full') && g.querySelector('.grid').className.includes('sm:grid-cols-2'));
+    const anySmall = Array.from(groups).some(g => g.className.includes('flex-1 min-w-[240px]') && g.querySelector('.grid').className.includes('grid-cols-1 gap-3'));
+    ok(anyBig || anySmall, 'groups use adaptive big/small layout classes', Array.from(groups).map(g => g.className).join(' | '));
+
     // Search filter still works
     const input = w.__HUB__.getSearchInput();
     input.value = 'grafana';

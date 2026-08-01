@@ -192,7 +192,7 @@
       padding: 1.25rem; z-index: 51; box-shadow: 0 24px 64px -20px rgba(0,0,0,.6);
     }
     /* Fullscreen search overlay — blurred backdrop, large centered input */
-    #search-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
+    #search-modal:not(.hidden) { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
     #search-modal .modal-backdrop { background: rgba(0,0,0,.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
     #search-panel {
       position: relative; z-index: 61; width: min(92vw, 640px);
@@ -316,13 +316,11 @@
 
     <!-- Services container -->
     <div id="root" class="mt-3 space-y-8 flex-1">
-      <div id="skeletons" class="columns-1 md:columns-2 xl:columns-3 gap-5">
-        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
-        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
-        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
-        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
-        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
-        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
+      <div id="skeletons" class="flex flex-wrap items-start gap-x-6 gap-y-8">
+        <div class="glass skeleton-card p-3 skel w-full"></div>
+        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
       </div>
       <div id="groups" class="space-y-8"></div>
     </div>
@@ -672,13 +670,18 @@
     }, {});
     const order = Object.keys(grouped).sort((a, b) => grouped[b].length - grouped[a].length || a.localeCompare(b));
 
-    let html = '<div class="columns-1 md:columns-2 xl:columns-3 gap-5" id="groups-cols">';
+    // Adaptive layout: a category with many apps spans a full row with a
+    // multi-column (horizontal) grid; categories with few apps sit side by
+    // side as columns with their apps listed vertically underneath.
+    const BIG_ROW = 4;
+    let html = '<div class="flex flex-wrap items-start gap-x-6 gap-y-8" id="groups-cols">';
     for (const cat of order) {
       const list = grouped[cat];
-      html += '<section class="group break-inside-avoid mb-5" data-category="' + cat + '">'
+      const big = list.length >= BIG_ROW;
+      html += '<section class="group' + (big ? ' w-full' : ' flex-1 min-w-[240px]') + '" data-category="' + cat + '">'
         + '<h2 class="group-header text-xs font-semibold uppercase">' + cat
         + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
-        + '<div class="grid grid-cols-1 gap-3 mt-2">';
+        + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3' : ' grid-cols-1 gap-3') + '">';
       for (const s of list) {
         html += renderCard(s);
       }
