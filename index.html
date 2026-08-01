@@ -59,6 +59,7 @@
     html.wallpaper-dark { --surface: rgba(0,0,0,0.55); --surface-hi: rgba(0,0,0,0.65); --border: rgba(255,255,255,0.1); --border-hi: rgba(255,255,255,0.18); --fg: #EDEDEF; --fg-muted: #A7ABB3; }
     html.wallpaper-dark .glass { backdrop-filter: blur(14px); }
     html.wallpaper .glass, body.wallpaper .glass { box-shadow: 0 4px 24px -8px rgba(0,0,0,0.35); }
+    body.wallpaper { background-image: none; background-color: transparent; }
 
     html, body { background-color: var(--bg-deep); color: var(--fg); }
     body {
@@ -130,9 +131,11 @@
     }
     .theme-btn:hover { background: var(--surface-hi); border-color: var(--border-hi); transform: scale(1.04); }
     .theme-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .theme-btn-disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* Add-service form */
     .form-inline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .form-inline-stack { grid-template-columns: 1fr; }
     @media (max-width: 640px) { .form-inline { grid-template-columns: 1fr; } }
     .form-input {
       background: transparent; border: 1px solid var(--border); border-radius: 10px;
@@ -341,7 +344,7 @@
           <span id="add-toggle-label">+ Add</span>
         </button>
       </div>
-      <form id="add-form" class="hidden form-inline" autocomplete="off" novalidate>
+      <form id="add-form" class="hidden form-inline form-inline-stack" autocomplete="off" novalidate>
         <input id="add-name" class="form-input" placeholder="Name (e.g. Grafana)" required />
         <div class="flex gap-1 min-w-0">
           <select id="add-scheme" class="form-input w-28 shrink-0" aria-label="URL scheme">
