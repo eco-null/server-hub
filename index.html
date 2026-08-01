@@ -969,9 +969,8 @@
      System stats — wire to /api/stats { host, cpu, mem, disk }
      ============================================================ */
   const STAT_ENDPOINT = '/api/stats';
-  const cpuBar= document.getElementById('stat-cpu-bar'); const cpuVal= document.getElementById('stat-cpu-val');
-  const memBar= document.getElementById('stat-mem-bar'); const memVal= document.getElementById('stat-mem-val');
-  const diskBar=document.getElementById('stat-disk-bar');const diskVal=document.getElementById('stat-disk-val');
+  const gridEl = document.getElementById('stats-grid');
+  const STAT_GRID_HTML = gridEl.innerHTML;
   const hostEl = document.getElementById('stats-host');
 
   function setBar(bar, val, label) {
@@ -981,8 +980,12 @@
     bar.style.background = v >= 90 ? 'var(--red)' : v >= 75 ? 'var(--amber)' : 'var(--accent)';
     label.textContent = v.toFixed(0) + '%';
   }
-  async function pollStats() {
+  async function renderSingleHostFallback() {
     try {
+      gridEl.innerHTML = STAT_GRID_HTML;
+      const cpuBar = document.getElementById('stat-cpu-bar'); const cpuVal = document.getElementById('stat-cpu-val');
+      const memBar = document.getElementById('stat-mem-bar'); const memVal = document.getElementById('stat-mem-val');
+      const diskBar = document.getElementById('stat-disk-bar'); const diskVal = document.getElementById('stat-disk-val');
       const r = await fetch(STAT_ENDPOINT, { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
@@ -991,6 +994,39 @@
       setBar(memBar, d.mem, memVal);
       setBar(diskBar, d.disk, diskVal);
     } catch {}
+  }
+  async function pollStats() {
+    try {
+      const r = await fetch('/api/beszel', { cache: 'no-store' });
+      if (r.ok) {
+        const d = await r.json();
+        if (d.enabled) {
+          if (d.error) { renderSingleHostFallback(); return; }
+          renderBeszel(d.systems);
+          return;
+        }
+      }
+    } catch {}
+    renderSingleHostFallback();
+  }
+  function renderBeszel(systems) {
+    gridEl.innerHTML = '';
+    systems.forEach(s => {
+      const row = document.createElement('div');
+      row.className = 'space-y-1';
+      row.innerHTML =
+        '<div class="flex items-baseline justify-between"><span class="text-xs text-[color:var(--fg-muted)] truncate">' + esc(s.name) + '</span>' +
+        '<span class="font-mono text-sm tabular-nums">' + esc(s.status) + '</span></div>' +
+        barRow('CPU', s.cpu) + barRow('Mem', s.mem) + barRow('Disk', s.disk);
+      gridEl.appendChild(row);
+    });
+  }
+  function barRow(label, val) {
+    const pct = (val == null || isNaN(val)) ? '—' : Math.max(0, Math.min(100, val)).toFixed(0) + '%';
+    const w = (val == null || isNaN(val)) ? '0%' : Math.max(0, Math.min(100, val)).toFixed(0) + '%';
+    return '<div class="flex items-center gap-2"><span class="text-[10px] text-[color:var(--fg-muted)] w-8">' + label + '</span>' +
+      '<div class="flex-1 h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div class="h-full" style="width:' + w + ';background:' + (val >= 90 ? 'var(--red)' : val >= 75 ? 'var(--amber)' : 'var(--accent)') + '"></div></div>' +
+      '<span class="font-mono text-[10px] tabular-nums w-8 text-right">' + pct + '</span></div>';
   }
   pollStats(); setInterval(pollStats, 15000);
 
@@ -1090,6 +1126,7 @@
     categorized, setServices: arr => { SERVICES = arr; },
     getSearchInput: () => searchInput,
     loadBookmarks, renderBookmarks, BOOKMARKS,
+    pollStats, renderBeszel,
   };
 
   /* ============================================================

@@ -448,6 +448,43 @@
     ok(tilesAfter.length === BMS.length + 1, 'new bookmark tile rendered after add', 'got ' + tilesAfter.length);
     ok(w.document.getElementById('bookmarks-editor').classList.contains('hidden'), 'editor hides after save');
 
+    // Beszel — enabled + systems renders one row per server
+    apiLog = [];
+    w.fetch = (url, opts = {}) => {
+      apiLog.push('GET ' + url);
+      if (String(url).includes('/api/beszel')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ enabled: true, systems: [{ name: 'casaos', cpu: 42, mem: 55, disk: 61, status: 'up' }] }) });
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'nope' }) });
+    };
+    await w.__HUB__.pollStats();
+    let beszelGrid = w.document.getElementById('stats-grid');
+    ok(apiLog.some(x => x === 'GET /api/beszel'), 'pollStats GETs /api/beszel');
+    ok(beszelGrid.textContent.includes('casaos'), 'beszel row renders server name', beszelGrid.textContent.slice(0, 60));
+    ok(beszelGrid.textContent.includes('up'), 'beszel row renders server status');
+    ok(beszelGrid.querySelector('div[style*="width:42%"]') !== null, 'beszel CPU bar rendered at 42%');
+
+    // Beszel disabled → single-host fallback renders via /api/stats
+    apiLog = [];
+    w.fetch = (url, opts = {}) => {
+      apiLog.push('GET ' + url);
+      if (String(url).includes('/api/beszel')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ enabled: false }) });
+      }
+      if (String(url).includes('/api/stats')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ host: 'home', cpu: 10, mem: 20, disk: 30 }) });
+      }
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'nope' }) });
+    };
+    await w.__HUB__.pollStats();
+    await new Promise(r => setTimeout(r, 10));
+    ok(apiLog.some(x => x === 'GET /api/beszel'), 'fallback pollStats GETs /api/beszel first');
+    ok(apiLog.some(x => x === 'GET /api/stats'), 'fallback GETs /api/stats');
+    const cpuValEl = w.document.getElementById('stat-cpu-val');
+    ok(cpuValEl && cpuValEl.textContent === '10%', 'fallback renders CPU bar value via /api/stats', cpuValEl && cpuValEl.textContent);
+    beszelGrid = w.document.getElementById('stats-grid');
+    ok(!beszelGrid.textContent.includes('casaos'), 'fallback clears beszel rows');
+
     // Restore default state for any subsequent test runs
     w.HubSettings.set({ theme: 'auto', features: {}, services: [], wallpaper: { mode: 'none', gradient: 'aurora', url: '' } });
   };
