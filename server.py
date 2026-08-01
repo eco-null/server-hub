@@ -17,7 +17,9 @@ import secrets
 import socket
 import threading
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 WEB_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -358,6 +360,92 @@ def stats_payload():
     return {"host": host, "cpu": cpu_percent(), "mem": mem_percent(), "disk": disk_percent()}
 
 
+# ---- Beszel multi-server stats proxy ----
+
+BESZEL_CACHE_TTL = 10.0
+_beszel_cache = {}
+
+
+def clear_beszel_cache():
+    _beszel_cache.clear()
+
+
+def read_beszel_env():
+    url = read_env("BESZEL_URL", "").rstrip("/")
+    if not url:
+        return None
+    return {
+        "url": url,
+        "user": read_env("BESZEL_USER", ""),
+        "password": read_env("BESZEL_PASSWORD", ""),
+        "api_key": read_env("BESZEL_API_KEY", ""),
+    }
+
+
+def normalize_beszel_system(rec):
+    """Map a Beszel systems-collection record to the dashboard shape.
+
+    stat_cpu/stat_mem/stat_disk are pinned to the live Beszel/PocketBase
+    instance; if the fields drift this is the one-line fix.
+    """
+    return {
+        "name": rec.get("name"),
+        "cpu": rec.get("stat_cpu"),
+        "mem": rec.get("stat_mem"),
+        "disk": rec.get("stat_disk"),
+        "status": rec.get("status", "unknown"),
+    }
+
+
+def _beszel_urlopen(req):
+    try:
+        return urllib.request.urlopen(req, timeout=10)
+    except urllib.error.HTTPError as e:
+        e.close()
+        raise
+
+
+def _beszel_login(cfg):
+    body = json.dumps({"identity": cfg["user"], "password": cfg["password"]}).encode("utf-8")
+    req = urllib.request.Request(
+        cfg["url"] + "/api/collections/users/auth-with-password",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with _beszel_urlopen(req) as resp:
+        data = json.loads(resp.read().decode("utf-8", "replace"))
+    token = data.get("token")
+    if not token:
+        raise RuntimeError("Beszel auth response missing token")
+    return token
+
+
+def _beszel_systems():
+    """Fetch + normalize Beszel systems, cached in-process for 10s.
+
+    Returns a list of {name, cpu, mem, disk, status} dicts, or None when
+    Beszel is unconfigured. Raises on connection/auth/fetch failure.
+    """
+    cfg = read_beszel_env()
+    if not cfg:
+        return None
+    now = time.time()
+    cached = _beszel_cache.get(cfg["url"])
+    if cached and now - cached[0] < BESZEL_CACHE_TTL:
+        return cached[1]
+    token = cfg["api_key"] or _beszel_login(cfg)
+    req = urllib.request.Request(
+        cfg["url"] + "/api/collections/systems?perPage=100",
+        headers={"Authorization": "Bearer " + token},
+    )
+    with _beszel_urlopen(req) as resp:
+        data = json.loads(resp.read().decode("utf-8", "replace"))
+    systems = [normalize_beszel_system(rec) for rec in data.get("items", [])]
+    _beszel_cache[cfg["url"]] = (now, systems)
+    return systems
+
+
 # ---- HTTP handler ----
 
 class HubHandler(BaseHTTPRequestHandler):
@@ -502,6 +590,21 @@ class HubHandler(BaseHTTPRequestHandler):
             return self._api_error(404, "bookmark not found")
         return self._bookmarks_response(self.server.services.list_bookmarks())
 
+    # ---- Beszel API helpers ----
+
+    def _handle_beszel(self):
+        try:
+            systems = _beszel_systems()
+        except Exception as e:
+            return self.send_bytes(
+                json.dumps({"enabled": True, "error": str(e)}), 200,
+                "application/json; charset=utf-8")
+        if systems is None:
+            return self.send_bytes(json.dumps({"enabled": False}), 200, "application/json; charset=utf-8")
+        return self.send_bytes(
+            json.dumps({"enabled": True, "systems": systems}), 200,
+            "application/json; charset=utf-8")
+
     def serve_file(self, rel):
         if not rel:
             return self.send_bytes("Not found", 404)
@@ -537,6 +640,10 @@ class HubHandler(BaseHTTPRequestHandler):
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
             return self._handle_services_list()
+        if path == "/api/beszel":
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_beszel()
         if path == "/api/bookmarks":
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")

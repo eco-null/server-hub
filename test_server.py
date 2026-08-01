@@ -1,6 +1,7 @@
 import contextlib
 import http.cookiejar
 import http.client
+import http.server
 import json
 import os
 import tempfile
@@ -387,6 +388,197 @@ class ServiceStoreBookmarks(unittest.TestCase):
         self.assertEqual(self.store.list_bookmarks()[0]["name"], "Kick")
         self.assertTrue(self.store.delete_bookmark(b["id"]))
         self.assertEqual(self.store.list_bookmarks(), [])
+
+
+class BeszelStubHandler(http.server.BaseHTTPRequestHandler):
+    """Minimal PocketBase-like stub for Beszel."""
+    fail = False
+    auth_hits = 0
+    last_auth = ""
+
+    def log_message(self, fmt, *args):
+        pass
+
+    def _send_json(self, obj, status=200):
+        body = json.dumps(obj).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_POST(self):
+        BeszelStubHandler.auth_hits += 1
+        if BeszelStubHandler.fail:
+            return self._send_json({"error": "boom"}, 500)
+        return self._send_json({"token": "tok123"})
+
+    def do_GET(self):
+        BeszelStubHandler.last_auth = self.headers.get("Authorization", "")
+        if BeszelStubHandler.fail:
+            return self._send_json({"error": "boom"}, 500)
+        return self._send_json({"items": [
+            {"name": "casaos", "status": "up", "stat_cpu": 42.0, "stat_mem": 55.0, "stat_disk": 61.0},
+        ]})
+
+
+class BeszelStub:
+    """Minimal PocketBase-like stub for Beszel."""
+    def __init__(self):
+        self.handler = BeszelStubHandler
+
+    def start(self):
+        self.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), self.handler)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        return "http://127.0.0.1:%d" % self.srv.server_address[1]
+
+    def stop(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+
+
+class BeszelTests(unittest.TestCase):
+    """End-to-end tests for the Beszel proxy endpoint using a stub Beszel server."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmpdir = tempfile.TemporaryDirectory()
+        cls.services_path = os.path.join(cls.tmpdir.name, "services.json")
+        cls.httpd = server.create_server(
+            "127.0.0.1", 0, user="alice", password="s3cret", services_path=cls.services_path)
+        cls.port = cls.httpd.server_address[1]
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base = "http://127.0.0.1:%d" % cls.port
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.tmpdir.cleanup()
+
+    def setUp(self):
+        self._beszel_env = {k: os.environ.get(k) for k in (
+            "BESZEL_URL", "BESZEL_USER", "BESZEL_PASSWORD", "BESZEL_API_KEY")}
+        for k in self._beszel_env:
+            os.environ.pop(k, None)
+        BeszelStubHandler.fail = False
+        BeszelStubHandler.auth_hits = 0
+        BeszelStubHandler.last_auth = ""
+        self._stubs = []
+        server.clear_beszel_cache()
+
+    def tearDown(self):
+        for stub in self._stubs:
+            stub.stop()
+        BeszelStubHandler.fail = False
+        server.clear_beszel_cache()
+        for k, v in self._beszel_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    def start_beszel(self):
+        stub = BeszelStub()
+        url = stub.start()
+        self._stubs.append(stub)
+        return url
+
+    def request(self, path, method="GET", data=None, jar=None):
+        if jar is None:
+            jar = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(
+            NoRedirect(), urllib.request.HTTPCookieProcessor(jar))
+        body = urllib.parse.urlencode(data).encode() if data else None
+        req = urllib.request.Request(self.base + path, data=body, method=method)
+        try:
+            with contextlib.closing(opener.open(req)) as resp:
+                return resp.status, dict(resp.headers), resp.read(), jar
+        except urllib.error.HTTPError as e:
+            with contextlib.closing(e):
+                return e.code, dict(e.headers), e.read(), jar
+
+    def login(self, jar):
+        return self.request("/login", "POST", {"username": "alice", "password": "s3cret"}, jar)
+
+    def api(self, path, jar=None):
+        if jar is None:
+            jar = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(
+            NoRedirect(), urllib.request.HTTPCookieProcessor(jar))
+        req = urllib.request.Request(self.base + path, method="GET")
+        try:
+            with contextlib.closing(opener.open(req)) as resp:
+                return resp.status, json.loads(resp.read().decode() or "{}"), jar
+        except urllib.error.HTTPError as e:
+            with contextlib.closing(e):
+                return e.code, json.loads(e.read().decode() or "{}"), jar
+
+    def test_beszel_requires_auth(self):
+        status, _, _ = self.api("/api/beszel")
+        self.assertEqual(status, 401)
+
+    def test_beszel_disabled_when_unconfigured(self):
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertEqual(status, 200)
+        self.assertEqual(data, {"enabled": False})
+
+    def test_beszel_returns_normalized_systems(self):
+        url = self.start_beszel()
+        os.environ["BESZEL_URL"] = url
+        os.environ["BESZEL_USER"] = "admin@beszel"
+        os.environ["BESZEL_PASSWORD"] = "secret"
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertEqual(status, 200)
+        self.assertEqual(data, {
+            "enabled": True,
+            "systems": [{"name": "casaos", "cpu": 42.0, "mem": 55.0, "disk": 61.0, "status": "up"}],
+        })
+
+    def test_beszel_error_when_stub_returns_500(self):
+        url = self.start_beszel()
+        os.environ["BESZEL_URL"] = url
+        os.environ["BESZEL_USER"] = "admin@beszel"
+        os.environ["BESZEL_PASSWORD"] = "secret"
+        BeszelStubHandler.fail = True
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertEqual(status, 200)
+        self.assertTrue(data["enabled"])
+        self.assertIn("error", data)
+
+    def test_beszel_api_key_skips_login(self):
+        url = self.start_beszel()
+        os.environ["BESZEL_URL"] = url
+        os.environ["BESZEL_API_KEY"] = "key123"
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertEqual(status, 200)
+        self.assertTrue(data["enabled"])
+        self.assertEqual(BeszelStubHandler.auth_hits, 0)
+        self.assertEqual(BeszelStubHandler.last_auth, "Bearer key123")
+
+    def test_beszel_caches_within_ttl(self):
+        url = self.start_beszel()
+        os.environ["BESZEL_URL"] = url
+        os.environ["BESZEL_USER"] = "admin@beszel"
+        os.environ["BESZEL_PASSWORD"] = "secret"
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertTrue(data["enabled"])
+        BeszelStubHandler.fail = True
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertEqual(status, 200)
+        self.assertTrue(data["enabled"])
+        self.assertEqual(data["systems"][0]["name"], "casaos")
 
 
 if __name__ == "__main__":
