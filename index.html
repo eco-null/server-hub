@@ -69,12 +69,7 @@
         radial-gradient(900px 700px at 92% 8%,  color-mix(in srgb, var(--blob-b) 12%, transparent), transparent 55%),
         linear-gradient(180deg, color-mix(in srgb, var(--bg-elev) 80%, var(--bg-deep)) 0%, var(--bg-deep) 70%);
       min-height: 100vh;
-      transition:
-        background-color 500ms var(--ease),
-        background-image 600ms var(--ease),
-        background-size 600ms var(--ease),
-        background-position 600ms var(--ease),
-        color 400ms var(--ease);
+      transition: background-color 400ms var(--ease), color 400ms var(--ease);
     }
     .blob {
       position: fixed; border-radius: 9999px; filter: blur(60px);
@@ -204,21 +199,25 @@
       position: relative; z-index: 61; width: min(92vw, 640px);
       background: var(--surface); border: 1px solid var(--border-hi); border-radius: 20px;
       padding: 1.5rem; box-shadow: 0 32px 80px -24px rgba(0,0,0,.7);
-      animation: modal-in 280ms var(--ease);
     }
     #search-modal-input { font-size: 1.25rem; padding: 0.85rem 1rem; }
 
-    /* Modal open/close animation (fade + scale) */
+    /* Modal open/close animation (fade + scale from center) */
     @keyframes modal-in {
-      from { opacity: 0; transform: translateY(14px) scale(0.97); }
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+      to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    /* Search panel is centered by flex, not translate — keep it that way. */
+    @keyframes search-in {
+      from { opacity: 0; transform: translateY(10px) scale(0.97); }
       to   { opacity: 1; transform: translateY(0) scale(1); }
     }
     #add-modal:not(.hidden) .modal-panel,
-    #edit-modal:not(.hidden) .modal-panel,
-    #search-modal:not(.hidden) #search-panel { animation: modal-in 260ms var(--ease); }
+    #edit-modal:not(.hidden) .modal-panel { animation: modal-in 240ms var(--ease); }
+    #search-modal:not(.hidden) #search-panel { animation: search-in 240ms var(--ease); }
     #add-modal:not(.hidden) .modal-backdrop,
     #edit-modal:not(.hidden) .modal-backdrop,
-    #search-modal:not(.hidden) .modal-backdrop { animation: backdrop-in 260ms var(--ease); }
+    #search-modal:not(.hidden) .modal-backdrop { animation: backdrop-in 240ms var(--ease); }
     @keyframes backdrop-in {
       from { opacity: 0; }
       to   { opacity: 1; }
