@@ -196,6 +196,24 @@
       <div class="space-y-3" id="feature-list">
         <!-- Rendered by JS -->
       </div>
+
+      <!-- System stats source (Beszel) -->
+      <div class="pt-3 mt-3 border-t border-[color:var(--border)]">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-medium">System stats source</p>
+            <p id="beszel-status" class="text-xs text-[color:var(--fg-muted)] mt-0.5">Checking Beszel…</p>
+          </div>
+          <button id="beszel-test" class="btn focus-ring text-xs shrink-0">Test connection</button>
+        </div>
+        <p class="text-xs text-[color:var(--fg-muted)] mt-1.5">
+          Beszel credentials are set server-side via env vars
+          (<code class="text-[color:var(--fg)]">BESZEL_URL</code>,
+          <code class="text-[color:var(--fg)]">BESZEL_USER</code>,
+          <code class="text-[color:var(--fg)]">BESZEL_PASSWORD</code>)
+          — no credentials are stored in the browser.
+        </p>
+      </div>
     </section>
 
     <!-- Services editor -->
@@ -410,6 +428,50 @@
     });
   }
   renderFeatures();
+
+  /* ============================================================
+     Beszel connection status + test (server-side env config)
+     ============================================================ */
+  const beszelStatusEl = document.getElementById('beszel-status');
+  const beszelTestBtn  = document.getElementById('beszel-test');
+  const BESZEL_TONES = ['text-[color:var(--green)]', 'text-[color:var(--red)]'];
+
+  function setBeszelStatus(text, tone) {
+    beszelStatusEl.classList.remove(...BESZEL_TONES);
+    if (tone === 'ok') beszelStatusEl.classList.add('text-[color:var(--green)]');
+    if (tone === 'bad') beszelStatusEl.classList.add('text-[color:var(--red)]');
+    beszelStatusEl.textContent = text;
+  }
+
+  async function checkBeszel(showToast) {
+    beszelTestBtn.disabled = true;
+    beszelStatusEl.textContent = 'Checking Beszel…';
+    let msg = '';
+    try {
+      const r = await fetch('/api/beszel', { cache: 'no-store' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'request failed (' + r.status + ')');
+      if (d.enabled && d.error) {
+        msg = 'Beszel: error — ' + d.error;
+        setBeszelStatus(msg, 'bad');
+      } else if (d.enabled) {
+        const n = (d.systems || []).length;
+        msg = 'Beszel: connected — ' + n + ' server' + (n === 1 ? '' : 's');
+        setBeszelStatus(msg, 'ok');
+      } else {
+        msg = 'Beszel: not configured (set BESZEL_URL etc. on the server)';
+        setBeszelStatus(msg, 'info');
+      }
+    } catch (err) {
+      msg = 'Beszel: error — ' + err.message;
+      setBeszelStatus(msg, 'bad');
+    } finally {
+      beszelTestBtn.disabled = false;
+      if (showToast) toast(msg);
+    }
+  }
+  beszelTestBtn.addEventListener('click', () => checkBeszel(true));
+  checkBeszel(false);
 
   /* ============================================================
      Services editor (server-persisted via /api/services)
