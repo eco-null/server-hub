@@ -213,7 +213,7 @@
     <div class="blob c" aria-hidden="true"></div>
   </div>
 
-  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col min-h-[calc(100vh-3rem)]">
 
     <!-- Header -->
     <header class="flex flex-col gap-6 lg:flex-row lg:gap-8">
@@ -304,7 +304,7 @@
     </header>
 
     <!-- Services container -->
-    <div id="root" class="mt-6 space-y-8">
+    <div id="root" class="mt-6 space-y-8 flex-1">
       <div id="skeletons" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
         <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
@@ -315,7 +315,7 @@
 
     <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
 
-    <footer class="mt-16 pt-6 border-t border-[color:var(--border)] text-center text-xs text-[color:var(--fg-muted)] font-mono space-y-1">
+    <footer class="mt-8 pt-6 border-t border-[color:var(--border)] text-center text-xs text-[color:var(--fg-muted)] font-mono space-y-1">
       <p>Add links with the “+ Add” form — they’re stored on the server in <code class="text-[color:var(--fg)]">services.json</code>.</p>
       <p>Categories driven by <code class="text-[color:var(--fg)]">categorize.js</code>. <a href="tests.html" class="underline hover:text-[color:var(--accent)]">Run tests</a> · <a href="SETUP-LXC.md" class="underline hover:text-[color:var(--accent)]">Hosting setup</a> · <a href="settings.html" class="underline hover:text-[color:var(--accent)]">Settings</a></p>
     </footer>
