@@ -197,38 +197,40 @@
     <div class="blob c" aria-hidden="true"></div>
   </div>
 
-  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+  <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
     <!-- Header -->
-    <header class="flex flex-col gap-6 sm:gap-8">
-      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div class="flex items-start gap-3">
-          <button id="theme-toggle" class="theme-btn shrink-0" title="Toggle theme" aria-label="Toggle color theme">
-            <svg id="theme-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
-          </button>
-          <div data-feature="greeting">
-            <p class="text-sm text-[color:var(--fg-muted)] font-mono" id="greeting" data-greeting-name>Hello</p>
-            <h1 class="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight" data-dynamic="true">Server Hub</h1>
-            <p class="mt-2 text-[color:var(--fg-muted)] max-w-md" data-dynamic-subtitle>Your self-hosted apps and services, reachable from one place.</p>
-            <div class="mt-3 flex flex-wrap gap-2 items-center">
-              <span id="cf-chip" class="chip chip-user hidden"></span>
-              <span id="theme-chip" class="chip"></span>
+    <header class="flex flex-col gap-6 lg:flex-row lg:gap-8">
+      <div class="flex-1 min-w-0 flex flex-col gap-6">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <button id="theme-toggle" class="theme-btn shrink-0" title="Toggle theme" aria-label="Toggle color theme">
+              <svg id="theme-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+            </button>
+            <div data-feature="greeting">
+              <p class="text-sm text-[color:var(--fg-muted)] font-mono" id="greeting" data-greeting-name>Hello</p>
+              <h1 class="mt-1 text-3xl sm:text-4xl font-semibold tracking-tight" data-dynamic="true">Server Hub</h1>
+              <p class="mt-2 text-[color:var(--fg-muted)] max-w-md" data-dynamic-subtitle>Your self-hosted apps and services, reachable from one place.</p>
+              <div class="mt-3 flex flex-wrap gap-2 items-center">
+                <span id="cf-chip" class="chip chip-user hidden"></span>
+                <span id="theme-chip" class="chip"></span>
+              </div>
             </div>
           </div>
+          <div class="text-right" data-feature="clock">
+            <p id="clock" class="font-mono text-2xl sm:text-3xl tabular-nums" aria-live="polite">--:--:--</p>
+            <p id="date" class="text-sm text-[color:var(--fg-muted)] mt-1">—</p>
+          </div>
         </div>
-        <div class="text-right" data-feature="clock">
-          <p id="clock" class="font-mono text-2xl sm:text-3xl tabular-nums" aria-live="polite">--:--:--</p>
-          <p id="date" class="text-sm text-[color:var(--fg-muted)] mt-1">—</p>
-        </div>
-      </div>
 
-      <!-- Search -->
-      <div data-feature="search" class="glass px-4 py-3 flex items-center gap-3">
-        <svg class="w-5 h-5 text-[color:var(--fg-muted)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-        <input id="search" type="search" inputmode="search" autocomplete="off" spellcheck="false"
-          placeholder="Filter services by name or description…" aria-label="Filter services"
-          class="flex-1 bg-transparent outline-none placeholder:text-[color:var(--fg-muted)] text-base focus-ring" />
-        <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-[color:var(--fg-muted)] border border-[color:var(--border)] rounded-md font-mono">/</kbd>
+        <!-- Search -->
+        <div data-feature="search" class="glass px-4 py-3 flex items-center gap-3">
+          <svg class="w-5 h-5 text-[color:var(--fg-muted)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="search" type="search" inputmode="search" autocomplete="off" spellcheck="false"
+            placeholder="Filter services by name or description…" aria-label="Filter services"
+            class="flex-1 bg-transparent outline-none placeholder:text-[color:var(--fg-muted)] text-base focus-ring" />
+          <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-[color:var(--fg-muted)] border border-[color:var(--border)] rounded-md font-mono">/</kbd>
+        </div>
       </div>
 
       <!-- Add service form -->
@@ -256,46 +258,48 @@
         </form>
       </section>
 
-      <!-- System stats -->
-      <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xs font-semibold uppercase group-header">System</h2>
-          <span id="stats-host" class="text-xs text-[color:var(--fg-muted)] font-mono">—</span>
-        </div>
-        <div class="grid grid-cols-3 gap-3 sm:gap-4" id="stats-grid">
-          <div class="space-y-1.5">
-            <div class="flex items-baseline justify-between">
-              <span class="text-xs text-[color:var(--fg-muted)]">CPU</span>
-              <span id="stat-cpu-val" class="font-mono text-sm tabular-nums">—</span>
-            </div>
-            <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-cpu-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+      <aside class="lg:w-80 shrink-0 flex flex-col gap-6">
+        <!-- System stats -->
+        <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase group-header">System</h2>
+            <span id="stats-host" class="text-xs text-[color:var(--fg-muted)] font-mono">—</span>
           </div>
-          <div class="space-y-1.5">
-            <div class="flex items-baseline justify-between">
-              <span class="text-xs text-[color:var(--fg-muted)]">Memory</span>
-              <span id="stat-mem-val" class="font-mono text-sm tabular-nums">—</span>
+          <div class="grid grid-cols-3 gap-3 sm:gap-4" id="stats-grid">
+            <div class="space-y-1.5">
+              <div class="flex items-baseline justify-between">
+                <span class="text-xs text-[color:var(--fg-muted)]">CPU</span>
+                <span id="stat-cpu-val" class="font-mono text-sm tabular-nums">—</span>
+              </div>
+              <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-cpu-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
             </div>
-            <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-mem-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
-          </div>
-          <div class="space-y-1.5">
-            <div class="flex items-baseline justify-between">
-              <span class="text-xs text-[color:var(--fg-muted)]">Disk</span>
-              <span id="stat-disk-val" class="font-mono text-sm tabular-nums">—</span>
+            <div class="space-y-1.5">
+              <div class="flex items-baseline justify-between">
+                <span class="text-xs text-[color:var(--fg-muted)]">Memory</span>
+                <span id="stat-mem-val" class="font-mono text-sm tabular-nums">—</span>
+              </div>
+              <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-mem-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
             </div>
-            <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-disk-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+            <div class="space-y-1.5">
+              <div class="flex items-baseline justify-between">
+                <span class="text-xs text-[color:var(--fg-muted)]">Disk</span>
+                <span id="stat-disk-val" class="font-mono text-sm tabular-nums">—</span>
+              </div>
+              <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-disk-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </aside>
     </header>
 
     <!-- Services container -->
-    <div id="root" class="mt-10 space-y-10">
+    <div id="root" class="mt-6 space-y-8">
       <div id="skeletons" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
         <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
         <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
       </div>
-      <div id="groups" class="space-y-10"></div>
+      <div id="groups" class="space-y-8"></div>
     </div>
 
     <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
