@@ -337,6 +337,16 @@
     Can't reach the services API — showing the last loaded list. Edits won't persist until the server responds.
   </div>
 
+  <!-- Search modal -->
+  <div id="search-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="search-title">
+    <div class="modal-backdrop" onclick="window.__HUB__.closeSearch()"></div>
+    <div class="modal-panel space-y-3" style="width:min(92vw,560px)">
+      <h2 id="search-title" class="text-xs font-semibold uppercase group-header">Search</h2>
+      <input id="search-modal-input" class="form-input w-full text-base" placeholder="Search services or the web…" autocomplete="off" />
+      <div id="search-suggestions" class="flex flex-col gap-1 max-h-72 overflow-y-auto"></div>
+    </div>
+  </div>
+
   <!-- Add service modal -->
   <div id="add-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="add-title">
     <div class="modal-backdrop" onclick="window.__HUB__.closeAdd()"></div>
@@ -926,12 +936,46 @@
     const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
       || el.tagName === 'SELECT' || el.isContentEditable);
     if (e.key === '/' && !typing) {
-      e.preventDefault(); searchInput.focus();
+      e.preventDefault(); openSearch();
     }
     if (e.key === 'Escape' && document.activeElement === searchInput) {
       searchInput.value = ''; filter(''); searchInput.blur();
     }
   });
+
+  const searchModal = document.getElementById('search-modal');
+  const searchModalInput = document.getElementById('search-modal-input');
+  const searchSuggestions = document.getElementById('search-suggestions');
+
+  function openSearch() { searchModal.classList.remove('hidden'); searchModalInput.value = ''; renderSearchSuggestions(''); searchModalInput.focus(); }
+  function closeSearch() { searchModal.classList.add('hidden'); searchSuggestions.innerHTML = ''; }
+  function renderSearchSuggestions(q) {
+    const items = categorized();
+    const ql = q.toLowerCase();
+    const matches = ql ? items.filter(s => (s.name + ' ' + (s.desc || '')).toLowerCase().includes(ql)).slice(0, 8) : items.slice(0, 8);
+    searchSuggestions.innerHTML = '';
+    matches.forEach(s => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'flex items-center gap-2 text-left px-3 py-2 rounded-lg hover:bg-[color:var(--surface-hi)] transition text-sm';
+      row.innerHTML = '<span class="shrink-0">' + svgFor(s.icon) + '</span><span class="min-w-0 flex-1 truncate">' + esc(s.name) + '</span><span class="text-[10px] text-[color:var(--fg-muted)] truncate">' + esc(s.category) + '</span>';
+      row.addEventListener('click', () => { window.open(s.url.startsWith('http') ? s.url : 'https://' + s.url, '_blank', 'noopener'); closeSearch(); });
+      searchSuggestions.appendChild(row);
+    });
+  }
+  searchModalInput.addEventListener('input', () => renderSearchSuggestions(searchModalInput.value));
+  searchModalInput.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeSearch();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const q = searchModalInput.value.trim();
+      if (!q) return;
+      closeSearch();
+      webSearch(q);
+    }
+  });
+  searchModal.addEventListener('keydown', e => { if (e.key === 'Escape') closeSearch(); });
+  document.getElementById('search').addEventListener('click', openSearch);
 
   function filter(q) {
     q = q.trim().toLowerCase();
@@ -1174,6 +1218,7 @@
     categorized, setServices: arr => { SERVICES = arr; },
     getSearchInput: () => searchInput,
     webSearch,
+    openSearch, closeSearch,
     loadBookmarks, renderBookmarks, BOOKMARKS,
     pollStats, renderBeszel,
   };

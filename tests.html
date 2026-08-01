@@ -296,6 +296,49 @@
     const allVisible = Array.from(w.document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
     ok(allVisible.length === fetched.length, 'clearing filter restores all cards', allVisible.length);
 
+    // Search popup — clicking #search opens the modal
+    const searchModal = w.document.getElementById('search-modal');
+    ok(searchModal && searchModal.classList.contains('hidden'), 'search modal starts hidden');
+    w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
+    ok(!searchModal.classList.contains('hidden'), 'clicking #search opens the search popup');
+    ok(w.document.activeElement === w.document.getElementById('search-modal-input'), 'popup input focused on open');
+
+    // Typing filters suggestions to matching services
+    const sInput = w.document.getElementById('search-modal-input');
+    sInput.value = 'grafana';
+    sInput.dispatchEvent(new w.Event('input'));
+    let sugg = w.document.querySelectorAll('#search-suggestions button');
+    ok(sugg.length === 1 && sugg[0].textContent.includes('Grafana'), 'typing filters suggestions to matching service', 'got ' + sugg.length);
+
+    // Enter with a query calls webSearch → provider URL via window.open
+    let opened = [];
+    const prevOpen = w.open;
+    w.open = (url, target, features) => { opened.push({ url, target, features }); return null; };
+    sInput.value = 'homelab wiki';
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter' }));
+    ok(opened.length === 1, 'Enter triggers webSearch', 'opened=' + opened.length);
+    ok(opened[0] && opened[0].url === 'https://www.google.com/search?q=' + encodeURIComponent('homelab wiki'),
+       'webSearch opens provider URL', opened[0] && opened[0].url);
+    ok(searchModal.classList.contains('hidden'), 'popup closes after Enter search');
+
+    // Clicking a suggestion opens the service URL
+    w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
+    sInput.value = '';
+    sInput.dispatchEvent(new w.Event('input'));
+    sugg = w.document.querySelectorAll('#search-suggestions button');
+    opened = [];
+    sugg[0].click();
+    ok(opened.length === 1, 'clicking a suggestion opens a URL', 'opened=' + opened.length);
+    ok(opened[0] && opened[0].url === 'https://grafana.example.com', 'suggestion opens the service URL', opened[0] && opened[0].url);
+    ok(searchModal.classList.contains('hidden'), 'popup closes after suggestion click');
+    w.open = prevOpen;
+
+    // Esc closes
+    w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
+    ok(!searchModal.classList.contains('hidden'), 'popup reopens for esc test');
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape' }));
+    ok(searchModal.classList.contains('hidden'), 'Esc closes the search popup');
+
     // Theme still works
     w.document.documentElement.classList.remove('light', 'dark');
     w.HubSettings.set({ theme: 'light' });
@@ -386,7 +429,9 @@
     w.document.getElementById('add-form').classList.add('hidden');
     w.document.activeElement.blur();
     w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: '/' }));
-    ok(w.document.activeElement === w.document.getElementById('search'), '/ with no input focused focuses search');
+    ok(!w.document.getElementById('search-modal').classList.contains('hidden'), '/ with no input focused opens the search popup');
+    ok(w.document.activeElement === w.document.getElementById('search-modal-input'), '/ focuses the search popup input');
+    w.__HUB__.closeSearch();
 
     // Scheme dropdown: pasting a full URL strips the scheme and sets the select
     const addScheme = w.document.getElementById('add-scheme');
