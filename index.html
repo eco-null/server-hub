@@ -264,6 +264,23 @@
             </div>
           </div>
         </section>
+
+        <!-- Bookmarks -->
+        <section aria-label="Bookmarks" id="bookmarks-card" class="glass p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase group-header">Bookmarks</h2>
+            <button id="bookmarks-add" class="btn-ghost text-xs" title="Add bookmark" aria-label="Add bookmark">+ Add</button>
+          </div>
+          <div id="bookmarks" class="flex flex-wrap gap-2"></div>
+          <form id="bookmarks-editor" class="hidden mt-3 space-y-2" autocomplete="off" novalidate>
+            <input id="bookmark-name" class="form-input" placeholder="Name (e.g. Homelab Wiki)" required />
+            <input id="bookmark-url" class="form-input" type="url" placeholder="https://…" required />
+            <div class="flex gap-2">
+              <button type="submit" class="btn-primary text-xs">Save</button>
+              <button type="button" id="bookmark-cancel" class="btn-ghost text-xs">Cancel</button>
+            </div>
+          </form>
+        </section>
       </aside>
     </header>
 
@@ -504,6 +521,71 @@
     if (!r.ok) throw new Error('request failed (' + r.status + ')');
     return r.json();
   }
+
+  /* ============================================================
+     BOOKMARKS — loaded from the server (services.json) via the API
+     ============================================================ */
+  const API_BOOKMARKS = '/api/bookmarks';
+  let BOOKMARKS = [];
+
+  async function loadBookmarks() {
+    try {
+      const r = await fetch(API_BOOKMARKS, { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      BOOKMARKS = Array.isArray(d.bookmarks) ? d.bookmarks : [];
+    } catch { BOOKMARKS = []; }
+    renderBookmarks();
+  }
+
+  function renderBookmarks() {
+    const box = document.getElementById('bookmarks');
+    if (!box) return;
+    box.innerHTML = '';
+    BOOKMARKS.forEach(b => {
+      const a = document.createElement('a');
+      a.href = b.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.className = 'glass px-3 py-2 rounded-lg flex items-center gap-2 text-sm hover:brightness-110 transition';
+      a.innerHTML = '<span class="w-2 h-2 rounded-full" style="background:var(--accent)"></span>' + esc(b.name);
+      box.appendChild(a);
+    });
+  }
+
+  // Inline add-bookmark editor (hidden by default)
+  const bookmarkEditor = document.getElementById('bookmarks-editor');
+  const bookmarkName   = document.getElementById('bookmark-name');
+  const bookmarkUrl    = document.getElementById('bookmark-url');
+
+  function openBookmarkEditor() {
+    bookmarkName.value = '';
+    bookmarkUrl.value = '';
+    bookmarkEditor.classList.remove('hidden');
+    bookmarkName.focus();
+  }
+  function closeBookmarkEditor() {
+    bookmarkEditor.classList.add('hidden');
+  }
+  async function saveBookmark(e) {
+    e.preventDefault();
+    const name = bookmarkName.value.trim();
+    const url  = bookmarkUrl.value.trim();
+    if (!name || !url) return;
+    try {
+      const r = await fetch(API_BOOKMARKS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, url }),
+      });
+      if (!r.ok) return;
+      const d = await r.json();
+      BOOKMARKS = Array.isArray(d.bookmarks) ? d.bookmarks : [];
+      renderBookmarks();
+      closeBookmarkEditor();
+    } catch {}
+  }
+  document.getElementById('bookmarks-add').addEventListener('click', openBookmarkEditor);
+  bookmarkEditor.addEventListener('submit', saveBookmark);
+  document.getElementById('bookmark-cancel').addEventListener('click', closeBookmarkEditor);
 
   // Categorize at render time using categorize.js
   function categorized() {
@@ -991,6 +1073,7 @@
     autoCategorize: (n,u,d) => window.autoCategorize(n,u,d),
     categorized, setServices: arr => { SERVICES = arr; },
     getSearchInput: () => searchInput,
+    loadBookmarks, renderBookmarks, BOOKMARKS,
   };
 
   /* ============================================================
@@ -1005,6 +1088,7 @@
       document.getElementById('api-offline').classList.remove('hidden');
       renderGroups();
     }
+    loadBookmarks();
   })();
 </script>
 </body>
