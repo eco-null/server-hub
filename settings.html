@@ -104,8 +104,9 @@
     .row-grid { display: grid; gap: 0.65rem; }
     .focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     .svc-row {
-      display: grid; grid-template-columns: 1.4fr 1.6fr 1.6fr 1.2fr auto auto; gap: 8px; align-items: center;
+      display: grid; grid-template-columns: 1.4fr 1.6fr 1.6fr auto auto auto; gap: 8px; align-items: center;
     }
+    .svc-color { width: 2.25rem; height: 2rem; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; }
     @media (max-width: 720px) { .svc-row { grid-template-columns: 1fr; } .svc-row .hide-sm { display: none; } }
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
   </style>
@@ -745,13 +746,9 @@
       row.innerHTML =
         '<input class="field focus-ring bm-name" data-i="' + i + '" value="' + esc(b.name) + '" placeholder="Name" />'
         + '<input class="field focus-ring bm-url"  data-i="' + i + '" value="' + esc(b.url) + '" placeholder="URL" />'
+        + '<input class="svc-color" type="color" data-i="' + i + '" value="' + esc(b.color || '#5E6AD2') + '" title="Dot color" />'
         + '<button class="btn btn-danger focus-ring text-xs bm-del" data-i="' + i + '" aria-label="Delete ' + esc(b.name) + '">✕</button>';
-      const colorInput = document.createElement('input');
-      colorInput.type = 'color';
-      colorInput.value = b.color || '#5E6AD2';
-      colorInput.dataset.i = i;
-      colorInput.className = 'svc-color';
-      row.appendChild(colorInput);
+      const colorInput = row.querySelector('.svc-color');
       colorInput.addEventListener('change', async e => {
         const i2 = +e.target.dataset.i;
         const b2 = bookmarks[i2];
@@ -852,8 +849,10 @@
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'server-hub-backup.json';
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(a.href);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
       toast('Backup exported');
     } catch (err) {
       toast('Export failed: ' + err.message);

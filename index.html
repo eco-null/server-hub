@@ -192,7 +192,7 @@
       padding: 1.25rem; z-index: 51; box-shadow: 0 24px 64px -20px rgba(0,0,0,.6);
     }
     /* Fullscreen search overlay — blurred backdrop, large centered input */
-    #search-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 12vh 1.25rem 1.25rem; }
+    #search-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.25rem; }
     #search-modal .modal-backdrop { background: rgba(0,0,0,.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
     #search-panel {
       position: relative; z-index: 61; width: min(92vw, 640px);
@@ -316,10 +316,13 @@
 
     <!-- Services container -->
     <div id="root" class="mt-3 space-y-8 flex-1">
-      <div id="skeletons" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
-        <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
-        <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
+      <div id="skeletons" class="columns-1 md:columns-2 xl:columns-3 gap-5">
+        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
+        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
+        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
+        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
+        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
+        <div class="glass skeleton-card p-3 skel break-inside-avoid mb-5"></div>
       </div>
       <div id="groups" class="space-y-8"></div>
     </div>
@@ -952,7 +955,7 @@
     const el = document.activeElement;
     const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'
       || el.tagName === 'SELECT' || el.isContentEditable);
-    if (e.key === '/' && !typing) {
+    if (e.key === '/' && !typing && window.HubSettings.get().features.search !== false) {
       e.preventDefault(); openSearch();
     }
     if (e.key === 'Escape' && document.activeElement === searchInput) {
