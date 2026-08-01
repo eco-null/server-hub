@@ -672,6 +672,11 @@ class HubHandler(BaseHTTPRequestHandler):
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
             return self.send_bytes(json.dumps({"email": user}), 200, "application/json; charset=utf-8")
+        # Public static assets (favicon, logo, JS, CSS) — not sensitive, and
+        # required for the login page's favicon/logo to render without a session.
+        ext = os.path.splitext(path)[1].lower()
+        if ext in (".png", ".svg", ".ico", ".gif", ".jpg", ".jpeg", ".webp", ".js", ".css", ".woff", ".woff2"):
+            return self.serve_file(path.lstrip("/"))
         if not user:
             return self.redirect("/login")
         if path == "/":

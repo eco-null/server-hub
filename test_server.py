@@ -102,6 +102,15 @@ class ServerHubTests(unittest.TestCase):
         self.assertEqual(status, 302)
         self.assertEqual(headers["Location"], "/login")
 
+    def test_static_assets_serve_without_auth(self):
+        status, headers, body, _ = self.request("/logo.png")
+        self.assertEqual(status, 200)
+        self.assertIn("image/png", headers["Content-Type"])
+        self.assertTrue(body.startswith(b"\x89PNG"))
+        status, headers, _, _ = self.request("/categorize.js")
+        self.assertEqual(status, 200)
+        self.assertIn("javascript", headers["Content-Type"])
+
     def test_login_page_served_without_auth(self):
         status, _, body, _ = self.request("/login")
         self.assertEqual(status, 200)
@@ -130,11 +139,6 @@ class ServerHubTests(unittest.TestCase):
         status, _, body, _ = self.request("/", jar=jar)
         self.assertEqual(status, 200)
         self.assertIn(b"Server Hub", body)
-
-    def test_static_asset_requires_auth(self):
-        status, headers, _, _ = self.request("/categorize.js")
-        self.assertEqual(status, 302)
-        self.assertEqual(headers["Location"], "/login")
 
     def test_api_me_returns_username(self):
         jar = http.cookiejar.CookieJar()
