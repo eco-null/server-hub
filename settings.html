@@ -298,6 +298,21 @@
       </div>
     </section>
 
+    <!-- Backup -->
+    <section class="glass section">
+      <h2 class="h2 mb-4">Backup</h2>
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <p class="text-sm text-[color:var(--fg-muted)] max-w-md">Export all settings, links, and bookmarks to a JSON file. Import to restore after an update.</p>
+        <div class="flex gap-2">
+          <button id="export-btn" class="btn focus-ring text-xs">Export</button>
+          <label class="btn focus-ring text-xs cursor-pointer">
+            Import
+            <input id="import-input" type="file" accept="application/json,.json" class="hidden" />
+          </label>
+        </div>
+      </div>
+    </section>
+
     <!-- Danger zone -->
     <section class="glass section">
       <h2 class="h2 mb-3">Reset</h2>
@@ -795,6 +810,60 @@
   bmAddForm.addEventListener('submit', e => { e.preventDefault(); addBookmark(); });
 
   loadBookmarks();
+
+  /* ============================================================
+     Backup (export/import)
+     ============================================================ */
+  const exportBtn = document.getElementById('export-btn');
+  const importInput = document.getElementById('import-input');
+
+  exportBtn.addEventListener('click', async () => {
+    try {
+      const [servicesData, bookmarksData] = await Promise.all([
+        apiJson('GET', API_SERVICES).catch(() => ({ services: [] })),
+        apiJson('GET', API_BOOKMARKS).catch(() => ({ bookmarks: [] })),
+      ]);
+      const payload = {
+        settings: window.HubSettings.get(),
+        services: servicesData.services || [],
+        bookmarks: bookmarksData.bookmarks || [],
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'server-hub-backup.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('Backup exported');
+    } catch (err) {
+      toast('Export failed: ' + err.message);
+    }
+  });
+
+  importInput.addEventListener('change', async () => {
+    const file = importInput.files && importInput.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data || typeof data !== 'object' || !data.settings) throw new Error('invalid backup');
+      if (!confirm('Replace all current settings, links, and bookmarks with this backup?')) return;
+      window.HubSettings.set(data.settings);
+      // replace services
+      const existingSvc = (await apiJson('GET', API_SERVICES)).services || [];
+      for (const s of existingSvc) await apiJson('DELETE', API_SERVICES + '/' + encodeURIComponent(s.id));
+      for (const s of data.services || []) await apiJson('POST', API_SERVICES, s);
+      // replace bookmarks
+      const existingBm = (await apiJson('GET', API_BOOKMARKS)).bookmarks || [];
+      for (const b of existingBm) await apiJson('DELETE', API_BOOKMARKS + '/' + encodeURIComponent(b.id));
+      for (const b of data.bookmarks || []) await apiJson('POST', API_BOOKMARKS, b);
+      toast('Backup restored');
+    } catch (err) {
+      toast('Import failed: ' + err.message);
+    } finally {
+      importInput.value = '';
+    }
+  });
 
   /* ============================================================
      Reset
