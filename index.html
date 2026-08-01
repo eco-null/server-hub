@@ -1060,7 +1060,16 @@
     themeBtn.setAttribute('title', 'Theme: ' + mode + ' — click to cycle');
     themeChip.textContent = 'theme: ' + mode;
   }
+  function wallpaperIsCustom(s) {
+    return s && s.wallpaper && s.wallpaper.mode === 'custom';
+  }
+  function syncThemeToggle() {
+    const on = wallpaperIsCustom(window.HubSettings.get());
+    themeBtn.disabled = on;
+    themeBtn.classList.toggle('theme-btn-disabled', on);
+  }
   function cycleTheme() {
+    if (wallpaperIsCustom(window.HubSettings.get())) return;
     const cur = window.HubSettings.get().theme;
     const next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
     window.HubSettings.set({ theme: next });
@@ -1082,7 +1091,8 @@
   window.HubSettings.apply(effectiveSettings);
   applyTheme(effectiveSettings.theme);
   window.HubSettings.applyWallpaper(window.HubSettings.get());
-  window.HubSettings.subscribe(s => { applyTheme(s.theme); window.HubSettings.apply(s); window.HubSettings.applyWallpaper(s); });
+  syncThemeToggle();
+  window.HubSettings.subscribe(s => { applyTheme(s.theme); window.HubSettings.apply(s); window.HubSettings.applyWallpaper(s); syncThemeToggle(); });
 
   // FAB: opens the add-service modal
   document.getElementById('fab-add').addEventListener('click', () => {
