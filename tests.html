@@ -207,17 +207,34 @@
   iframe.id = 'hub';
   document.body.appendChild(iframe);
 
-  let hubWin, runDomTests;
+  group('settings.html — search provider UI (iframe)');
+
+  const sframe = document.createElement('iframe');
+  sframe.src = 'settings.html';
+  sframe.style.cssText = 'position:fixed; bottom:0; left:0; width:480px; height:600px; opacity:0.6; border:1px solid #444; z-index:49;';
+  sframe.id = 'hub-settings';
+  document.body.appendChild(sframe);
+
+  let hubWin, sWin, runDomTests, runSettingsDomTests;
+  let pending = 2;
+
   iframe.addEventListener('load', () => {
     hubWin = iframe.contentWindow;
-    runDomTests().then(finish).catch(e => {
-      out('iframe DOM tests ran', false, String(e));
-      finish();
-    });
+    runDomTests().catch(e => { out('index.html DOM tests ran', false, String(e)); }).then(maybeFinish);
   });
 
-  // Safety timeout in case iframe load never fires
-  setTimeout(() => { if (!hubWin) { skip('iframe DOM tests', 'iframe did not load (open via http/file)'); finish(); } }, 4000);
+  sframe.addEventListener('load', () => {
+    sWin = sframe.contentWindow;
+    runSettingsDomTests().catch(e => { out('settings.html DOM tests ran', false, String(e)); }).then(maybeFinish);
+  });
+
+  function maybeFinish() { if (--pending <= 0) finish(); }
+
+  // Safety timeout in case an iframe never fires its load event
+  setTimeout(() => {
+    if (!hubWin) { skip('index.html DOM tests', 'iframe did not load (open via http/file)'); maybeFinish(); }
+    if (!sWin)   { skip('settings.html DOM tests', 'iframe did not load (open via http/file)'); maybeFinish(); }
+  }, 4000);
 
   let finished = false;
   function finish() {
@@ -295,6 +312,9 @@
     w.__HUB__.filter('');
     const allVisible = Array.from(w.document.querySelectorAll('.card')).filter(c => c.style.display !== 'none');
     ok(allVisible.length === fetched.length, 'clearing filter restores all cards', allVisible.length);
+
+    // Task 3 — search input must not carry the focus-ring class
+    ok(!input.classList.contains('focus-ring'), 'search input does not use focus-ring class');
 
     // Search popup — clicking #search opens the modal
     const searchModal = w.document.getElementById('search-modal');
@@ -563,6 +583,36 @@
 
     // Restore default state for any subsequent test runs
     w.HubSettings.set({ theme: 'auto', features: {}, services: [], wallpaper: { mode: 'none', gradient: 'aurora', url: '' } });
+  };
+
+  runSettingsDomTests = async function () {
+    const sw = sWin;
+    const sel = sw.document.getElementById('search-provider');
+    const row = sw.document.getElementById('searxng-row');
+    const url = sw.document.getElementById('searxng-url');
+    ok(sel && sel.tagName === 'SELECT', 'settings: search-provider select exists');
+    ok(row, 'settings: searxng URL row exists');
+    eq(sw.HubSettings.get().search.provider, 'google', 'settings: default search provider is google');
+    ok(row.style.display === 'none', 'settings: searxng row hidden for google provider');
+
+    // Selecting SearXNG reveals the row and persists the provider
+    sel.value = 'searxng';
+    sel.dispatchEvent(new sw.Event('change'));
+    ok(row.style.display !== 'none', 'settings: selecting SearXNG reveals the URL row');
+    eq(sw.HubSettings.get().search.provider, 'searxng', 'settings: provider change persisted to HubSettings');
+
+    // Typing a URL persists it
+    url.value = 'https://searx.example.com';
+    url.dispatchEvent(new sw.Event('input'));
+    eq(sw.HubSettings.get().search.searxngUrl, 'https://searx.example.com', 'settings: searxng URL persisted');
+
+    // Switching back to Google hides the row again
+    sel.value = 'google';
+    sel.dispatchEvent(new sw.Event('change'));
+    ok(row.style.display === 'none', 'settings: switching back to Google hides the URL row');
+
+    // Cleanup — leave defaults for other suites
+    sw.HubSettings.set({ search: { provider: 'google', searxngUrl: '' } });
   };
 </script>
 </body>

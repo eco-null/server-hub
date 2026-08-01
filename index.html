@@ -145,6 +145,8 @@
     }
     .form-input::placeholder { color: var(--fg-muted); }
     .form-input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+    .search-input:focus-visible { outline: none; }
     .btn-primary {
       background: var(--accent); color: white; border: none; padding: 0.55rem 1rem;
       border-radius: 10px; font-size: 0.875rem; font-weight: 500; cursor: pointer;
@@ -247,7 +249,7 @@
           <svg class="w-5 h-5 text-[color:var(--fg-muted)] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
           <input id="search" type="search" inputmode="search" autocomplete="off" spellcheck="false"
             placeholder="Filter services by name or description…" aria-label="Filter services"
-            class="flex-1 bg-transparent outline-none placeholder:text-[color:var(--fg-muted)] text-base focus-ring" />
+            class="flex-1 bg-transparent outline-none placeholder:text-[color:var(--fg-muted)] text-base search-input" />
           <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-[color:var(--fg-muted)] border border-[color:var(--border)] rounded-md font-mono">/</kbd>
         </div>
       </div>

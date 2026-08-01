@@ -217,6 +217,32 @@
       </div>
     </section>
 
+    <!-- Search provider -->
+    <section class="glass section">
+      <h2 class="h2 mb-4">Search</h2>
+      <div class="row-grid">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="font-medium text-sm">Web search provider</p>
+            <p class="text-xs text-[color:var(--fg-muted)]">Used when you press Enter in the search popup.</p>
+          </div>
+          <select id="search-provider" class="field focus-ring w-48">
+            <option value="google">Google</option>
+            <option value="ddg">DuckDuckGo</option>
+            <option value="bing">Bing</option>
+            <option value="searxng">SearXNG</option>
+          </select>
+        </div>
+        <div class="flex items-center justify-between" id="searxng-row" style="display:none">
+          <div>
+            <p class="font-medium text-sm">SearXNG URL</p>
+            <p class="text-xs text-[color:var(--fg-muted)]">e.g. https://searx.yourdomain.com</p>
+          </div>
+          <input id="searxng-url" class="field focus-ring w-64" placeholder="https://searx.example.com" />
+        </div>
+      </div>
+    </section>
+
     <!-- Services editor -->
     <section class="glass section">
       <div class="flex items-center justify-between mb-4">
@@ -392,6 +418,18 @@
   nameInput.addEventListener('input',  e => S.set({ userName:  e.target.value }));
   titleInput.addEventListener('input', e => S.set({ pageTitle: e.target.value }));
   subInput.addEventListener('input',   e => S.set({ subtitle:  e.target.value }));
+
+  // Search provider
+  const searchProvider = document.getElementById('search-provider');
+  const searxngRow = document.getElementById('searxng-row');
+  const searxngUrl = document.getElementById('searxng-url');
+  const curSearch = cur.search || {};
+  searchProvider.value = curSearch.provider || 'google';
+  searxngUrl.value = curSearch.searxngUrl || '';
+  const toggleSearxng = () => { searxngRow.style.display = searchProvider.value === 'searxng' ? '' : 'none'; };
+  searchProvider.addEventListener('change', () => { S.set({ search: { provider: searchProvider.value, searxngUrl: searxngUrl.value.trim() } }); toggleSearxng(); });
+  searxngUrl.addEventListener('input', () => S.set({ search: { provider: searchProvider.value, searxngUrl: searxngUrl.value.trim() } }));
+  toggleSearxng();
 
   // Features toggles
   const FEATURE_META = [
