@@ -820,8 +820,8 @@
   exportBtn.addEventListener('click', async () => {
     try {
       const [servicesData, bookmarksData] = await Promise.all([
-        apiJson('GET', API_SERVICES).catch(() => ({ services: [] })),
-        apiJson('GET', API_BOOKMARKS).catch(() => ({ bookmarks: [] })),
+        apiJson('GET', API_SERVICES),
+        apiJson('GET', API_BOOKMARKS),
       ]);
       const payload = {
         settings: window.HubSettings.get(),
