@@ -191,6 +191,15 @@
       background: var(--surface); border: 1px solid var(--border-hi); border-radius: 18px;
       padding: 1.25rem; z-index: 51; box-shadow: 0 24px 64px -20px rgba(0,0,0,.6);
     }
+    /* Fullscreen search overlay — blurred backdrop, large centered input */
+    #search-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 12vh 1.25rem 1.25rem; }
+    #search-modal .modal-backdrop { background: rgba(0,0,0,.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    #search-panel {
+      position: relative; z-index: 61; width: min(92vw, 640px);
+      background: var(--surface); border: 1px solid var(--border-hi); border-radius: 20px;
+      padding: 1.5rem; box-shadow: 0 32px 80px -24px rgba(0,0,0,.7);
+    }
+    #search-modal-input { font-size: 1.25rem; padding: 0.85rem 1rem; }
 
     @media (prefers-reduced-motion: reduce) {
       .blob { animation: none; }
@@ -342,10 +351,9 @@
   <!-- Search modal -->
   <div id="search-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="search-title">
     <div class="modal-backdrop" onclick="window.__HUB__.closeSearch()"></div>
-    <div class="modal-panel space-y-3" style="width:min(92vw,560px)">
-      <h2 id="search-title" class="text-xs font-semibold uppercase group-header">Search</h2>
-      <input id="search-modal-input" class="form-input w-full text-base" placeholder="Search services or the web…" autocomplete="off" />
-      <div id="search-suggestions" class="flex flex-col gap-1 max-h-72 overflow-y-auto"></div>
+    <div id="search-panel">
+      <input id="search-modal-input" class="form-input w-full" placeholder="Search services or the web…" autocomplete="off" />
+      <div id="search-suggestions" class="flex flex-col gap-1 mt-3 max-h-72 overflow-y-auto"></div>
     </div>
   </div>
 
