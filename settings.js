@@ -193,23 +193,35 @@ function applyWallpaper(s) {
     sampleImageLuminance(w.url).then(dark => {
       root.classList.toggle('wallpaper-dark', dark);
       root.classList.toggle('wallpaper-light', !dark);
-    }).catch(() => {
-      // fall back to transparent + toast
+    }).catch(err => {
+      if (err && err.tainted) {
+        // Image loaded but pixels can't be read (no CORS). Keep the wallpaper
+        // and default to dark — better than silently dropping a working image.
+        root.classList.add('wallpaper-dark');
+        root.classList.remove('wallpaper-light');
+        return;
+      }
+      // Genuine load failure (e.g. dead URL): fall back to transparent + toast.
       applyWallpaper({ wallpaper: { mode: 'none' } });
       try { window.__hubToast && window.__hubToast('Wallpaper failed to load — reverted'); } catch {}
     });
   }
 }
 
+/* Sentinel error so callers can distinguish a tainted canvas (image loaded,
+ * but CORS blocked reading its pixels) from a genuine load failure. */
+const TAINTED_CANVAS = { tainted: true };
+
 function sampleImageLuminance(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    // No crossOrigin: hosts without CORS headers still load the image. We
+    // just can't sample its pixels, so the caller defaults to wallpaper-dark.
     img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = 32; c.height = 32;
+      const ctx = c.getContext('2d');
       try {
-        const c = document.createElement('canvas');
-        c.width = 32; c.height = 32;
-        const ctx = c.getContext('2d');
         ctx.drawImage(img, 0, 0, 32, 32);
         const d = ctx.getImageData(0, 0, 32, 32).data;
         let sum = 0, n = 0;
@@ -218,7 +230,12 @@ function sampleImageLuminance(url) {
           n++;
         }
         resolve((sum / n) < 128); // dark background -> wallpaper-dark
-      } catch (e) { reject(e); }
+      } catch (e) {
+        // SecurityError on getImageData: canvas is tainted by a non-CORS
+        // image. Reject with a distinct sentinel, not a generic error.
+        if (e && (e.name === 'SecurityError' || e.code === 18)) reject(TAINTED_CANVAS);
+        else reject(e);
+      }
     };
     img.onerror = reject;
     img.src = url;
