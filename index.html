@@ -315,7 +315,7 @@
     </header>
 
     <!-- Services container -->
-    <div id="root" class="mt-6 space-y-8 flex-1">
+    <div id="root" class="mt-3 space-y-8 flex-1">
       <div id="skeletons" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
         <div class="glass skeleton-card p-4 skel"></div><div class="glass skeleton-card p-4 skel"></div>
@@ -669,18 +669,19 @@
     }, {});
     const order = Object.keys(grouped).sort((a, b) => grouped[b].length - grouped[a].length || a.localeCompare(b));
 
-    let html = '';
+    let html = '<div class="columns-1 md:columns-2 xl:columns-3 gap-5" id="groups-cols">';
     for (const cat of order) {
       const list = grouped[cat];
-      html += '<section class="group space-y-4" data-category="' + cat + '">'
+      html += '<section class="group break-inside-avoid mb-5" data-category="' + cat + '">'
         + '<h2 class="group-header text-xs font-semibold uppercase">' + cat
         + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
-        + '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">';
+        + '<div class="grid grid-cols-1 gap-3 mt-2">';
       for (const s of list) {
         html += renderCard(s);
       }
       html += '</div></section>';
     }
+    html += '</div>';
     groupsEl.innerHTML = html;
     skeletonsEl.classList.add('hidden');
 
@@ -712,19 +713,19 @@
         + '</span>'
       : '';
     return '<a href="' + target + '" target="_blank" rel="noopener noreferrer" '
-      + 'class="card reveal glass flex items-start gap-3 p-4 focus-ring cursor-pointer relative overflow-hidden" '
+      + 'class="card reveal glass flex items-start gap-2 p-3 focus-ring cursor-pointer relative overflow-hidden" '
       + 'data-name="' + esc(s.name.toLowerCase()) + '" data-desc="' + esc((s.desc || '').toLowerCase()) + '" '
       + 'data-category="' + esc(s.category) + '" data-ping-url="' + (s.ping !== false ? esc(s.url) : '') + '" '
       + 'data-id="' + esc(s.id || '') + '">'
       + '<span class="accent-bar absolute left-0 top-0 h-full w-[3px] opacity-70" aria-hidden="true"></span>'
-      + '<span class="shrink-0 mt-0.5 text-[color:var(--fg)]">' + svgFor(s.icon) + '</span>'
+      + '<span class="shrink-0 mt-0 text-[color:var(--fg)]">' + svgFor(s.icon) + '</span>'
       + '<span class="min-w-0 flex-1">'
       + '<span class="flex items-center gap-2">'
       + '<span class="text-sm font-medium text-[color:var(--fg)] truncate">' + esc(s.name) + '</span>'
       + '<span class="status-dot status-idle" data-status role="img" aria-label="checking status"></span>'
       + '</span>'
       + '<span class="block text-xs text-[color:var(--fg-muted)] mt-0.5 truncate">' + esc(s.desc || '') + '</span>'
-      + '<span class="block text-[11px] text-[color:var(--fg-muted)]/70 font-mono mt-1 truncate">' + esc(hostOf(s.url)) + '</span>'
+      + '<span class="block text-[11px] text-[color:var(--fg-muted)]/70 font-mono mt-0.5 truncate">' + esc(hostOf(s.url)) + '</span>'
       + '</span>'
       + actions
       + '</a>';
