@@ -441,7 +441,7 @@ def _beszel_systems():
         return None
 
     req = urllib.request.Request(
-        cfg["url"].rstrip("/") + "/api/collections/systems?perPage=100",
+        cfg["url"].rstrip("/") + "/api/collections/systems/records?perPage=100",
         headers={
             # PocketBase accepts both "Bearer <token>" and bare "<token>".
             "Authorization": f"Bearer {token}",

@@ -544,7 +544,7 @@ class BeszelTests(unittest.TestCase):
         })
         # Login flow used, systems fetched from the records endpoint with a Bearer token
         self.assertEqual(BeszelStubHandler.auth_hits, 1)
-        self.assertIn("/api/collections/systems", BeszelStubHandler.last_path)
+        self.assertIn("/api/collections/systems/records", BeszelStubHandler.last_path)
         self.assertEqual(BeszelStubHandler.last_auth, "Bearer tok123")
 
     def test_beszel_error_when_stub_returns_500(self):
