@@ -152,6 +152,22 @@
             </label>
           </div>
         </div>
+
+        <!-- Wallpaper -->
+        <div class="flex items-center justify-between pt-2">
+          <div>
+            <p class="font-medium text-sm">Wallpaper</p>
+            <p class="text-xs text-[color:var(--fg-muted)]">Choose a background for the dashboard. Changes preview live.</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <button id="wp-none" class="btn focus-ring" aria-pressed="false">None</button>
+            <div class="flex gap-1.5" id="wp-gradients" role="group" aria-label="Wallpaper gradients"></div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 pt-2">
+          <input id="wp-url" class="field focus-ring flex-1" type="text" placeholder="Custom image URL (https://…)" aria-label="Custom wallpaper URL" />
+          <button id="wp-apply" class="btn btn-primary focus-ring text-xs">Apply</button>
+        </div>
       </div>
     </section>
 
@@ -292,6 +308,60 @@
     customInput.value = a;
   }
   refreshAccent();
+
+  // Wallpaper
+  const wpGradientsEl = document.getElementById('wp-gradients');
+  const wpNoneBtn     = document.getElementById('wp-none');
+  const wpUrlInput    = document.getElementById('wp-url');
+  const wpApplyBtn    = document.getElementById('wp-apply');
+
+  Object.keys(S.GRADIENTS || {}).forEach(k => {
+    const s = document.createElement('button');
+    s.className = 'swatch focus-ring wp-grad';
+    s.style.background = S.GRADIENTS[k];
+    s.setAttribute('aria-label', 'Gradient wallpaper ' + k);
+    s.setAttribute('aria-pressed', 'false');
+    s.dataset.gradient = k;
+    s.title = k;
+    s.addEventListener('click', () => {
+      S.set({ wallpaper: { mode: 'gradient', gradient: k } });
+      refreshWallpaper();
+      toast('Wallpaper: ' + k);
+    });
+    wpGradientsEl.appendChild(s);
+  });
+
+  wpNoneBtn.addEventListener('click', () => {
+    S.set({ wallpaper: { mode: 'none' } });
+    refreshWallpaper();
+    toast('Wallpaper: none');
+  });
+
+  wpApplyBtn.addEventListener('click', () => {
+    S.set({ wallpaper: { mode: 'custom', url: wpUrlInput.value.trim() } });
+    refreshWallpaper();
+    toast('Wallpaper applied');
+  });
+
+  wpUrlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') wpApplyBtn.click();
+  });
+
+  function refreshWallpaper() {
+    const w = S.get().wallpaper || { mode: 'none' };
+    const mode = w.mode || 'none';
+    wpNoneBtn.classList.toggle('btn-primary', mode === 'none');
+    wpNoneBtn.setAttribute('aria-pressed', String(mode === 'none'));
+    wpGradientsEl.querySelectorAll('.wp-grad').forEach(s => {
+      const active = mode === 'gradient' && s.dataset.gradient === w.gradient;
+      s.classList.toggle('active', active);
+      s.setAttribute('aria-pressed', String(active));
+    });
+    if (mode === 'custom' && w.url) wpUrlInput.value = w.url;
+    S.apply(S.get());
+    window.HubSettings.applyWallpaper(S.get());
+  }
+  refreshWallpaper();
 
   // Personalization fields
   const nameInput = document.getElementById('user-name');
