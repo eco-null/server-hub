@@ -378,7 +378,6 @@ def read_beszel_env():
         "url": url,
         "user": read_env("BESZEL_USER", ""),
         "password": read_env("BESZEL_PASSWORD", ""),
-        "api_key": read_env("BESZEL_API_KEY", ""),
     }
 
 
@@ -406,19 +405,19 @@ def _beszel_urlopen(req):
 
 
 def _beszel_login(cfg):
-    body = json.dumps({"identity": cfg["user"], "password": cfg["password"]}).encode("utf-8")
+    url = cfg["url"].rstrip("/") + "/api/collections/users/auth-with-password"
+    payload = json.dumps({
+        "identity": cfg["user"],
+        "password": cfg["password"],
+    }).encode("utf-8")
     req = urllib.request.Request(
-        cfg["url"] + "/api/collections/users/auth-with-password",
-        data=body,
+        url,
+        data=payload,
         headers={"Content-Type": "application/json"},
-        method="POST",
     )
     with _beszel_urlopen(req) as resp:
-        data = json.loads(resp.read().decode("utf-8", "replace"))
-    token = data.get("token")
-    if not token:
-        raise RuntimeError("Beszel auth response missing token")
-    return token
+        data = json.loads(resp.read().decode("utf-8"))
+    return data.get("token")  # PocketBase-issued JWT
 
 
 def _beszel_systems():
@@ -434,10 +433,19 @@ def _beszel_systems():
     cached = _beszel_cache.get(cfg["url"])
     if cached and now - cached[0] < BESZEL_CACHE_TTL:
         return cached[1]
-    token = cfg["api_key"] or _beszel_login(cfg)
+
+    # Always obtain a fresh JWT via the login flow (token-based API keys
+    # can be misconfigured/expired; user/password is the reliable path).
+    token = _beszel_login(cfg)
+    if not token:
+        return None
+
     req = urllib.request.Request(
-        cfg["url"] + "/api/collections/systems?perPage=100",
-        headers={"Authorization": "Bearer " + token},
+        cfg["url"].rstrip("/") + "/api/collections/systems?perPage=100",
+        headers={
+            # PocketBase accepts both "Bearer <token>" and bare "<token>".
+            "Authorization": f"Bearer {token}",
+        },
     )
     with _beszel_urlopen(req) as resp:
         data = json.loads(resp.read().decode("utf-8", "replace"))

@@ -395,6 +395,7 @@ class BeszelStubHandler(http.server.BaseHTTPRequestHandler):
     fail = False
     auth_hits = 0
     last_auth = ""
+    last_path = ""
 
     def log_message(self, fmt, *args):
         pass
@@ -409,12 +410,14 @@ class BeszelStubHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         BeszelStubHandler.auth_hits += 1
+        BeszelStubHandler.last_path = self.path
         if BeszelStubHandler.fail:
             return self._send_json({"error": "boom"}, 500)
         return self._send_json({"token": "tok123"})
 
     def do_GET(self):
         BeszelStubHandler.last_auth = self.headers.get("Authorization", "")
+        BeszelStubHandler.last_path = self.path
         if BeszelStubHandler.fail:
             return self._send_json({"error": "boom"}, 500)
         return self._send_json({"items": [
@@ -539,6 +542,10 @@ class BeszelTests(unittest.TestCase):
             "enabled": True,
             "systems": [{"name": "casaos", "cpu": 42.0, "mem": 55.0, "disk": 61.0, "status": "up"}],
         })
+        # Login flow used, systems fetched from the records endpoint with a Bearer token
+        self.assertEqual(BeszelStubHandler.auth_hits, 1)
+        self.assertIn("/api/collections/systems", BeszelStubHandler.last_path)
+        self.assertEqual(BeszelStubHandler.last_auth, "Bearer tok123")
 
     def test_beszel_error_when_stub_returns_500(self):
         url = self.start_beszel()
@@ -553,17 +560,17 @@ class BeszelTests(unittest.TestCase):
         self.assertTrue(data["enabled"])
         self.assertIn("error", data)
 
-    def test_beszel_api_key_skips_login(self):
+    def test_beszel_logs_in_for_token(self):
         url = self.start_beszel()
         os.environ["BESZEL_URL"] = url
-        os.environ["BESZEL_API_KEY"] = "key123"
+        os.environ["BESZEL_USER"] = "admin@beszel"
+        os.environ["BESZEL_PASSWORD"] = "secret"
         jar = http.cookiejar.CookieJar()
         self.login(jar)
         status, data, _ = self.api("/api/beszel", jar=jar)
         self.assertEqual(status, 200)
         self.assertTrue(data["enabled"])
-        self.assertEqual(BeszelStubHandler.auth_hits, 0)
-        self.assertEqual(BeszelStubHandler.last_auth, "Bearer key123")
+        self.assertEqual(BeszelStubHandler.auth_hits, 1)
 
     def test_beszel_caches_within_ttl(self):
         url = self.start_beszel()
