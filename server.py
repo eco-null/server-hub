@@ -94,22 +94,23 @@ class ServiceStore:
         self._path = path
         self._lock = threading.Lock()
         self._services = self._load()
+        self._bookmarks = self._load("bookmarks")
 
-    def _load(self):
+    def _load(self, key="services"):
         try:
             with open(self._path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            svcs = data.get("services", [])
-            if not isinstance(svcs, list):
+            items = data.get(key, [])
+            if not isinstance(items, list):
                 return []
-            return [s for s in svcs if isinstance(s, dict) and s.get("id")]
+            return [s for s in items if isinstance(s, dict) and s.get("id")]
         except (OSError, ValueError):
             return []
 
     def _save(self):
         tmp = self._path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"services": self._services}, f, indent=2)
+            json.dump({"services": self._services, "bookmarks": self._bookmarks}, f, indent=2)
         os.replace(tmp, self._path)
 
     def list(self):
@@ -138,6 +139,36 @@ class ServiceStore:
             before = len(self._services)
             self._services = [s for s in self._services if s["id"] != sid]
             if len(self._services) != before:
+                self._save()
+                return True
+        return False
+
+    def list_bookmarks(self):
+        with self._lock:
+            return [dict(b) for b in self._bookmarks]
+
+    def add_bookmark(self, entry):
+        entry = dict(entry)
+        entry["id"] = secrets.token_urlsafe(12)
+        with self._lock:
+            self._bookmarks.append(entry)
+            self._save()
+        return dict(entry)
+
+    def update_bookmark(self, bid, fields):
+        with self._lock:
+            for i, b in enumerate(self._bookmarks):
+                if b["id"] == bid:
+                    self._bookmarks[i] = {**b, **fields, "id": bid}
+                    self._save()
+                    return dict(self._bookmarks[i])
+        return None
+
+    def delete_bookmark(self, bid):
+        with self._lock:
+            before = len(self._bookmarks)
+            self._bookmarks = [b for b in self._bookmarks if b["id"] != bid]
+            if len(self._bookmarks) != before:
                 self._save()
                 return True
         return False

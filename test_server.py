@@ -341,5 +341,29 @@ class ServerHubTests(unittest.TestCase):
         self.assertEqual(status, 413)
 
 
+class ServiceStoreBookmarks(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.store = server.ServiceStore(os.path.join(self.tmp.name, "services.json"))
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_load_missing_bookmarks_defaults_empty(self):
+        # write a services-only file, then confirm bookmarks load as []
+        with open(self.store._path, "w") as f:
+            json.dump({"services": []}, f)
+        s2 = server.ServiceStore(self.store._path)
+        self.assertEqual(s2.list_bookmarks(), [])
+
+    def test_bookmark_crud(self):
+        b = self.store.add_bookmark({"name": "YouTube", "url": "https://youtube.com", "icon": "youtube"})
+        self.assertIn("id", b)
+        self.assertEqual(self.store.list_bookmarks()[0]["name"], "YouTube")
+        upd = self.store.update_bookmark(b["id"], {"name": "Kick"})
+        self.assertEqual(upd["name"], "Kick")
+        self.assertEqual(self.store.list_bookmarks()[0]["name"], "Kick")
+        self.assertTrue(self.store.delete_bookmark(b["id"]))
+        self.assertEqual(self.store.list_bookmarks(), [])
+
+
 if __name__ == "__main__":
     unittest.main()
