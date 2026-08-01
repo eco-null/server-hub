@@ -585,7 +585,7 @@
       const a = document.createElement('a');
       a.href = b.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
       a.className = 'glass px-3 py-2 rounded-lg flex items-center gap-2 text-sm hover:brightness-110 transition';
-      a.innerHTML = '<span class="w-2 h-2 rounded-full" style="background:var(--accent)"></span>' + esc(b.name);
+      a.innerHTML = '<span class="w-2 h-2 rounded-full shrink-0" style="background:' + esc(b.color || 'var(--accent)') + '"></span>' + esc(b.name);
       box.appendChild(a);
     });
   }

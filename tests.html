@@ -533,7 +533,7 @@
 
     // Bookmarks — GET renders a tile per bookmark
     const BMS = [
-      { id: 'bm-1', name: 'Homelab Wiki', url: 'https://wiki.example.com' },
+      { id: 'bm-1', name: 'Homelab Wiki', url: 'https://wiki.example.com', color: '#22C55E' },
       { id: 'bm-2', name: 'Dashboards',  url: 'https://grafana.example.com' },
     ];
     let lastBmPost = null;
@@ -564,6 +564,12 @@
     ok(bmTiles.length === BMS.length, 'bookmarks card renders a tile per bookmark', 'got ' + bmTiles.length);
     ok(bmTiles[0] && bmTiles[0].target === '_blank', 'bookmark tile opens in new tab (target=_blank)');
     ok(bmTiles[0] && bmTiles[0].rel === 'noopener noreferrer', 'bookmark tile has rel noopener noreferrer', bmTiles[0] && bmTiles[0].rel);
+    const dotColored = bmTiles[0] && bmTiles[0].querySelector('span');
+    const dotDefault = bmTiles[1] && bmTiles[1].querySelector('span');
+    ok(dotColored && /background:#22C55E/.test(dotColored.getAttribute('style') || ''),
+       'bookmark tile dot renders the bookmark color (#22C55E)', dotColored && dotColored.getAttribute('style'));
+    ok(dotDefault && /background:var\(--accent\)/.test(dotDefault.getAttribute('style') || ''),
+       'bookmark tile dot falls back to var(--accent) when no color', dotDefault && dotDefault.getAttribute('style'));
 
     // Add flow POSTs /api/bookmarks, re-renders, and hides the editor
     apiLog = [];

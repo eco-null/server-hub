@@ -293,6 +293,7 @@
         <div class="svc-row">
           <input id="bm-new-name" class="field focus-ring" placeholder="Name (e.g. YouTube)" />
           <input id="bm-new-url"  class="field focus-ring" type="text" placeholder="URL (e.g. https://youtube.com)" />
+          <input id="bm-new-color" class="field focus-ring" type="color" value="#5E6AD2" title="Dot color" />
           <button id="bm-save" class="btn btn-primary focus-ring text-xs">Add</button>
         </div>
       </div>
@@ -717,6 +718,7 @@
   const bmAddForm  = document.getElementById('bm-add-form');
   const bmNewName  = document.getElementById('bm-new-name');
   const bmNewUrl   = document.getElementById('bm-new-url');
+  const bmNewColor = document.getElementById('bm-new-color');
   const bmSave     = document.getElementById('bm-save');
 
   const API_BOOKMARKS = '/api/bookmarks';
@@ -744,6 +746,24 @@
         '<input class="field focus-ring bm-name" data-i="' + i + '" value="' + esc(b.name) + '" placeholder="Name" />'
         + '<input class="field focus-ring bm-url"  data-i="' + i + '" value="' + esc(b.url) + '" placeholder="URL" />'
         + '<button class="btn btn-danger focus-ring text-xs bm-del" data-i="' + i + '" aria-label="Delete ' + esc(b.name) + '">✕</button>';
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = b.color || '#5E6AD2';
+      colorInput.dataset.i = i;
+      colorInput.className = 'svc-color';
+      row.appendChild(colorInput);
+      colorInput.addEventListener('change', async e => {
+        const i2 = +e.target.dataset.i;
+        const b2 = bookmarks[i2];
+        if (!b2) return;
+        try {
+          bookmarks = (await apiJson('PUT', API_BOOKMARKS + '/' + encodeURIComponent(b2.id), {
+            name: b2.name, url: b2.url, color: e.target.value,
+          })).bookmarks || bookmarks;
+          toast('Color saved');
+        } catch (err) { toast('Save failed: ' + err.message); }
+        renderBookmarks();
+      });
       bmListEl.appendChild(row);
     });
 
@@ -797,9 +817,9 @@
     if (!/^https?:\/\//i.test(url)) { toast('URL must start with http:// or https://'); return; }
     try {
       bookmarks = (await apiJson('POST', API_BOOKMARKS, {
-        name, url, icon: 'link',
+        name, url, icon: 'link', color: bmNewColor.value,
       })).bookmarks || bookmarks;
-      bmNewName.value = ''; bmNewUrl.value = '';
+      bmNewName.value = ''; bmNewUrl.value = ''; bmNewColor.value = '#5E6AD2';
       renderBookmarks();
       toast('Bookmark added');
     } catch (err) {
