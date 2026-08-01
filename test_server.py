@@ -421,7 +421,8 @@ class BeszelStubHandler(http.server.BaseHTTPRequestHandler):
         if BeszelStubHandler.fail:
             return self._send_json({"error": "boom"}, 500)
         return self._send_json({"items": [
-            {"name": "casaos", "status": "up", "stat_cpu": 42.0, "stat_mem": 55.0, "stat_disk": 61.0},
+            {"name": "casaos", "status": "up", "host": "ubuntu",
+             "info": {"cpu": 42.0, "mp": 55.0, "dp": 61.0, "u": "3h 12m"}},
         ]})
 
 
@@ -540,7 +541,10 @@ class BeszelTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(data, {
             "enabled": True,
-            "systems": [{"name": "casaos", "cpu": 42.0, "mem": 55.0, "disk": 61.0, "status": "up"}],
+            "systems": [{
+                "name": "casaos", "status": "up", "host": "ubuntu", "uptime": "3h 12m",
+                "cpu": 42.0, "mem": 55.0, "disk": 61.0,
+            }],
         })
         # Login flow used, systems fetched from the records endpoint with a Bearer token
         self.assertEqual(BeszelStubHandler.auth_hits, 1)

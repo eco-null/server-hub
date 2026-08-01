@@ -384,15 +384,27 @@ def read_beszel_env():
 def normalize_beszel_system(rec):
     """Map a Beszel systems-collection record to the dashboard shape.
 
-    stat_cpu/stat_mem/stat_disk are pinned to the live Beszel/PocketBase
-    instance; if the fields drift this is the one-line fix.
+    The live system stats live inside the record's `info` object, stored as
+    either a JSON object or a JSON string. Beszel abbreviations (verified
+    against the Beszel source): `cpu` (%), `mp` (memory %), `dp` (disk %),
+    `u` (usage/uptime).
     """
+    info = rec.get("info") or {}
+    if isinstance(info, str):
+        try:
+            info = json.loads(info)
+        except Exception:
+            info = {}
+    if not isinstance(info, dict):
+        info = {}
     return {
         "name": rec.get("name"),
-        "cpu": rec.get("stat_cpu"),
-        "mem": rec.get("stat_mem"),
-        "disk": rec.get("stat_disk"),
         "status": rec.get("status", "unknown"),
+        "host": rec.get("host"),
+        "uptime": info.get("u"),
+        "cpu": info.get("cpu"),
+        "mem": info.get("mp"),
+        "disk": info.get("dp"),
     }
 
 

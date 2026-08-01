@@ -453,7 +453,7 @@
     w.fetch = (url, opts = {}) => {
       apiLog.push('GET ' + url);
       if (String(url).includes('/api/beszel')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ enabled: true, systems: [{ name: 'casaos', cpu: 42, mem: 55, disk: 61, status: 'up' }] }) });
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ enabled: true, systems: [{ name: 'casaos', host: 'ubuntu', uptime: '3h 12m', cpu: 42, mem: 55, disk: 61, status: 'up' }] }) });
       }
       return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'nope' }) });
     };
@@ -462,6 +462,8 @@
     ok(apiLog.some(x => x === 'GET /api/beszel'), 'pollStats GETs /api/beszel');
     ok(beszelGrid.textContent.includes('casaos'), 'beszel row renders server name', beszelGrid.textContent.slice(0, 60));
     ok(beszelGrid.textContent.includes('up'), 'beszel row renders server status');
+    ok(beszelGrid.textContent.includes('3h 12m'), 'beszel row renders uptime');
+    ok(beszelGrid.className.includes('grid-cols-2'), 'beszel grid uses 2 columns', beszelGrid.className);
     ok(beszelGrid.querySelector('div[style*="width:42%"]') !== null, 'beszel CPU bar rendered at 42%');
 
     // Beszel disabled → single-host fallback renders via /api/stats
@@ -483,6 +485,7 @@
     const cpuValEl = w.document.getElementById('stat-cpu-val');
     ok(cpuValEl && cpuValEl.textContent === '10%', 'fallback renders CPU bar value via /api/stats', cpuValEl && cpuValEl.textContent);
     beszelGrid = w.document.getElementById('stats-grid');
+    ok(beszelGrid.className.includes('grid-cols-3'), 'fallback restores 3-column grid', beszelGrid.className);
     ok(!beszelGrid.textContent.includes('casaos'), 'fallback clears beszel rows');
 
     // Restore default state for any subsequent test runs

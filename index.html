@@ -982,6 +982,7 @@
   }
   async function renderSingleHostFallback() {
     try {
+      gridEl.className = 'grid grid-cols-3 gap-3 sm:gap-4';
       gridEl.innerHTML = STAT_GRID_HTML;
       const cpuBar = document.getElementById('stat-cpu-bar'); const cpuVal = document.getElementById('stat-cpu-val');
       const memBar = document.getElementById('stat-mem-bar'); const memVal = document.getElementById('stat-mem-val');
@@ -1010,13 +1011,16 @@
     renderSingleHostFallback();
   }
   function renderBeszel(systems) {
+    gridEl.className = 'grid grid-cols-2 gap-3 sm:gap-4';
     gridEl.innerHTML = '';
     systems.forEach(s => {
       const row = document.createElement('div');
       row.className = 'space-y-1';
       row.innerHTML =
-        '<div class="flex items-baseline justify-between"><span class="text-xs text-[color:var(--fg-muted)] truncate">' + esc(s.name) + '</span>' +
-        '<span class="font-mono text-sm tabular-nums">' + esc(s.status) + '</span></div>' +
+        '<div class="flex items-baseline justify-between gap-2">' +
+          '<span class="text-xs text-[color:var(--fg-muted)] truncate" title="' + esc(s.host || '') + '">' + esc(s.name) + '</span>' +
+          '<span class="font-mono text-[10px] tabular-nums text-[color:var(--fg-muted)]">' + esc(s.status) + (s.uptime ? ' · ' + esc(s.uptime) : '') + '</span>' +
+        '</div>' +
         barRow('CPU', s.cpu) + barRow('Mem', s.mem) + barRow('Disk', s.disk);
       gridEl.appendChild(row);
     });
