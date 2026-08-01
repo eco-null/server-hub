@@ -302,6 +302,12 @@
     w.__HUB__.applyTheme('dark');
     ok(w.document.documentElement.classList.contains('dark') && !w.document.documentElement.classList.contains('light'), 'applyTheme(dark) sets html.dark, removes light');
 
+    // Wallpaper — settings change re-applies on the dashboard (init + subscribe)
+    w.HubSettings.set({ wallpaper: { mode: 'gradient', gradient: 'ocean' } });
+    ok(w.document.body.classList.contains('wallpaper'), 'wallpaper setting adds wallpaper class to body');
+    ok(w.document.body.style.background && w.document.body.style.background.trim() !== '',
+       'wallpaper gradient sets a non-empty background', String(w.document.body.style.background).slice(0, 60));
+
     // autoCategorize passthrough
     eq(w.__HUB__.autoCategorize('Jellyfin', 'https://media.local', 'Movies').category, 'Media', '__HUB__.autoCategorize passthrough');
 
@@ -443,7 +449,7 @@
     ok(w.document.getElementById('bookmarks-editor').classList.contains('hidden'), 'editor hides after save');
 
     // Restore default state for any subsequent test runs
-    w.HubSettings.set({ theme: 'auto', features: {}, services: [] });
+    w.HubSettings.set({ theme: 'auto', features: {}, services: [], wallpaper: { mode: 'none', gradient: 'aurora', url: '' } });
   };
 </script>
 </body>

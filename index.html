@@ -683,6 +683,7 @@
     clearTimeout(toastT);
     toastT = setTimeout(() => t.classList.add('hidden'), 2000);
   }
+  window.__hubToast = showToast;
 
   function hostOf(url) {
     if (!url) return '';
@@ -1024,7 +1025,8 @@
   const effectiveSettings = window.HubSettings.get();
   window.HubSettings.apply(effectiveSettings);
   applyTheme(effectiveSettings.theme);
-  window.HubSettings.subscribe(s => { applyTheme(s.theme); window.HubSettings.apply(s); });
+  window.HubSettings.applyWallpaper(window.HubSettings.get());
+  window.HubSettings.subscribe(s => { applyTheme(s.theme); window.HubSettings.apply(s); window.HubSettings.applyWallpaper(s); });
 
   // FAB: opens the add-service modal
   document.getElementById('fab-add').addEventListener('click', () => {
