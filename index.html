@@ -233,31 +233,6 @@
         </div>
       </div>
 
-      <!-- Add service form -->
-      <section aria-label="Add a service" class="glass p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xs font-semibold uppercase group-header">Add service — category auto-detected</h2>
-          <button id="add-toggle" class="btn-ghost text-xs" aria-expanded="false" aria-controls="add-form">
-            <span id="add-toggle-label">+ Add</span>
-          </button>
-        </div>
-        <form id="add-form" class="hidden form-inline" autocomplete="off" novalidate>
-          <input id="add-name" class="form-input" placeholder="Name (e.g. Grafana)" required />
-          <div class="flex gap-1 min-w-0">
-            <select id="add-scheme" class="form-input w-28 shrink-0" aria-label="URL scheme">
-              <option value="https://" selected>https://</option>
-              <option value="http://">http://</option>
-            </select>
-            <input id="add-url" class="form-input min-w-0 flex-1" type="text" placeholder="host (e.g. immich.canzodal.com)" required />
-          </div>
-          <input id="add-desc" class="form-input" placeholder="Short description (optional)" />
-          <div class="flex items-center gap-2 col-span-full flex-wrap">
-            <button type="submit" class="btn-primary">Add &amp; auto-categorize</button>
-            <span id="add-preview" class="text-xs text-[color:var(--fg-muted)] font-mono"></span>
-          </div>
-        </form>
-      </section>
-
       <aside class="lg:w-80 shrink-0 flex flex-col gap-6">
         <!-- System stats -->
         <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
@@ -324,6 +299,34 @@
   <!-- API offline notice -->
   <div id="api-offline" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-40 glass px-4 py-2 rounded-xl text-xs text-[color:var(--fg-muted)]">
     Can't reach the services API — showing the last loaded list. Edits won't persist until the server responds.
+  </div>
+
+  <!-- Add service modal -->
+  <div id="add-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="add-title">
+    <div class="modal-backdrop" onclick="window.__HUB__.closeAdd()"></div>
+    <div class="modal-panel space-y-3">
+      <div class="flex items-center justify-between mb-2">
+        <h2 id="add-title" class="text-xs font-semibold uppercase group-header">Add service — category auto-detected</h2>
+        <button id="add-toggle" type="button" class="btn-ghost text-xs" aria-expanded="false" aria-controls="add-form">
+          <span id="add-toggle-label">+ Add</span>
+        </button>
+      </div>
+      <form id="add-form" class="hidden form-inline" autocomplete="off" novalidate>
+        <input id="add-name" class="form-input" placeholder="Name (e.g. Grafana)" required />
+        <div class="flex gap-1 min-w-0">
+          <select id="add-scheme" class="form-input w-28 shrink-0" aria-label="URL scheme">
+            <option value="https://" selected>https://</option>
+            <option value="http://">http://</option>
+          </select>
+          <input id="add-url" class="form-input min-w-0 flex-1" type="text" placeholder="host (e.g. immich.canzodal.com)" required />
+        </div>
+        <input id="add-desc" class="form-input" placeholder="Short description (optional)" />
+        <div class="flex items-center gap-2 col-span-full flex-wrap">
+          <button type="submit" class="btn-primary">Add &amp; auto-categorize</button>
+          <span id="add-preview" class="text-xs text-[color:var(--fg-muted)] font-mono"></span>
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Edit modal -->
@@ -618,12 +621,23 @@
     return m ? m[0] : null;
   }
 
+  function openAddModal() {
+    document.getElementById('add-modal').classList.remove('hidden');
+    addToggle.setAttribute('aria-expanded', 'true');
+    addToggleLabel.textContent = 'Close';
+    addForm.classList.remove('hidden');
+    addName.focus();
+  }
+
+  function closeAddModal() {
+    document.getElementById('add-modal').classList.add('hidden');
+    addToggle.setAttribute('aria-expanded', 'false');
+    addToggleLabel.textContent = '+ Add';
+  }
+
   addToggle.addEventListener('click', () => {
-    const open = !addForm.classList.contains('hidden');
-    addForm.classList.toggle('hidden');
-    addToggle.setAttribute('aria-expanded', String(!open));
-    addToggleLabel.textContent = open ? '+ Add' : 'Close';
-    if (!open) addName.focus();
+    if (document.getElementById('add-modal').classList.contains('hidden')) openAddModal();
+    else closeAddModal();
   });
 
   addUrl.addEventListener('input', () => {
@@ -662,6 +676,7 @@
       addName.value = ''; addUrl.value = ''; addDesc.value = '';
       addPreview.textContent = '✓ Added to ' + result.category;
       setTimeout(() => addPreview.textContent = '', 2500);
+      closeAddModal();
     } catch (err) {
       addPreview.textContent = '✗ ' + err.message;
       setTimeout(() => addPreview.textContent = '', 2500);
@@ -927,11 +942,9 @@
   applyTheme(effectiveSettings.theme);
   window.HubSettings.subscribe(s => { applyTheme(s.theme); window.HubSettings.apply(s); });
 
-  // FAB: opens the add-service form
+  // FAB: opens the add-service modal
   document.getElementById('fab-add').addEventListener('click', () => {
-    if (addForm.classList.contains('hidden')) addToggle.click();
-    addName.focus();
-    addForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    openAddModal();
   });
 
   // Re-render when settings change in another tab (services are server-side now)
@@ -973,6 +986,7 @@
     renderGroups, filter, applyTheme, cycleTheme, remove,
     edit: openEditModal, closeEdit: closeEditModal,
     saveEdit: saveEditModal, openIconPicker: renderIconPicker,
+    openAdd: openAddModal, closeAdd: closeAddModal,
     loadServices, reloadServices: loadServices,
     autoCategorize: (n,u,d) => window.autoCategorize(n,u,d),
     categorized, setServices: arr => { SERVICES = arr; },
