@@ -41,6 +41,8 @@ class ServerHubTests(unittest.TestCase):
         server.guard.reset("127.0.0.1")
         for svc in self.httpd.services.list():
             self.httpd.services.delete(svc["id"])
+        for bm in self.httpd.services.list_bookmarks():
+            self.httpd.services.delete_bookmark(bm["id"])
 
     def request(self, path, method="GET", data=None, jar=None):
         if jar is None:
@@ -339,6 +341,28 @@ class ServerHubTests(unittest.TestCase):
             "/api/services", "POST",
             {"name": "X" * 70000, "url": "https://x.example.com"}, jar)
         self.assertEqual(status, 413)
+
+    def test_bookmarks_crud(self):
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/bookmarks", jar=jar)
+        self.assertEqual(status, 200)
+        self.assertEqual(data["bookmarks"], [])
+        status, data, _ = self.api("/api/bookmarks", "POST",
+                                   {"name": "YouTube", "url": "https://youtube.com", "icon": "youtube"}, jar)
+        self.assertEqual(status, 200)
+        self.assertEqual(len(data["bookmarks"]), 1)
+        bid = data["bookmarks"][0]["id"]
+        status, data, _ = self.api("/api/bookmarks/" + bid, "PUT", {"name": "Kick"}, jar)
+        self.assertEqual(status, 200)
+        self.assertEqual(data["bookmarks"][0]["name"], "Kick")
+        status, data, _ = self.api("/api/bookmarks/" + bid, "DELETE", jar=jar)
+        self.assertEqual(status, 200)
+        self.assertEqual(data["bookmarks"], [])
+
+    def test_bookmarks_require_auth(self):
+        status, _, _, _ = self.request("/api/bookmarks")
+        self.assertEqual(status, 401)
 
 
 class ServiceStoreBookmarks(unittest.TestCase):

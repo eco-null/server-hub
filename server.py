@@ -87,6 +87,33 @@ def validate_service(data, partial=False):
     return fields, None
 
 
+def validate_bookmark(data, partial=False):
+    """Validate a bookmark object. Returns (fields, None) or (None, error)."""
+    if not isinstance(data, dict):
+        return None, "body must be a JSON object"
+    fields = {}
+    if "name" in data or not partial:
+        name = str(data.get("name") or "").strip()
+        if not name:
+            return None, "name is required"
+        if len(name) > 200:
+            return None, "name too long"
+        fields["name"] = name
+    if "url" in data or not partial:
+        url = str(data.get("url") or "").strip()
+        if not url:
+            return None, "url is required"
+        if len(url) > 2000:
+            return None, "url too long"
+        if not re.match(r"^https?://", url):
+            return None, "url must start with http:// or https://"
+        fields["url"] = url
+    if "icon" in data or not partial:
+        icon = str(data.get("icon") or "link").strip()
+        fields["icon"] = icon or "link"
+    return fields, None
+
+
 class ServiceStore:
     """Thread-safe JSON-backed service list. Atomic writes (tmp + os.replace)."""
 
@@ -437,6 +464,44 @@ class HubHandler(BaseHTTPRequestHandler):
             return self._api_error(404, "service not found")
         return self._services_response(self._api_services())
 
+    # ---- bookmarks API helpers ----
+
+    def _bookmarks_response(self, bookmarks):
+        return self.send_bytes(json.dumps({"bookmarks": bookmarks}), 200, "application/json; charset=utf-8")
+
+    def _handle_bookmarks_list(self):
+        return self._bookmarks_response(self.server.services.list_bookmarks())
+
+    def _handle_bookmarks_create(self):
+        data, err = self.read_json_body()
+        if err:
+            if err == "payload too large":
+                return self._api_error(413, err)
+            return self._api_error(400, err)
+        fields, err = validate_bookmark(data, partial=False)
+        if err:
+            return self._api_error(400, err)
+        self.server.services.add_bookmark(fields)
+        return self._bookmarks_response(self.server.services.list_bookmarks())
+
+    def _handle_bookmarks_update(self, bid):
+        data, err = self.read_json_body()
+        if err:
+            if err == "payload too large":
+                return self._api_error(413, err)
+            return self._api_error(400, err)
+        fields, err = validate_bookmark(data, partial=True)
+        if err:
+            return self._api_error(400, err)
+        if self.server.services.update_bookmark(bid, fields) is None:
+            return self._api_error(404, "bookmark not found")
+        return self._bookmarks_response(self.server.services.list_bookmarks())
+
+    def _handle_bookmarks_delete(self, bid):
+        if not self.server.services.delete_bookmark(bid):
+            return self._api_error(404, "bookmark not found")
+        return self._bookmarks_response(self.server.services.list_bookmarks())
+
     def serve_file(self, rel):
         if not rel:
             return self.send_bytes("Not found", 404)
@@ -472,6 +537,10 @@ class HubHandler(BaseHTTPRequestHandler):
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
             return self._handle_services_list()
+        if path == "/api/bookmarks":
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_bookmarks_list()
         if path == "/api/me":
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
@@ -489,6 +558,11 @@ class HubHandler(BaseHTTPRequestHandler):
             if not user:
                 return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
             return self._handle_services_create()
+        if path == "/api/bookmarks":
+            user = self.session_user()
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_bookmarks_create()
         if path != "/login":
             return self.send_bytes("Not found", 404)
         try:
@@ -518,22 +592,34 @@ class HubHandler(BaseHTTPRequestHandler):
     def do_PUT(self):
         path = urllib.parse.urlparse(self.path).path
         m = re.match(r"^/api/services/([^/]+)$", path)
-        if not m:
-            return self.send_bytes("Not found", 404)
-        user = self.session_user()
-        if not user:
-            return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
-        return self._handle_services_update(m.group(1))
+        if m:
+            user = self.session_user()
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_services_update(m.group(1))
+        m = re.match(r"^/api/bookmarks/([^/]+)$", path)
+        if m:
+            user = self.session_user()
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_bookmarks_update(m.group(1))
+        return self.send_bytes("Not found", 404)
 
     def do_DELETE(self):
         path = urllib.parse.urlparse(self.path).path
         m = re.match(r"^/api/services/([^/]+)$", path)
-        if not m:
-            return self.send_bytes("Not found", 404)
-        user = self.session_user()
-        if not user:
-            return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
-        return self._handle_services_delete(m.group(1))
+        if m:
+            user = self.session_user()
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_services_delete(m.group(1))
+        m = re.match(r"^/api/bookmarks/([^/]+)$", path)
+        if m:
+            user = self.session_user()
+            if not user:
+                return self.send_bytes(json.dumps({"error": "unauthenticated"}), 401, "application/json; charset=utf-8")
+            return self._handle_bookmarks_delete(m.group(1))
+        return self.send_bytes("Not found", 404)
 
 
 class HubServer(ThreadingHTTPServer):
