@@ -492,6 +492,45 @@
     w.document.getElementById('add-desc').value = '';
     addUrlField.value = '';
 
+    // Default domain — bare host expands to host.<domain>
+    w.HubSettings.set({ defaultDomain: 'canozdal.com' });
+    apiLog = [];
+    stubFetch(CANNED);
+    lastPostBody = null;
+    w.fetch = (url, opts = {}) => {
+      if ((opts.method || 'GET') === 'POST' && String(url).includes('/api/services')) {
+        lastPostBody = JSON.parse(opts.body);
+      }
+      return prevFetch(url, opts);
+    };
+    addScheme.value = 'https://';
+    addUrlField.value = 'n8n';
+    w.document.getElementById('add-name').value = 'n8n';
+    w.document.getElementById('add-form').dispatchEvent(new w.Event('submit'));
+    await new Promise(r => setTimeout(r, 10));
+    ok(lastPostBody && lastPostBody.url === 'https://n8n.canozdal.com', 'default domain expands bare host', lastPostBody && lastPostBody.url);
+    w.document.getElementById('add-name').value = '';
+
+    // Default domain — host with a dot is left untouched
+    apiLog = [];
+    stubFetch(CANNED);
+    lastPostBody = null;
+    w.fetch = (url, opts = {}) => {
+      if ((opts.method || 'GET') === 'POST' && String(url).includes('/api/services')) {
+        lastPostBody = JSON.parse(opts.body);
+      }
+      return prevFetch(url, opts);
+    };
+    addScheme.value = 'https://';
+    addUrlField.value = 'n8n.example.com';
+    w.document.getElementById('add-name').value = 'n8n2';
+    w.document.getElementById('add-form').dispatchEvent(new w.Event('submit'));
+    await new Promise(r => setTimeout(r, 10));
+    ok(lastPostBody && lastPostBody.url === 'https://n8n.example.com', 'host with a dot is not expanded', lastPostBody && lastPostBody.url);
+    w.document.getElementById('add-name').value = '';
+    addUrlField.value = '';
+    w.HubSettings.set({ defaultDomain: '' });
+
     // Bookmarks — GET renders a tile per bookmark
     const BMS = [
       { id: 'bm-1', name: 'Homelab Wiki', url: 'https://wiki.example.com' },

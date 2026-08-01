@@ -809,7 +809,13 @@
   addForm.addEventListener('submit', async e => {
     e.preventDefault();
     const name = addName.value.trim();
-    const url  = (document.getElementById('add-scheme').value + addUrl.value.trim()).trim();
+    const rawHost = addUrl.value.trim();
+    let url = (document.getElementById('add-scheme').value + rawHost).trim();
+    const dd = window.HubSettings.get().defaultDomain;
+    if (dd && rawHost && !rawHost.includes('.') && !rawHost.includes(':')) {
+      url = (document.getElementById('add-scheme').value + rawHost + '.' + dd).trim();
+      addUrl.value = rawHost + '.' + dd;
+    }
     const desc = addDesc.value.trim();
     if (!name || !url) return;
     const result = window.autoCategorize(name, url, desc);

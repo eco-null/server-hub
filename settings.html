@@ -189,6 +189,13 @@
           <input id="subtitle" class="field mt-1.5" placeholder="Your self-hosted apps…" maxlength="120" />
         </label>
       </div>
+      <div class="flex items-center justify-between pt-2">
+        <div>
+          <p class="font-medium text-sm">Default domain</p>
+          <p class="text-xs text-[color:var(--fg-muted)]">e.g. canozdal.com — a host like "n8n" becomes "n8n.canozdal.com".</p>
+        </div>
+        <input id="default-domain" class="field focus-ring w-56" placeholder="example.com" />
+      </div>
     </section>
 
     <!-- Features -->
@@ -418,6 +425,10 @@
   nameInput.addEventListener('input',  e => S.set({ userName:  e.target.value }));
   titleInput.addEventListener('input', e => S.set({ pageTitle: e.target.value }));
   subInput.addEventListener('input',   e => S.set({ subtitle:  e.target.value }));
+
+  const domainInput = document.getElementById('default-domain');
+  domainInput.value = cur.defaultDomain || '';
+  domainInput.addEventListener('input', e => S.set({ defaultDomain: e.target.value.trim() }));
 
   // Search provider
   const searchProvider = document.getElementById('search-provider');

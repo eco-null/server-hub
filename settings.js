@@ -48,6 +48,7 @@ const DEFAULTS = Object.freeze({
   theme: 'auto',
   accent: '#5E6AD2',
   userName: '',
+  defaultDomain: '',
   pageTitle: 'Server Hub',
   subtitle: 'Your self-hosted apps and services, reachable from one place.',
   wallpaper: {
