@@ -48,6 +48,18 @@
       --blob-opacity: 0.35;
       --scrim: rgba(15,23,42,0.40);
     }
+
+    /* ============================================================
+       Wallpaper readability — html.wallpaper-light / html.wallpaper-dark
+       toggled by HubSettings.applyWallpaper (settings.js). Keeps glass
+       + text readable over any wallpaper; .wallpaper is set on <body>.
+       ============================================================ */
+    html.wallpaper-light { --surface: rgba(255,255,255,0.75); --surface-hi: rgba(255,255,255,0.85); --border: rgba(0,0,0,0.12); --border-hi: rgba(0,0,0,0.2); --fg: #111318; --fg-muted: #3d4148; }
+    html.wallpaper-light .glass { backdrop-filter: blur(14px); }
+    html.wallpaper-dark { --surface: rgba(0,0,0,0.55); --surface-hi: rgba(0,0,0,0.65); --border: rgba(255,255,255,0.1); --border-hi: rgba(255,255,255,0.18); --fg: #EDEDEF; --fg-muted: #A7ABB3; }
+    html.wallpaper-dark .glass { backdrop-filter: blur(14px); }
+    html.wallpaper .glass, body.wallpaper .glass { box-shadow: 0 4px 24px -8px rgba(0,0,0,0.35); }
+
     html, body { background-color: var(--bg-deep); color: var(--fg); }
     body {
       background:
