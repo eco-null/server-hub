@@ -9,6 +9,7 @@
  *   accent       hex string like '#5E6AD2'
  *   userName     string shown in greeting (empty = generic "Hello")
  *   pageTitle    string used as <h1> + document.title
+ *   wallpaper    { mode, gradient, url } — background wallpaper ('none' | 'gradient' | 'custom')
  *   features     { clock, greeting, stats, statusPings, blobs, search }  (booleans)
  *   services     array of user-defined service entries (merged over defaults)
  *
@@ -49,6 +50,11 @@ const DEFAULTS = Object.freeze({
   userName: '',
   pageTitle: 'Server Hub',
   subtitle: 'Your self-hosted apps and services, reachable from one place.',
+  wallpaper: {
+    mode: 'none',
+    gradient: 'aurora',
+    url: '',
+  },
   features: {
     clock: true,
     greeting: true,
@@ -151,6 +157,74 @@ function hexToRgba(hex, a) {
   return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
 }
 
+const GRADIENTS = {
+  aurora: 'radial-gradient(1200px 800px at 15% 10%, #1e3a5f 0%, transparent 55%), radial-gradient(1000px 700px at 85% 20%, #5E6AD2 0%, transparent 50%), linear-gradient(160deg, #0b1020 0%, #1a2b4a 100%)',
+  dusk: 'radial-gradient(1100px 750px at 80% 15%, #4a1e5f 0%, transparent 50%), radial-gradient(900px 650px at 20% 85%, #0f4a5f 0%, transparent 55%), linear-gradient(160deg, #0d0b1e 0%, #2a1438 100%)',
+  ocean: 'radial-gradient(1100px 750px at 20% 15%, #0e4d64 0%, transparent 55%), linear-gradient(160deg, #04121c 0%, #0b2c3d 100%)',
+  forest: 'radial-gradient(1000px 700px at 80% 10%, #1a4d2a 0%, transparent 55%), linear-gradient(160deg, #06120a 0%, #0f2a18 100%)',
+  mono: 'linear-gradient(160deg, #0a0a0c 0%, #17171a 100%)',
+};
+
+const GradientLuminance = { aurora: false, dusk: false, ocean: false, forest: false, mono: false };
+
+function applyWallpaper(s) {
+  const w = (s && s.wallpaper) || DEFAULTS.wallpaper;
+  const body = document.body;
+  // remove prior state
+  body.classList.remove('wallpaper');
+  body.style.backgroundImage = '';
+  body.style.backgroundSize = '';
+  body.style.backgroundPosition = '';
+  body.style.backgroundRepeat = '';
+  const root = document.documentElement;
+  root.classList.remove('wallpaper-dark', 'wallpaper-light');
+  if (w.mode === 'gradient' && GRADIENTS[w.gradient]) {
+    body.classList.add('wallpaper');
+    body.style.background = GRADIENTS[w.gradient];
+    body.style.backgroundSize = 'cover';
+    body.style.backgroundRepeat = 'no-repeat';
+    root.classList.add(GradientLuminance[w.gradient] ? 'wallpaper-light' : 'wallpaper-dark');
+  } else if (w.mode === 'custom' && w.url) {
+    body.classList.add('wallpaper');
+    body.style.backgroundImage = 'url("' + w.url.replace(/"/g, '%22') + '")';
+    body.style.backgroundSize = 'cover';
+    body.style.backgroundPosition = 'center';
+    body.style.backgroundRepeat = 'no-repeat';
+    sampleImageLuminance(w.url).then(dark => {
+      root.classList.toggle('wallpaper-dark', dark);
+      root.classList.toggle('wallpaper-light', !dark);
+    }).catch(() => {
+      // fall back to transparent + toast
+      applyWallpaper({ wallpaper: { mode: 'none' } });
+      try { window.__hubToast && window.__hubToast('Wallpaper failed to load — reverted'); } catch {}
+    });
+  }
+}
+
+function sampleImageLuminance(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = 32; c.height = 32;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, 32, 32);
+        const d = ctx.getImageData(0, 0, 32, 32).data;
+        let sum = 0, n = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+          n++;
+        }
+        resolve((sum / n) < 128); // dark background -> wallpaper-dark
+      } catch (e) { reject(e); }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 if (typeof window !== 'undefined') {
   window.HubSettings = {
     KEY: SETTINGS_KEY,
@@ -161,5 +235,7 @@ if (typeof window !== 'undefined') {
     subscribe,
     isDark,
     hexToRgba,
+    GRADIENTS,
+    applyWallpaper,
   };
 }

@@ -169,6 +169,28 @@
   ok(window.HubSettings.isDark({ theme: 'dark' }) === true, 'isDark true for dark');
   ok(window.HubSettings.isDark({ theme: 'light' }) === false, 'isDark false for light');
 
+  // wallpaper — model + applyWallpaper (sync paths only; custom-image path needs real canvas)
+  eq(window.HubSettings.defaults.wallpaper.mode, 'none', 'default wallpaper mode is none');
+  eq(window.HubSettings.defaults.wallpaper.gradient, 'aurora', 'default wallpaper gradient is aurora');
+  eq(window.HubSettings.defaults.wallpaper.url, '', 'default wallpaper url empty');
+  ok(window.HubSettings.GRADIENTS && typeof window.HubSettings.GRADIENTS.aurora === 'string', 'GRADIENTS map exported');
+  ok(typeof window.HubSettings.applyWallpaper === 'function', 'applyWallpaper exported');
+
+  // gradient mode adds classes/background
+  window.HubSettings.applyWallpaper({ wallpaper: { mode: 'gradient', gradient: 'aurora' } });
+  ok(document.body.classList.contains('wallpaper'), 'gradient mode adds wallpaper class to body');
+  ok(document.body.style.background, 'gradient mode sets body background');
+  ok(document.documentElement.classList.contains('wallpaper-dark'), 'gradient mode adds wallpaper-dark to <html>');
+  ok(!document.documentElement.classList.contains('wallpaper-light'), 'gradient mode does not add wallpaper-light');
+
+  // none mode strips prior state
+  window.HubSettings.applyWallpaper({ wallpaper: { mode: 'none' } });
+  ok(!document.body.classList.contains('wallpaper'), 'none mode removes wallpaper class from body');
+  ok(!document.body.style.backgroundImage, 'none mode clears body background-image');
+  ok(!document.body.style.background, 'none mode clears body background');
+  ok(!document.documentElement.classList.contains('wallpaper-dark'), 'none mode removes wallpaper-dark from <html>');
+  ok(!document.documentElement.classList.contains('wallpaper-light'), 'none mode removes wallpaper-light from <html>');
+
   // cleanup
   try { localStorage.removeItem(window.HubSettings.KEY); } catch {}
 
