@@ -303,7 +303,7 @@
   customInput.addEventListener('input', e => { S.set({ accent: e.target.value }); refreshAccent(); });
   function refreshAccent() {
     const a = S.get().accent;
-    document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.color.toLowerCase() === a.toLowerCase()));
+    document.querySelectorAll('#swatches .swatch').forEach(s => s.classList.toggle('active', s.dataset.color.toLowerCase() === a.toLowerCase()));
     document.documentElement.style.setProperty('--accent', a);
     customInput.value = a;
   }
