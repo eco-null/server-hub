@@ -43,13 +43,31 @@
         radial-gradient(1000px 600px at 80% -10%, var(--accent-glow), transparent 60%),
         linear-gradient(180deg, var(--bg-elev), var(--bg-deep));
       min-height: 100vh;
-      transition: background-color 400ms var(--ease), color 400ms var(--ease);
+      transition:
+        background-color 500ms var(--ease),
+        background-image 600ms var(--ease),
+        background-size 600ms var(--ease),
+        background-position 600ms var(--ease),
+        color 400ms var(--ease);
     }
     .glass {
       background: var(--surface);
       backdrop-filter: blur(18px) saturate(140%);
       -webkit-backdrop-filter: blur(18px) saturate(140%);
       border: 1px solid var(--border); border-radius: 16px;
+      transition: background-color 300ms var(--ease), border-color 300ms var(--ease);
+    }
+    .section {
+      animation: section-in 360ms var(--ease) both;
+    }
+    .section:nth-child(2) { animation-delay: 40ms; }
+    .section:nth-child(3) { animation-delay: 80ms; }
+    .section:nth-child(4) { animation-delay: 120ms; }
+    .section:nth-child(5) { animation-delay: 160ms; }
+    .section:nth-child(6) { animation-delay: 200ms; }
+    @keyframes section-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
     .field {
       background: transparent; border: 1px solid var(--border); border-radius: 10px;
@@ -108,7 +126,7 @@
     }
     .svc-color { width: 2.25rem; height: 2rem; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: transparent; cursor: pointer; }
     @media (max-width: 720px) { .svc-row { grid-template-columns: 1fr; } .svc-row .hide-sm { display: none; } }
-    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } .section { animation: none; } }
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -193,7 +211,7 @@
       <div class="flex items-center justify-between pt-2">
         <div>
           <p class="font-medium text-sm">Default domain</p>
-          <p class="text-xs text-[color:var(--fg-muted)]">e.g. canozdal.com — a host like "n8n" becomes "n8n.canozdal.com".</p>
+          <p class="text-xs text-[color:var(--fg-muted)]">A bare subdomain in the add form is expanded with this domain (e.g. "n8n" → "n8n.&lt;domain&gt;").</p>
         </div>
         <input id="default-domain" class="field focus-ring w-56" placeholder="example.com" />
       </div>
