@@ -93,6 +93,13 @@
     ['SearXNG',         'https://search.example.com',  'Meta search',           'Search'],
     ['pgAdmin',         'https://pgadmin.example.com',  'Postgres admin',       'Database'],
     ['Mattermost',      'https://chat.example.com/mm',  'Team chat',             'Communication'],
+    ['Steam',           'https://steam.example.com',     'Game store',            'Gaming'],
+    ['Calibre',         'https://books.example.com/cb',  'Ebook library',        'Books'],
+    ['Ghostfolio',      'https://fin.example.com',       'Portfolio tracking',   'Money'],
+    ['Traccar',         'https://gps.example.com',       'GPS tracking',         'Travel'],
+    ['Mealie',          'https://recipes.example.com',   'Recipe manager',       'Health'],
+    ['coolify',         'https://deploy.example.com',    'Self-host PaaS',       'Dev'],
+    ['netdata',         'https://metrics.example.com',   'System metrics',       'Monitoring'],
   ];
   for (const [n, u, d, exp] of CASES) {
     const got = C(n, u, d).category;
