@@ -178,18 +178,23 @@ function applyWallpaper(s) {
   body.style.backgroundRepeat = '';
   const root = document.documentElement;
   root.classList.remove('wallpaper-dark', 'wallpaper-light');
+  // Hide the animated gradient blobs behind a custom URL wallpaper.
+  const blobsEl = document.querySelector('[data-feature="blobs"]');
+  const setBlobs = (show) => { if (blobsEl) blobsEl.style.display = show ? '' : 'none'; };
   if (w.mode === 'gradient' && GRADIENTS[w.gradient]) {
     body.classList.add('wallpaper');
     body.style.background = GRADIENTS[w.gradient];
     body.style.backgroundSize = 'cover';
     body.style.backgroundRepeat = 'no-repeat';
     root.classList.add(GradientLuminance[w.gradient] ? 'wallpaper-light' : 'wallpaper-dark');
+    setBlobs(true);
   } else if (w.mode === 'custom' && w.url) {
     body.classList.add('wallpaper');
     body.style.backgroundImage = 'url("' + w.url.replace(/"/g, '%22') + '")';
     body.style.backgroundSize = 'cover';
     body.style.backgroundPosition = 'center';
     body.style.backgroundRepeat = 'no-repeat';
+    setBlobs(false);
     sampleImageLuminance(w.url).then(dark => {
       root.classList.toggle('wallpaper-dark', dark);
       root.classList.toggle('wallpaper-light', !dark);
@@ -205,6 +210,8 @@ function applyWallpaper(s) {
       applyWallpaper({ wallpaper: { mode: 'none' } });
       try { window.__hubToast && window.__hubToast('Wallpaper failed to load — reverted'); } catch {}
     });
+  } else {
+    setBlobs(true);
   }
 }
 

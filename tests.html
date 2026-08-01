@@ -308,6 +308,15 @@
     ok(w.document.body.style.background && w.document.body.style.background.trim() !== '',
        'wallpaper gradient sets a non-empty background', String(w.document.body.style.background).slice(0, 60));
 
+    // Custom URL wallpaper hides the animated gradient blobs; back to none restores them
+    const wBlobs = w.document.querySelector('[data-feature="blobs"]');
+    w.HubSettings.applyWallpaper({ wallpaper: { mode: 'custom', url: 'https://example.com/wall.jpg' } });
+    ok(wBlobs && wBlobs.style.display === 'none', 'custom wallpaper hides gradient blobs');
+    ok(w.document.body.classList.contains('wallpaper'), 'custom mode adds wallpaper class to body');
+    ok(w.document.body.style.backgroundImage.includes('example.com'), 'custom mode sets background-image');
+    w.HubSettings.applyWallpaper({ wallpaper: { mode: 'none' } });
+    ok(wBlobs && wBlobs.style.display !== 'none', 'none mode restores gradient blobs');
+
     // autoCategorize passthrough
     eq(w.__HUB__.autoCategorize('Jellyfin', 'https://media.local', 'Movies').category, 'Media', '__HUB__.autoCategorize passthrough');
 
