@@ -210,6 +210,26 @@
       </div>
     </section>
 
+    <!-- Bookmarks editor -->
+    <section class="glass section">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="h2">Bookmarks</h2>
+        <button id="add-bm" class="btn btn-primary focus-ring text-xs">+ Add bookmark</button>
+      </div>
+      <p class="text-xs text-[color:var(--fg-muted)] mb-4">Bookmarks are stored permanently on the server (<code class="text-[color:var(--fg)]">services.json</code>) and shown on your dashboard.</p>
+
+      <div id="bm-list" class="space-y-2"></div>
+
+      <!-- Add new bookmark form (collapsible) -->
+      <div id="bm-add-form" class="hidden mt-4 pt-4 border-t border-[color:var(--border)]">
+        <div class="svc-row">
+          <input id="bm-new-name" class="field focus-ring" placeholder="Name (e.g. YouTube)" />
+          <input id="bm-new-url"  class="field focus-ring" type="text" placeholder="URL (e.g. https://youtube.com)" />
+          <button id="bm-save" class="btn btn-primary focus-ring text-xs">Add</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Danger zone -->
     <section class="glass section">
       <h2 class="h2 mb-3">Reset</h2>
@@ -466,6 +486,108 @@
   addForm.addEventListener('submit', e => { e.preventDefault(); addNew(); });
 
   loadServices();
+
+  /* ============================================================
+     Bookmarks editor (server-persisted via /api/bookmarks)
+     ============================================================ */
+  const bmListEl   = document.getElementById('bm-list');
+  const bmAddBtn   = document.getElementById('add-bm');
+  const bmAddForm  = document.getElementById('bm-add-form');
+  const bmNewName  = document.getElementById('bm-new-name');
+  const bmNewUrl   = document.getElementById('bm-new-url');
+  const bmSave     = document.getElementById('bm-save');
+
+  const API_BOOKMARKS = '/api/bookmarks';
+  let bookmarks = [];
+
+  async function loadBookmarks() {
+    try {
+      bookmarks = (await apiJson('GET', API_BOOKMARKS)).bookmarks || [];
+    } catch {
+      bookmarks = [];
+    }
+    renderBookmarks();
+  }
+
+  function renderBookmarks() {
+    if (bookmarks.length === 0) {
+      bmListEl.innerHTML = '<p class="text-xs text-[color:var(--fg-muted)] py-3">No bookmarks yet. Click “+ Add bookmark”.</p>';
+      return;
+    }
+    bmListEl.innerHTML = '';
+    bookmarks.forEach((b, i) => {
+      const row = document.createElement('div');
+      row.className = 'svc-row';
+      row.innerHTML =
+        '<input class="field focus-ring bm-name" data-i="' + i + '" value="' + esc(b.name) + '" placeholder="Name" />'
+        + '<input class="field focus-ring bm-url"  data-i="' + i + '" value="' + esc(b.url) + '" placeholder="URL" />'
+        + '<button class="btn btn-danger focus-ring text-xs bm-del" data-i="' + i + '" aria-label="Delete ' + esc(b.name) + '">✕</button>';
+      bmListEl.appendChild(row);
+    });
+
+    bmListEl.querySelectorAll('.bm-name').forEach(el => el.addEventListener('change', onEditBm));
+    bmListEl.querySelectorAll('.bm-url').forEach(el => el.addEventListener('change', onEditBm));
+    bmListEl.querySelectorAll('.bm-del').forEach(el => el.addEventListener('click', onDeleteBm));
+  }
+
+  async function onEditBm(e) {
+    const i = +e.target.dataset.i;
+    const field = e.target.classList.contains('bm-name') ? 'name' : 'url';
+    const b = bookmarks[i];
+    if (!b) return;
+    b[field] = e.target.value.trim();
+    try {
+      bookmarks = (await apiJson('PUT', API_BOOKMARKS + '/' + encodeURIComponent(b.id), {
+        name: b.name, url: b.url, icon: b.icon || 'link',
+      })).bookmarks || bookmarks;
+      toast('Saved');
+    } catch (err) {
+      toast('Save failed: ' + err.message);
+    }
+    renderBookmarks();
+  }
+
+  async function onDeleteBm(e) {
+    const i = +e.currentTarget.dataset.i;
+    const b = bookmarks[i];
+    if (!b) return;
+    if (!confirm('Delete "' + b.name + '"?')) return;
+    try {
+      bookmarks = (await apiJson('DELETE', API_BOOKMARKS + '/' + encodeURIComponent(b.id))).bookmarks || bookmarks;
+      renderBookmarks();
+      toast('Bookmark removed');
+    } catch (err) {
+      toast('Delete failed: ' + err.message);
+    }
+  }
+
+  bmAddBtn.addEventListener('click', () => {
+    const open = !bmAddForm.classList.contains('hidden');
+    bmAddForm.classList.toggle('hidden');
+    bmAddBtn.textContent = open ? '+ Add bookmark' : 'Cancel';
+    if (!open) bmNewName.focus();
+  });
+
+  async function addBookmark() {
+    const name = bmNewName.value.trim();
+    const url  = bmNewUrl.value.trim();
+    if (!name || !url) { toast('Name and URL required'); return; }
+    if (!/^https?:\/\//i.test(url)) { toast('URL must start with http:// or https://'); return; }
+    try {
+      bookmarks = (await apiJson('POST', API_BOOKMARKS, {
+        name, url, icon: 'link',
+      })).bookmarks || bookmarks;
+      bmNewName.value = ''; bmNewUrl.value = '';
+      renderBookmarks();
+      toast('Bookmark added');
+    } catch (err) {
+      toast('Add failed: ' + err.message);
+    }
+  }
+  bmSave.addEventListener('click', addBookmark);
+  bmAddForm.addEventListener('submit', e => { e.preventDefault(); addBookmark(); });
+
+  loadBookmarks();
 
   /* ============================================================
      Reset
