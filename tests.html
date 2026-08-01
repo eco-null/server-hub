@@ -302,6 +302,14 @@
     w.__HUB__.applyTheme('dark');
     ok(w.document.documentElement.classList.contains('dark') && !w.document.documentElement.classList.contains('light'), 'applyTheme(dark) sets html.dark, removes light');
 
+    // Theme toggle sits stacked under the logo in a flex-col container
+    const logo = w.document.querySelector('img[alt="Server Hub"]');
+    const themeToggle = w.document.getElementById('theme-toggle');
+    ok(logo && themeToggle && logo.parentElement === themeToggle.parentElement,
+       'logo and theme toggle share the same parent');
+    ok(logo && themeToggle && logo.parentElement.classList.contains('flex-col'),
+       'logo/theme-toggle container is flex-col');
+
     // Wallpaper — settings change re-applies on the dashboard (init + subscribe)
     w.HubSettings.set({ wallpaper: { mode: 'gradient', gradient: 'ocean' } });
     ok(w.document.body.classList.contains('wallpaper'), 'wallpaper setting adds wallpaper class to body');
@@ -464,7 +472,7 @@
     w.fetch = (url, opts = {}) => {
       apiLog.push('GET ' + url);
       if (String(url).includes('/api/beszel')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ enabled: true, systems: [{ name: 'casaos', host: 'ubuntu', uptime: '3h 12m', cpu: 42, mem: 55, disk: 61, status: 'up' }] }) });
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ enabled: true, systems: [{ name: 'casaos', host: 'ubuntu', uptime: 9000721, cpu: 42, mem: 55, disk: 61, status: 'up' }] }) });
       }
       return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: 'nope' }) });
     };
@@ -473,9 +481,16 @@
     ok(apiLog.some(x => x === 'GET /api/beszel'), 'pollStats GETs /api/beszel');
     ok(beszelGrid.textContent.includes('casaos'), 'beszel row renders server name', beszelGrid.textContent.slice(0, 60));
     ok(beszelGrid.textContent.includes('up'), 'beszel row renders server status');
-    ok(!beszelGrid.textContent.includes('3h 12m'), 'beszel row omits uptime');
+    ok(beszelGrid.textContent.includes('104d'), 'beszel row shows formatted uptime', beszelGrid.textContent.slice(0, 80));
     ok(beszelGrid.className.includes('grid-cols-2'), 'beszel grid uses 2 columns', beszelGrid.className);
     ok(beszelGrid.querySelector('div[style*="width:42%"]') !== null, 'beszel CPU bar rendered at 42%');
+
+    // Beszel uptime toggle-off → formatted uptime hidden, then restored
+    w.HubSettings.set({ features: { beszelUptime: false } });
+    await w.__HUB__.pollStats();
+    beszelGrid = w.document.getElementById('stats-grid');
+    ok(!beszelGrid.textContent.includes('104d'), 'beszel uptime hidden when toggle off');
+    w.HubSettings.set({ features: { beszelUptime: true } });
 
     // Beszel disabled → single-host fallback renders via /api/stats
     apiLog = [];

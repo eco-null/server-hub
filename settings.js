@@ -62,6 +62,7 @@ const DEFAULTS = Object.freeze({
     statusPings: true,
     blobs: true,
     search: true,
+    beszelUptime: true,
   },
   services: [],
 });

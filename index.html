@@ -1018,16 +1018,25 @@
     } catch {}
     renderSingleHostFallback();
   }
+  function formatUptime(sec) {
+    if (sec == null || isNaN(sec) || sec < 1) return '';
+    if (sec >= 86400) { const d = Math.floor(sec / 86400); const h = Math.floor((sec % 86400) / 3600); return h ? d + 'd ' + h + 'h' : d + 'd'; }
+    if (sec >= 3600) { const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60); return m ? h + 'h ' + m + 'm' : h + 'h'; }
+    if (sec >= 60) { const m = Math.floor(sec / 60); const s = sec % 60; return s ? m + 'm ' + s + 's' : m + 'm'; }
+    return Math.floor(sec) + 's';
+  }
   function renderBeszel(systems) {
     gridEl.className = 'grid grid-cols-2 gap-3 sm:gap-4';
     gridEl.innerHTML = '';
     systems.forEach(s => {
+      const showUptime = window.HubSettings.get().features.beszelUptime !== false;
+      const up = formatUptime(s.uptime);
       const row = document.createElement('div');
       row.className = 'space-y-1';
       row.innerHTML =
         '<div class="flex items-baseline justify-between gap-2">' +
           '<span class="text-xs text-[color:var(--fg-muted)] truncate" title="' + esc(s.host || '') + '">' + esc(s.name) + '</span>' +
-          '<span class="font-mono text-[10px] tabular-nums text-[color:var(--fg-muted)]">' + esc(s.status) + '</span>' +
+          '<span class="font-mono text-[10px] tabular-nums text-[color:var(--fg-muted)]">' + esc(s.status) + (showUptime && up ? ' · ' + up : '') + '</span>' +
         '</div>' +
         barRow('CPU', s.cpu) + barRow('Mem', s.mem) + barRow('Disk', s.disk);
       gridEl.appendChild(row);
