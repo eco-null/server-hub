@@ -64,6 +64,10 @@ const DEFAULTS = Object.freeze({
     search: true,
     beszelUptime: true,
   },
+  search: {
+    provider: 'google',
+    searxngUrl: '',
+  },
   services: [],
 });
 

@@ -124,6 +124,8 @@
   eq(s.userName, '', 'default userName empty');
   eq(s.features.statusPings, true, 'default feature flag true');
   ok(Array.isArray(s.services) && s.services.length === 0, 'default services array empty');
+  eq(window.HubSettings.defaults.search.provider, 'google', 'default search provider is google');
+  eq(window.HubSettings.defaults.search.searxngUrl, '', 'default searxngUrl empty');
 
   // set + persist
   window.HubSettings.set({ theme: 'dark', accent: '#22C55E', userName: 'Tester' });
