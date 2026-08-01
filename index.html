@@ -576,12 +576,14 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, url }),
       });
-      if (!r.ok) return;
+      if (!r.ok) { showToast('Failed to add bookmark'); return; }
       const d = await r.json();
       BOOKMARKS = Array.isArray(d.bookmarks) ? d.bookmarks : [];
       renderBookmarks();
       closeBookmarkEditor();
-    } catch {}
+    } catch {
+      showToast('Failed to add bookmark');
+    }
   }
   document.getElementById('bookmarks-add').addEventListener('click', openBookmarkEditor);
   bookmarkEditor.addEventListener('submit', saveBookmark);
