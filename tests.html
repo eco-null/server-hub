@@ -421,6 +421,12 @@
     const iconOpts = w.document.querySelectorAll('#edit-icons .icon-opt');
     ok(iconOpts.length > 0, 'icon picker grid rendered');
     ok(w.document.querySelector('#edit-icons .icon-opt.selected').dataset.icon === 'chart', 'current icon highlighted');
+    // New icons are present and selectable
+    const iconKeys = Array.from(iconOpts).map(b => b.dataset.icon);
+    ok(iconKeys.includes('server') && iconKeys.includes('camera') && iconKeys.includes('gamepad'),
+      'expanded icon set includes new icons', iconKeys.length + ' icons');
+    ok(iconKeys.includes('book') && iconKeys.includes('wallet') && iconKeys.includes('map-pin'),
+      'new icons cover books/money/travel categories');
 
     // Save edit issues PUT and re-renders renamed card
     apiLog = [];

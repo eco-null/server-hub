@@ -36,7 +36,11 @@ KNOWN_ICONS = {
     "chart", "pulse", "database", "shield", "shield-check", "key", "lock",
     "lock-key", "cloud", "note", "file", "film", "music", "headphones", "git",
     "branch", "terminal", "globe", "home", "broadcast", "cog", "box",
-    "shopping", "flask", "sparkles",
+    "shopping", "flask", "sparkles", "camera", "image", "book", "gamepad",
+    "wallet", "map-pin", "activity", "cpu", "server", "wifi", "zap", "mail",
+    "message", "calendar", "clock", "download", "upload", "sliders", "user",
+    "users", "bookmark", "star", "heart", "link", "external-link", "folder",
+    "archive", "package", "layers", "refresh", "bell", "bug", "code", "command",
 }
 KNOWN_CATEGORIES = {
     "Monitoring", "Security", "Network", "Media", "Productivity", "Files",
