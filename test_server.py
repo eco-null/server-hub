@@ -2,11 +2,13 @@ import contextlib
 import http.cookiejar
 import http.client
 import http.server
+import io
 import json
 import os
 import tempfile
 import threading
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -260,6 +262,16 @@ class ServerHubTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(data["services"][0]["icon"], "box")
 
+    def test_new_categories_accepted(self):
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        for cat in ("Gaming", "Books", "Money", "Travel", "Health"):
+            status, data, _ = self.api(
+                "/api/services", "POST",
+                {"name": cat, "url": "https://x.example.com", "categoryOverride": cat}, jar)
+            self.assertEqual(status, 200, cat)
+            self.assertEqual(data["services"][-1]["categoryOverride"], cat)
+
     def test_update_service_preserves_id_and_ping(self):
         jar = http.cookiejar.CookieJar()
         self.login(jar)
@@ -380,6 +392,20 @@ class ServerHubTests(unittest.TestCase):
         status, data, _ = self.api("/api/bookmarks", "POST", {"name": "YouTube", "url": "https://youtube.com"}, jar)
         self.assertEqual(status, 200)
         self.assertNotIn("color", data["bookmarks"][1])
+
+    def test_bookmark_invalid_color_not_stored(self):
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/bookmarks", "POST",
+                                   {"name": "Kick", "url": "https://kick.com", "color": "red;position:fixed"}, jar)
+        self.assertEqual(status, 200)
+        self.assertNotIn("color", data["bookmarks"][0])
+
+
+class StatsUnitTests(unittest.TestCase):
+    def test_cpu_percent_short_procstat_line_does_not_raise(self):
+        with mock.patch("builtins.open", return_value=io.StringIO("cpu 1 2 3\n")):
+            self.assertIsNone(server.cpu_percent())
 
 
 class ServiceStoreBookmarks(unittest.TestCase):
@@ -578,7 +604,24 @@ class BeszelTests(unittest.TestCase):
         status, data, _ = self.api("/api/beszel", jar=jar)
         self.assertEqual(status, 200)
         self.assertTrue(data["enabled"])
-        self.assertIn("error", data)
+        self.assertEqual(data["error"], "beszel unreachable")
+
+    def test_beszel_negative_cache_avoids_repeated_failed_auth(self):
+        url = self.start_beszel()
+        os.environ["BESZEL_URL"] = url
+        os.environ["BESZEL_USER"] = "admin@beszel"
+        os.environ["BESZEL_PASSWORD"] = "secret"
+        BeszelStubHandler.fail = True
+        jar = http.cookiejar.CookieJar()
+        self.login(jar)
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertEqual(data["enabled"], True)
+        self.assertEqual(data["error"], "beszel unreachable")
+        self.assertEqual(BeszelStubHandler.auth_hits, 1)
+        # A second request within the TTL must not hammer Beszel again.
+        status, data, _ = self.api("/api/beszel", jar=jar)
+        self.assertEqual(data["error"], "beszel unreachable")
+        self.assertEqual(BeszelStubHandler.auth_hits, 1)
 
     def test_beszel_logs_in_for_token(self):
         url = self.start_beszel()

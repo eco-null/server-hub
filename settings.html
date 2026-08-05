@@ -790,7 +790,7 @@
     b[field] = e.target.value.trim();
     try {
       bookmarks = (await apiJson('PUT', API_BOOKMARKS + '/' + encodeURIComponent(b.id), {
-        name: b.name, url: b.url, icon: b.icon || 'link',
+        name: b.name, url: b.url, icon: b.icon || 'link', color: b.color || '',
       })).bookmarks || bookmarks;
       toast('Saved');
     } catch (err) {
@@ -875,23 +875,50 @@
   importInput.addEventListener('change', async () => {
     const file = importInput.files && importInput.files[0];
     if (!file) return;
+    const insertedSvc = [];
+    const insertedBm  = [];
+    let deleting = false;
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
+      const data = JSON.parse(text, (k, v) => {
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') return undefined;
+        return v;
+      });
       if (!data || typeof data !== 'object' || !data.settings) throw new Error('invalid backup');
       if (!confirm('Replace all current settings, links, and bookmarks with this backup?')) return;
       window.HubSettings.set(data.settings);
-      // replace services
-      const existingSvc = (await apiJson('GET', API_SERVICES)).services || [];
-      for (const s of existingSvc) await apiJson('DELETE', API_SERVICES + '/' + encodeURIComponent(s.id));
-      for (const s of data.services || []) await apiJson('POST', API_SERVICES, s);
-      // replace bookmarks
-      const existingBm = (await apiJson('GET', API_BOOKMARKS)).bookmarks || [];
-      for (const b of existingBm) await apiJson('DELETE', API_BOOKMARKS + '/' + encodeURIComponent(b.id));
-      for (const b of data.bookmarks || []) await apiJson('POST', API_BOOKMARKS, b);
+      // restore services/bookmarks: capture the CURRENT ids first, then insert
+      // the backup. Only after every insert succeeds do we delete the old
+      // items, so a mid-import failure never leaves the user's live links gone.
+      const oldSvcIds = new Set(((await apiJson('GET', API_SERVICES)).services || []).map(s => s.id));
+      const oldBmIds  = new Set(((await apiJson('GET', API_BOOKMARKS)).bookmarks || []).map(b => b.id));
+      const backupSvcs = Array.isArray(data.services) ? data.services : [];
+      const backupBms  = Array.isArray(data.bookmarks) ? data.bookmarks : [];
+      for (const s of backupSvcs) insertedSvc.push(await apiJson('POST', API_SERVICES, s));
+      for (const b of backupBms) insertedBm.push(await apiJson('POST', API_BOOKMARKS, b));
+      deleting = true;
+      // Delete only items that existed before the import (the POSTs assign new
+      // ids, so we must not touch the freshly inserted rows).
+      for (const id of oldSvcIds) await apiJson('DELETE', API_SERVICES + '/' + encodeURIComponent(id));
+      for (const id of oldBmIds) await apiJson('DELETE', API_BOOKMARKS + '/' + encodeURIComponent(id));
       toast('Backup restored');
     } catch (err) {
-      toast('Import failed: ' + err.message);
+      const msg = err.message;
+      if (deleting) {
+        // inserts are safely in place; a delete failed, so originals may remain — keep inserts, warn
+        toast('Restore warning: ' + msg + ' — new links kept, some old links may remain (duplicates)');
+      } else if (insertedSvc.length || insertedBm.length) {
+        // an insert failed; remove the ones already inserted (best-effort), keep originals
+        try {
+          for (const s of insertedSvc) await apiJson('DELETE', API_SERVICES + '/' + encodeURIComponent(s.id));
+          for (const b of insertedBm) await apiJson('DELETE', API_BOOKMARKS + '/' + encodeURIComponent(b.id));
+          toast('Import failed: ' + msg + ' — originals kept, partial imports rolled back');
+        } catch (rollbackErr) {
+          toast('Import failed: ' + msg + ' (partial cleanup failed: ' + rollbackErr.message + ')');
+        }
+      } else {
+        toast('Import failed: ' + msg);
+      }
     } finally {
       importInput.value = '';
     }

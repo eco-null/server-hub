@@ -89,6 +89,9 @@ function structuredCloneSafe(o) {
 
 function deepMerge(base, over) {
   for (const k of Object.keys(over)) {
+    // Reject prototype-pollution keys; they can come from a crafted imported
+    // backup file or hand-edited localStorage.
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
     if (over[k] && typeof over[k] === 'object' && !Array.isArray(over[k])) {
       base[k] = deepMerge(base[k] || {}, over[k]);
     } else if (over[k] !== undefined) {

@@ -445,20 +445,6 @@
         <span class="text-xs text-[color:var(--fg-muted)]">Category</span>
         <select id="edit-cat" class="form-input mt-1">
           <option value="auto">Auto</option>
-          <option value="Monitoring">Monitoring</option>
-          <option value="Security">Security</option>
-          <option value="Network">Network</option>
-          <option value="Media">Media</option>
-          <option value="Productivity">Productivity</option>
-          <option value="Files">Files</option>
-          <option value="Dev">Dev</option>
-          <option value="Communication">Communication</option>
-          <option value="Home">Home</option>
-          <option value="Finance">Finance</option>
-          <option value="AI">AI</option>
-          <option value="Search">Search</option>
-          <option value="Database">Database</option>
-          <option value="Other">Other</option>
         </select>
       </label>
       <div class="flex justify-end gap-2 pt-1">
@@ -612,9 +598,14 @@
     box.innerHTML = '';
     BOOKMARKS.forEach(b => {
       const a = document.createElement('a');
-      a.href = b.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      a.target = '_blank'; a.rel = 'noopener noreferrer';
       a.className = 'glass px-3 py-2 rounded-lg flex items-center gap-2 text-sm hover:brightness-110 transition';
-      a.innerHTML = '<span class="w-2 h-2 rounded-full shrink-0" style="background:' + esc(b.color || 'var(--accent)') + '"></span>' + esc(b.name);
+      // Only assign href for http(s) URLs; anything else (javascript:, data:)
+      // is rendered non-clickable to prevent stored code execution.
+      a.href = /^https?:\/\//i.test(b.url) ? b.url : '#';
+      if (!/^https?:\/\//i.test(b.url)) a.classList.add('cursor-default', 'opacity-70');
+      const color = /^#[0-9a-fA-F]{6}$/.test(b.color || '') ? b.color : 'var(--accent)';
+      a.innerHTML = '<span class="w-2 h-2 rounded-full shrink-0" style="background:' + color + '"></span>' + esc(b.name);
       box.appendChild(a);
     });
   }
@@ -706,8 +697,8 @@
     for (const cat of order) {
       const list = grouped[cat];
       const big = list.length >= BIG_ROW;
-      html += '<section class="group' + (big ? ' w-full' : ' flex-1 min-w-[240px]') + '" data-category="' + cat + '">'
-        + '<h2 class="group-header text-xs font-semibold uppercase">' + cat
+      html += '<section class="group' + (big ? ' w-full' : ' flex-1 min-w-[240px]') + '" data-category="' + esc(cat) + '">'
+        + '<h2 class="group-header text-xs font-semibold uppercase">' + esc(cat)
         + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
         + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3' : ' grid-cols-1 gap-3') + '">';
       for (const s of list) {
@@ -735,18 +726,16 @@
   const ICON_TRASH  = '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v5M14 11v5"/>';
 
   function renderCard(s) {
-    const target = s.url.startsWith('http') ? s.url : 'https://' + s.url;
+    const target = /^https?:\/\//i.test(s.url) ? s.url : 'https://' + s.url;
     const actions = s.id
       ? '<span class="card-actions flex gap-0.5 shrink-0 mt-1">'
-          + '<button type="button" class="card-action" title="Edit" aria-label="Edit ' + esc(s.name) + '" '
-          + 'onclick="event.preventDefault(); event.stopPropagation(); window.__HUB__.edit(\'' + esc(s.id) + '\')">'
+          + '<button type="button" class="card-action" data-edit="' + esc(s.id) + '" title="Edit" aria-label="Edit ' + esc(s.name) + '">'
           + '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICON_PENCIL + '</svg></button>'
-          + '<button type="button" class="card-action" title="Delete" aria-label="Delete ' + esc(s.name) + '" '
-          + 'onclick="event.preventDefault(); event.stopPropagation(); window.__HUB__.remove(\'' + esc(s.id) + '\')">'
+          + '<button type="button" class="card-action" data-del="' + esc(s.id) + '" title="Delete" aria-label="Delete ' + esc(s.name) + '">'
           + '<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICON_TRASH + '</svg></button>'
         + '</span>'
       : '';
-    return '<a href="' + target + '" target="_blank" rel="noopener noreferrer" '
+    return '<a href="' + esc(target) + '" target="_blank" rel="noopener noreferrer" '
       + 'class="card reveal glass flex items-start gap-2 p-3 focus-ring cursor-pointer relative overflow-hidden" '
       + 'data-name="' + esc(s.name.toLowerCase()) + '" data-desc="' + esc((s.desc || '').toLowerCase()) + '" '
       + 'data-category="' + esc(s.category) + '" data-ping-url="' + (s.ping !== false ? esc(s.url) : '') + '" '
@@ -904,8 +893,14 @@
   let editingId = null;
   let selectedIcon = 'box';
 
-  const EDIT_CATEGORIES = ['Monitoring','Security','Network','Media','Productivity',
-    'Files','Dev','Communication','Home','Finance','AI','Search','Database','Other'];
+  const editCats = ['auto'].concat(Object.keys(window.KEYWORD_RULES || {}).concat(['Other']));
+  (function () {
+    const sel = document.getElementById('edit-cat');
+    if (!sel) return;
+    sel.innerHTML = editCats.map(c =>
+      '<option value="' + esc(c) + '"' + (c === 'auto' ? ' selected' : '') + '>' + esc(c) + '</option>'
+    ).join('');
+  })();
 
   function renderIconPicker(current) {
     selectedIcon = ICONS[current] ? current : 'box';
@@ -1258,6 +1253,15 @@
   /* ============================================================
      Expose for tests (tests.html loads index.html in iframe)
      ============================================================ */
+  // Delegated handlers for card edit/delete buttons (avoids inline onclick
+  // handlers, which are a stored-XSS vector via entity-escaped ids).
+  groupsEl.addEventListener('click', e => {
+    const btn = e.target.closest('[data-edit],[data-del]');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    if (btn.hasAttribute('data-edit')) openEditModal(btn.getAttribute('data-edit'));
+    else if (btn.hasAttribute('data-del')) remove(btn.getAttribute('data-del'));
+  });
   window.__HUB__ = {
     SERVICES, SERVICES_DEFAULT,
     renderGroups, filter, applyTheme, cycleTheme, remove,

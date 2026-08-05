@@ -41,7 +41,7 @@ KNOWN_ICONS = {
 KNOWN_CATEGORIES = {
     "Monitoring", "Security", "Network", "Media", "Productivity", "Files",
     "Dev", "Communication", "Home", "Finance", "AI", "Search", "Database",
-    "Other",
+    "Other", "Gaming", "Books", "Money", "Travel", "Health",
 }
 
 
@@ -116,7 +116,8 @@ def validate_bookmark(data, partial=False):
     if "color" in data or not partial:
         color = str(data.get("color") or "").strip()
         if color:
-            fields["color"] = color[:64]
+            if re.match(r"^#[0-9a-fA-F]{6}$", color):
+                fields["color"] = color
     return fields, None
 
 
@@ -308,6 +309,8 @@ def cpu_percent():
                 for line in f:
                     if line.startswith("cpu "):
                         nums = [int(x) for x in line.split()[1:]]
+                        if len(nums) < 4:
+                            return None
                         idle = nums[3] + (nums[4] if len(nums) > 4 else 0)
                         return sum(nums), idle
         except (OSError, ValueError):
@@ -368,10 +371,12 @@ def stats_payload():
 
 BESZEL_CACHE_TTL = 10.0
 _beszel_cache = {}
+_beszel_cache_lock = threading.Lock()
 
 
 def clear_beszel_cache():
-    _beszel_cache.clear()
+    with _beszel_cache_lock:
+        _beszel_cache.clear()
 
 
 def read_beszel_env():
@@ -440,33 +445,46 @@ def _beszel_systems():
     """Fetch + normalize Beszel systems, cached in-process for 10s.
 
     Returns a list of {name, cpu, mem, disk, status} dicts, or None when
-    Beszel is unconfigured. Raises on connection/auth/fetch failure.
+    Beszel is unconfigured. Raises on connection/auth/fetch failure. Failures
+    are negative-cached for BESZEL_CACHE_TTL so a down/unreachable Beszel is
+    not hammered on every poll.
     """
     cfg = read_beszel_env()
     if not cfg:
         return None
     now = time.time()
-    cached = _beszel_cache.get(cfg["url"])
-    if cached and now - cached[0] < BESZEL_CACHE_TTL:
-        return cached[1]
+    with _beszel_cache_lock:
+        cached = _beszel_cache.get(cfg["url"])
+        if cached and now - cached[0] < BESZEL_CACHE_TTL:
+            entry = cached[1]
+            if isinstance(entry, Exception):
+                raise entry
+            return entry
 
-    # Always obtain a fresh JWT via the login flow (token-based API keys
-    # can be misconfigured/expired; user/password is the reliable path).
-    token = _beszel_login(cfg)
-    if not token:
-        return None
+    try:
+        # Always obtain a fresh JWT via the login flow (token-based API keys
+        # can be misconfigured/expired; user/password is the reliable path).
+        token = _beszel_login(cfg)
+        if not token:
+            raise RuntimeError("beszel unreachable")
 
-    req = urllib.request.Request(
-        cfg["url"].rstrip("/") + "/api/collections/systems/records?perPage=100",
-        headers={
-            # PocketBase accepts both "Bearer <token>" and bare "<token>".
-            "Authorization": f"Bearer {token}",
-        },
-    )
-    with _beszel_urlopen(req) as resp:
-        data = json.loads(resp.read().decode("utf-8", "replace"))
-    systems = [normalize_beszel_system(rec) for rec in data.get("items", [])]
-    _beszel_cache[cfg["url"]] = (now, systems)
+        req = urllib.request.Request(
+            cfg["url"].rstrip("/") + "/api/collections/systems/records?perPage=100",
+            headers={
+                # PocketBase accepts both "Bearer <token>" and bare "<token>".
+                "Authorization": f"Bearer {token}",
+            },
+        )
+        with _beszel_urlopen(req) as resp:
+            data = json.loads(resp.read().decode("utf-8", "replace"))
+        systems = [normalize_beszel_system(rec) for rec in data.get("items", [])]
+    except Exception as e:
+        with _beszel_cache_lock:
+            _beszel_cache[cfg["url"]] = (time.time(), e)
+        raise
+
+    with _beszel_cache_lock:
+        _beszel_cache[cfg["url"]] = (time.time(), systems)
     return systems
 
 
@@ -476,7 +494,7 @@ class HubHandler(BaseHTTPRequestHandler):
     server_version = "ServerHub/1.0"
 
     def log_message(self, fmt, *args):
-        print("[%s] %s" % (self.address_string(), fmt % args))
+        print("[%s] %s" % (self.client_address[0], fmt % args))
 
     def client_ip(self):
         return self.client_address[0]
@@ -619,9 +637,9 @@ class HubHandler(BaseHTTPRequestHandler):
     def _handle_beszel(self):
         try:
             systems = _beszel_systems()
-        except Exception as e:
+        except Exception:
             return self.send_bytes(
-                json.dumps({"enabled": True, "error": str(e)}), 200,
+                json.dumps({"enabled": True, "error": "beszel unreachable"}), 200,
                 "application/json; charset=utf-8")
         if systems is None:
             return self.send_bytes(json.dumps({"enabled": False}), 200, "application/json; charset=utf-8")
@@ -781,6 +799,7 @@ def main():
     host = read_env("HUB_HOST", "0.0.0.0")
     port = int(read_env("HUB_PORT", "8642"))
     httpd = create_server(host, port)
+    httpd.socket.settimeout(30)
     print("Server Hub listening on http://%s:%d" % (host, port))
     try:
         httpd.serve_forever()
