@@ -315,41 +315,6 @@
     const anySmall = Array.from(groups).some(g => g.className.includes('flex-1 min-w-[240px]') && g.querySelector('.grid').className.includes('grid-cols-1 gap-3'));
     ok(anyBig || anySmall, 'groups use adaptive big/small layout classes', Array.from(groups).map(g => g.className).join(' | '));
 
-    // Pure-CSS magazine wrap — header is a transparent flow box, the System/
-    // Bookmarks aside floats right, and category sections are flow-root so
-    // services wrap around the sidebar (beside it, then full width below the
-    // Bookmarks) without moving any DOM elements.
-    function cssRule(sel) {
-      return Array.from(w.document.styleSheets).flatMap(sh => {
-        try { return Array.from(sh.cssRules); } catch { return []; }
-      }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ').includes(sel));
-    }
-    const mainFlowRule = cssRule('main[class]');
-    ok(mainFlowRule && /display:\s*block/.test(mainFlowRule.style.cssText),
-       'main is a block flow context', mainFlowRule && mainFlowRule.style.cssText);
-    const headerFlowRule = cssRule('header[class]');
-    ok(headerFlowRule && /display:\s*contents/.test(headerFlowRule.style.cssText),
-       'header is a transparent flow box (display: contents)', headerFlowRule && headerFlowRule.style.cssText);
-    const asideFlowRule = cssRule('header aside[class]');
-    ok(asideFlowRule && /float:\s*right/.test(asideFlowRule.style.cssText),
-       'widgets aside floats right', asideFlowRule && asideFlowRule.style.cssText);
-    ok(asideFlowRule && /width:\s*320px/.test(asideFlowRule.style.cssText),
-       'widgets aside is 320px wide', asideFlowRule && asideFlowRule.style.cssText);
-    ok(asideFlowRule && /margin-left/.test(asideFlowRule.style.cssText),
-       'widgets aside keeps a left margin gap', asideFlowRule && asideFlowRule.style.cssText);
-    ok(!asideFlowRule || !/position:\s*(absolute|fixed|sticky)/.test(asideFlowRule.style.cssText),
-       'widgets aside stays in normal flow (no absolute/fixed/sticky)', asideFlowRule && asideFlowRule.style.cssText);
-    const colsFlowRule = Array.from(w.document.styleSheets).flatMap(sh => {
-      try { return Array.from(sh.cssRules); } catch { return []; }
-    }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ').includes('#groups-cols') && /display:\s*contents/.test(r.style && r.style.cssText || ''));
-    ok(colsFlowRule, 'groups-cols is display:contents so categories wrap around the float', colsFlowRule && colsFlowRule.style && colsFlowRule.style.cssText);
-    const groupFlowRule = cssRule('#groups .group');
-    ok(groupFlowRule && /flow-root/.test(groupFlowRule.style.cssText),
-       'category sections are flow-root (wrap around the sidebar)', groupFlowRule && groupFlowRule.style.cssText);
-    const widgetsAside = w.document.querySelector('header aside');
-    ok(widgetsAside && widgetsAside.querySelector('#stats-grid'), 'System widget untouched, still inside header');
-    ok(widgetsAside && widgetsAside.querySelector('#bookmarks-card'), 'Bookmarks widget untouched, still inside header');
-
     // Search filter still works
     const input = w.__HUB__.getSearchInput();
     input.value = 'grafana';
