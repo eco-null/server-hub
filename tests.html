@@ -307,8 +307,8 @@
     ok(cards.length > 0 && cards[0].querySelector('.card-action[title="Delete"]'),
        'every card has a delete button');
 
-    // Adaptive grid layout: #groups is a CSS grid (no flex wrapper), and
-    // category sections carry explicit big/small classes that drive placement.
+    // Adaptive layout: category sections carry big/small classes that drive
+    // their inner card grid, and the widgets sidebar floats right beside them.
     function cssRule(sel) {
       return Array.from(w.document.styleSheets).flatMap(sh => {
         try { return Array.from(sh.cssRules); } catch { return []; }
@@ -316,28 +316,32 @@
     }
     const groupsGridEl = w.document.getElementById('groups');
     const groupsRule = cssRule('#groups');
-    ok(groupsRule && /display:\s*grid/.test(groupsRule.style.cssText),
-       'groups container is a CSS grid', groupsRule && groupsRule.style.cssText);
+    ok(groupsRule && !/display:\s*grid/.test(groupsRule.style.cssText),
+       'groups container is not a CSS grid (float layout)', groupsRule && groupsRule.style.cssText);
     ok(!w.document.getElementById('groups-cols'), 'legacy #groups-cols flex wrapper removed');
     const groups = w.document.querySelectorAll('#groups .group');
     const anyBig = Array.from(groups).some(g => g.classList.contains('big') && g.querySelector('.grid').className.includes('sm:grid-cols-2'));
     const anySmall = Array.from(groups).some(g => g.classList.contains('small') && g.querySelector('.grid').className.includes('grid-cols-1 gap-3'));
     ok(anyBig || anySmall, 'groups use adaptive big/small layout classes', Array.from(groups).map(g => g.className).join(' | '));
 
-    // Floating sidebar — the side panel moves into the grid as its first child
-    // and is pinned to the top-right column (col 3) across var(--sb-rows) rows.
+    // Floating sidebar — the widgets stay the first child of the services
+    // container and float right (top-right corner); category sections are
+    // flow-root (BFC) so they wrap around it: fill the space left of the
+    // sidebar and expand back to full width once the sidebar ends.
     const sidePanel = w.document.getElementById('side-panel');
     ok(sidePanel, 'side panel exists (id=side-panel)');
-    ok(sidePanel && sidePanel.parentElement === groupsGridEl, 'side panel is a direct child of the services grid');
+    ok(sidePanel && sidePanel.parentElement === groupsGridEl, 'side panel stays a direct child of the services container');
     ok(sidePanel && sidePanel.querySelector('#stats-grid'), 'side panel keeps system stats');
     ok(sidePanel && sidePanel.querySelector('#bookmarks-card'), 'side panel keeps bookmarks');
     const sideRule = cssRule('#side-panel');
-    ok(sideRule && /grid-column:\s*3/.test(sideRule.style.cssText), 'side panel sits in grid column 3', sideRule && sideRule.style.cssText);
-    ok(sideRule && /--sb-rows/.test(sideRule.style.cssText), 'side panel spans var(--sb-rows) rows', sideRule && sideRule.style.cssText);
-    ok(sideRule && /position:\s*sticky/.test(sideRule.style.cssText), 'side panel is sticky', sideRule && sideRule.style.cssText);
-    ok(sideRule && /top:\s*1rem/.test(sideRule.style.cssText), 'side panel sticks below the top edge', sideRule && sideRule.style.cssText);
-    ok(groupsGridEl.style.getPropertyValue('--sb-rows') !== '', '--sb-rows measured after boot', groupsGridEl.style.getPropertyValue('--sb-rows'));
-    ok(typeof w.__HUB__.measureSidebarRows === 'function', 'measureSidebarRows exported for ResizeObserver');
+    ok(sideRule && /float:\s*right/.test(sideRule.style.cssText), 'side panel floats right', sideRule && sideRule.style.cssText);
+    ok(sideRule && /width:\s*320px/.test(sideRule.style.cssText), 'side panel is 320px wide', sideRule && sideRule.style.cssText);
+    ok(sideRule && /margin-left/.test(sideRule.style.cssText), 'side panel keeps a left margin gap', sideRule && sideRule.style.cssText);
+    const groupRule = cssRule('#groups > .group');
+    ok(groupRule && /flow-root/.test(groupRule.style.cssText), 'category sections are flow-root (wrap around sidebar)', groupRule && groupRule.style.cssText);
+    ok(!/--sb-rows/.test(sideRule.style.cssText), 'no --sb-rows span needed (float layout)');
+    ok(groupsGridEl.style.getPropertyValue('--sb-rows') === '', 'no --sb-rows inline style after boot');
+    ok(typeof w.__HUB__.measureSidebarRows === 'undefined', 'measureSidebarRows removed (no ResizeObserver)');
 
     // Search filter still works
     const input = w.__HUB__.getSearchInput();
