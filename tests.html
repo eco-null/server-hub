@@ -315,37 +315,52 @@
     const anySmall = Array.from(groups).some(g => g.className.includes('flex-1 min-w-[240px]') && g.querySelector('.grid').className.includes('grid-cols-1 gap-3'));
     ok(anyBig || anySmall, 'groups use adaptive big/small layout classes', Array.from(groups).map(g => g.className).join(' | '));
 
-    // Pure-CSS magazine wrap — header is a transparent flow box, the System/
-    // Bookmarks aside floats right, and category sections are flow-root so
-    // services wrap around the sidebar (beside it, then full width below the
-    // Bookmarks) without moving any DOM elements.
-    function cssRule(sel) {
-      return Array.from(w.document.styleSheets).flatMap(sh => {
-        try { return Array.from(sh.cssRules); } catch { return []; }
-      }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ').includes(sel));
+    // Clean 2-column grid (desktop): main = 1fr + 320px; System/Bookmarks
+    // aside is a grid item of main in column 2; header (search) + services in
+    // column 1. The header is a transparent flow box on desktop so the nested
+    // aside can participate in main's grid (grid-column only applies to grid
+    // items); floats / position hacks are gone.
+    function cssRuleDeep(sel, decl) {
+      const stack = [];
+      for (const sh of w.document.styleSheets) {
+        let rules;
+        try { rules = Array.from(sh.cssRules); } catch { continue; }
+        stack.push(...rules);
+      }
+      while (stack.length) {
+        const r = stack.shift();
+        const css = (r.style && r.style.cssText) || '';
+        if (r.selectorText && r.selectorText.replace(/\s+/g, ' ').includes(sel) && (!decl || css.includes(decl))) return r;
+        if (r.cssRules) stack.push(...Array.from(r.cssRules));
+      }
+      return null;
     }
-    const mainFlowRule = cssRule('main[class]');
-    ok(mainFlowRule && /display:\s*block/.test(mainFlowRule.style.cssText),
-       'main is a block flow context', mainFlowRule && mainFlowRule.style.cssText);
-    const headerFlowRule = cssRule('header[class]');
-    ok(headerFlowRule && /display:\s*contents/.test(headerFlowRule.style.cssText),
-       'header is a transparent flow box (display: contents)', headerFlowRule && headerFlowRule.style.cssText);
-    const asideFlowRule = cssRule('header aside[class]');
-    ok(asideFlowRule && /float:\s*right/.test(asideFlowRule.style.cssText),
-       'widgets aside floats right', asideFlowRule && asideFlowRule.style.cssText);
-    ok(asideFlowRule && /width:\s*320px/.test(asideFlowRule.style.cssText),
-       'widgets aside is 320px wide', asideFlowRule && asideFlowRule.style.cssText);
-    ok(asideFlowRule && /margin-left/.test(asideFlowRule.style.cssText),
-       'widgets aside keeps a left margin gap', asideFlowRule && asideFlowRule.style.cssText);
-    ok(!asideFlowRule || !/position:\s*(absolute|fixed|sticky)/.test(asideFlowRule.style.cssText),
-       'widgets aside stays in normal flow (no absolute/fixed/sticky)', asideFlowRule && asideFlowRule.style.cssText);
-    const colsFlowRule = Array.from(w.document.styleSheets).flatMap(sh => {
-      try { return Array.from(sh.cssRules); } catch { return []; }
-    }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ').includes('#groups-cols') && /display:\s*contents/.test(r.style && r.style.cssText || ''));
-    ok(colsFlowRule, 'groups-cols is display:contents so categories wrap around the float', colsFlowRule && colsFlowRule.style && colsFlowRule.style.cssText);
-    const groupFlowRule = cssRule('#groups .group');
-    ok(groupFlowRule && /flow-root/.test(groupFlowRule.style.cssText),
-       'category sections are flow-root (wrap around the sidebar)', groupFlowRule && groupFlowRule.style.cssText);
+    const mainGridRule = cssRuleDeep('main[class]', 'display: grid');
+    ok(mainGridRule && /grid-template-columns\s*:\s*1fr\s+320px/.test(mainGridRule.style.cssText),
+       'main is a 2-column grid on desktop (1fr 320px)', mainGridRule && mainGridRule.style.cssText);
+    ok(mainGridRule && /align-items\s*:\s*start/.test(mainGridRule.style.cssText),
+       'main grid aligns items to the top', mainGridRule && mainGridRule.style.cssText);
+    const headerTransparent = cssRuleDeep('header[class]', 'display: contents');
+    ok(headerTransparent, 'header is a transparent flow box on desktop (display: contents)', headerTransparent && headerTransparent.style && headerTransparent.style.cssText);
+    const asideGridRule = cssRuleDeep('header aside[class]', 'grid-column');
+    ok(asideGridRule && /grid-column\s*:\s*2/.test(asideGridRule.style.cssText),
+       'System/Bookmarks aside sits in grid column 2', asideGridRule && asideGridRule.style.cssText);
+    ok(asideGridRule && /grid-row\s*:\s*1\s*\/\s*span\s*2/.test(asideGridRule.style.cssText),
+       'aside spans the header + services rows', asideGridRule && asideGridRule.style.cssText);
+    ok(asideGridRule && /width\s*:\s*320px/.test(asideGridRule.style.cssText),
+       'aside is 320px wide in the grid', asideGridRule && asideGridRule.style.cssText);
+    ok(asideGridRule && /float\s*:\s*none/.test(asideGridRule.style.cssText),
+       'no float hacks on the aside', asideGridRule && asideGridRule.style.cssText);
+    ok(!asideGridRule || !/position\s*:\s*(absolute|fixed|sticky)/.test(asideGridRule.style.cssText),
+       'aside stays in normal document flow (no position tricks)', asideGridRule && asideGridRule.style.cssText);
+    const rootGridRule = cssRuleDeep('#root', 'grid-column');
+    ok(rootGridRule && /grid-column\s*:\s*1/.test(rootGridRule.style.cssText),
+       'services container sits in grid column 1', rootGridRule && rootGridRule.style.cssText);
+    const groupsWrapRule = cssRuleDeep('#groups-cols', 'flex-wrap');
+    ok(groupsWrapRule && /display\s*:\s*flex/.test(groupsWrapRule.style.cssText),
+       'service categories restore flex-wrap in the grid', groupsWrapRule && groupsWrapRule.style.cssText);
+    const revertRule = cssRuleDeep('#groups-cols', 'display: revert');
+    ok(revertRule, 'previous display:contents hacks are reverted globally', revertRule && revertRule.style && revertRule.style.cssText);
     const widgetsAside = w.document.querySelector('header aside');
     ok(widgetsAside && widgetsAside.querySelector('#stats-grid'), 'System widget untouched, still inside header');
     ok(widgetsAside && widgetsAside.querySelector('#bookmarks-card'), 'Bookmarks widget untouched, still inside header');
