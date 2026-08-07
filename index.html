@@ -224,6 +224,60 @@
     }
 
     #groups-cols { animation: groups-in 500ms var(--ease) both; }
+
+    /* ============================================================
+       Magazine wrap (pure CSS, no DOM/JS changes): the header is a
+       transparent flow box so its children (left column + aside) join
+       main's block flow; the System/Bookmarks aside floats right; each
+       category section is a flow-root BFC so services wrap around the
+       sidebar — filling the 2-col space beside it and expanding back
+       to full width once the sidebar ends. High-specificity selectors
+       override the Tailwind CDN utilities.
+       ============================================================ */
+    main[class] {
+      display: block !important;
+    }
+    header[class] {
+      display: contents !important;
+    }
+    header aside[class] {
+      float: right !important;
+      clear: right !important;
+      width: 320px !important;
+      margin-left: 1.5rem !important;
+      margin-bottom: 1.5rem !important;
+    }
+    #groups-cols {
+      display: contents !important;
+    }
+    #groups .group {
+      display: flow-root !important;
+    }
+    #groups .group + .group {
+      margin-top: 2rem;
+    }
+    @media (max-width: 1023px) {
+      header[class] {
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      header aside[class] {
+        float: none !important;
+        width: auto !important;
+        margin-left: 0 !important;
+        margin-bottom: 0 !important;
+      }
+      #groups-cols {
+        display: flex !important;
+        flex-wrap: wrap !important;
+      }
+      #groups .group {
+        display: block !important;
+      }
+      #groups .group + .group {
+        margin-top: 0;
+      }
+    }
     @keyframes groups-in {
       from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
