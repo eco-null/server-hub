@@ -255,7 +255,7 @@
   <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col min-h-[calc(100vh-3rem)]">
 
     <!-- Header -->
-    <header class="flex flex-col gap-6">
+    <header class="flex flex-col gap-6 lg:flex-row lg:gap-8">
       <div class="flex-1 min-w-0 flex flex-col gap-6">
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="flex items-start gap-3">
@@ -290,25 +290,8 @@
           <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-[color:var(--fg-muted)] border border-[color:var(--border)] rounded-md font-mono">/</kbd>
         </div>
       </div>
-    </header>
 
-    <!-- Services + sidebar: side by side so a tall bookmarks list never
-         pushes services down or leaves a gap under the search bar. -->
-    <div class="lg:flex lg:gap-8">
-      <div class="flex-1 min-w-0">
-        <!-- Services container -->
-        <div id="root" class="mt-3 space-y-8">
-          <div id="skeletons" class="flex flex-wrap items-start gap-x-6 gap-y-8">
-            <div class="glass skeleton-card p-3 skel w-full"></div>
-            <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
-            <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
-            <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
-          </div>
-          <div id="groups" class="space-y-8"></div>
-        </div>
-      </div>
-
-      <aside class="lg:w-80 shrink-0 flex flex-col gap-6 lg:mt-3">
+      <aside class="lg:w-80 shrink-0 flex flex-col gap-6">
         <!-- System stats -->
         <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
           <div class="flex items-center justify-between mb-3">
@@ -357,6 +340,17 @@
           </form>
         </section>
       </aside>
+    </header>
+
+    <!-- Services container -->
+    <div id="root" class="mt-3 space-y-8 flex-1">
+      <div id="skeletons" class="flex flex-wrap items-start gap-x-6 gap-y-8">
+        <div class="glass skeleton-card p-3 skel w-full"></div>
+        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+      </div>
+      <div id="groups" class="space-y-8"></div>
     </div>
 
     <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
@@ -743,7 +737,7 @@
       html += '<section class="group' + (big ? ' w-full' : ' flex-1 min-w-[240px]') + '" data-category="' + esc(cat) + '">'
         + '<h2 class="group-header text-xs font-semibold uppercase">' + esc(cat)
         + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
-        + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3' : ' grid-cols-1 gap-3') + '">';
+        + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' : ' grid-cols-1 gap-3') + '">';
       for (const s of list) {
         html += renderCard(s);
       }
