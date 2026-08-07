@@ -307,13 +307,37 @@
     ok(cards.length > 0 && cards[0].querySelector('.card-action[title="Delete"]'),
        'every card has a delete button');
 
-    // Adaptive group layout: wrapper + big/small category classes
-    const groupsCols = w.document.getElementById('groups-cols');
-    ok(groupsCols && groupsCols.className.includes('flex flex-wrap'), 'groups wrapper is flex-wrap', groupsCols && groupsCols.className);
-    const groups = w.document.querySelectorAll('#groups-cols .group');
-    const anyBig = Array.from(groups).some(g => g.className.includes('w-full') && g.querySelector('.grid').className.includes('sm:grid-cols-2'));
-    const anySmall = Array.from(groups).some(g => g.className.includes('flex-1 min-w-[240px]') && g.querySelector('.grid').className.includes('grid-cols-1 gap-3'));
+    // Adaptive grid layout: #groups is a CSS grid (no flex wrapper), and
+    // category sections carry explicit big/small classes that drive placement.
+    function cssRule(sel) {
+      return Array.from(w.document.styleSheets).flatMap(sh => {
+        try { return Array.from(sh.cssRules); } catch { return []; }
+      }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ').includes(sel));
+    }
+    const groupsGridEl = w.document.getElementById('groups');
+    const groupsRule = cssRule('#groups');
+    ok(groupsRule && /display:\s*grid/.test(groupsRule.style.cssText),
+       'groups container is a CSS grid', groupsRule && groupsRule.style.cssText);
+    ok(!w.document.getElementById('groups-cols'), 'legacy #groups-cols flex wrapper removed');
+    const groups = w.document.querySelectorAll('#groups .group');
+    const anyBig = Array.from(groups).some(g => g.classList.contains('big') && g.querySelector('.grid').className.includes('sm:grid-cols-2'));
+    const anySmall = Array.from(groups).some(g => g.classList.contains('small') && g.querySelector('.grid').className.includes('grid-cols-1 gap-3'));
     ok(anyBig || anySmall, 'groups use adaptive big/small layout classes', Array.from(groups).map(g => g.className).join(' | '));
+
+    // Floating sidebar — the side panel moves into the grid as its first child
+    // and is pinned to the top-right column (col 3) across var(--sb-rows) rows.
+    const sidePanel = w.document.getElementById('side-panel');
+    ok(sidePanel, 'side panel exists (id=side-panel)');
+    ok(sidePanel && sidePanel.parentElement === groupsGridEl, 'side panel is a direct child of the services grid');
+    ok(sidePanel && sidePanel.querySelector('#stats-grid'), 'side panel keeps system stats');
+    ok(sidePanel && sidePanel.querySelector('#bookmarks-card'), 'side panel keeps bookmarks');
+    const sideRule = cssRule('#side-panel');
+    ok(sideRule && /grid-column:\s*3/.test(sideRule.style.cssText), 'side panel sits in grid column 3', sideRule && sideRule.style.cssText);
+    ok(sideRule && /--sb-rows/.test(sideRule.style.cssText), 'side panel spans var(--sb-rows) rows', sideRule && sideRule.style.cssText);
+    ok(sideRule && /position:\s*sticky/.test(sideRule.style.cssText), 'side panel is sticky', sideRule && sideRule.style.cssText);
+    ok(sideRule && /top:\s*1rem/.test(sideRule.style.cssText), 'side panel sticks below the top edge', sideRule && sideRule.style.cssText);
+    ok(groupsGridEl.style.getPropertyValue('--sb-rows') !== '', '--sb-rows measured after boot', groupsGridEl.style.getPropertyValue('--sb-rows'));
+    ok(typeof w.__HUB__.measureSidebarRows === 'function', 'measureSidebarRows exported for ResizeObserver');
 
     // Search filter still works
     const input = w.__HUB__.getSearchInput();
