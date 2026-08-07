@@ -223,26 +223,37 @@
       to   { opacity: 1; }
     }
 
-    /* Services + floating sidebar. #side-panel (System/Bookmarks) floats right
-       at the top of the services area; each category section is a flow-root
-       (block formatting context) so it never overlaps the sidebar — services
-       fill the 2-column space beside it and expand back to full width once the
-       sidebar ends. No row-span measurement needed. */
+    /* Services + floating sidebar share one CSS grid. #groups is the grid;
+       the side panel (System/Bookmarks) is pinned to column 3 and spans
+       var(--sb-rows) rows (sticky), so categories wrap 2-up beside it and
+       3-up below it on large screens; it collapses to a full-width block on
+       smaller viewports. */
     #groups {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-auto-flow: row dense;
+      gap: 2rem 1.5rem;
+      align-items: start;
       animation: groups-in 500ms var(--ease) both;
     }
-    #groups::after { content: ''; display: block; clear: both; }
-    #groups > .group { display: flow-root; }
-    #groups > .group + .group { margin-top: 2rem; }
+    @media (max-width: 1023px) {
+      #groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 639px) {
+      #groups { grid-template-columns: 1fr; }
+    }
+    #groups > .group { min-width: 0; }
+    #groups > .group.big   { grid-column: 1 / -1; }
+    #groups > .group.small { grid-column: span 1; }
     #side-panel {
-      float: right;
-      clear: right;
-      margin-left: 1.5rem;
-      margin-bottom: 1.5rem;
-      width: 320px;
+      grid-column: 3;
+      grid-row: 1 / span var(--sb-rows, 3);
+      position: sticky;
+      top: 1rem;
+      align-self: start;
     }
     @media (max-width: 1023px) {
-      #side-panel { float: none; width: auto; margin-left: 0; margin-bottom: 0; }
+      #side-panel { grid-column: 1 / -1; grid-row: auto; position: static; }
     }
     @keyframes groups-in {
       from { opacity: 0; transform: translateY(10px); }
@@ -1102,6 +1113,28 @@
   }
 
   /* ============================================================
+     Floating sidebar — keep #side-panel's grid row span in sync
+     with its height so categories wrap 2-up beside it on large
+     screens and 3-up below once it ends.
+     ============================================================ */
+  const sidePanelEl = document.getElementById('side-panel');
+  function measureSidebarRows() {
+    const grid = document.getElementById('groups');
+    const panel = document.getElementById('side-panel');
+    if (!grid || !panel) return;
+    // Approximate height of one card + vertical gap (~92px card + 32px gap).
+    const ROW_H = 124;
+    const rows = Math.max(1, Math.ceil(panel.offsetHeight / ROW_H));
+    grid.style.setProperty('--sb-rows', rows);
+  }
+  if (sidePanelEl && typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(measureSidebarRows);
+    ro.observe(sidePanelEl);
+  }
+  measureSidebarRows();
+  window.addEventListener('load', measureSidebarRows);
+
+  /* ============================================================
      Status ping
      ============================================================ */
   function pingService(card) {
@@ -1337,6 +1370,7 @@
     openSearch, closeSearch,
     loadBookmarks, renderBookmarks, BOOKMARKS,
     pollStats, renderBeszel,
+    measureSidebarRows,
   };
 
   /* ============================================================
