@@ -743,7 +743,7 @@
       html += '<section class="group' + (big ? ' w-full' : ' flex-1 min-w-[240px]') + '" data-category="' + esc(cat) + '">'
         + '<h2 class="group-header text-xs font-semibold uppercase">' + esc(cat)
         + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
-        + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 gap-3' : ' grid-cols-1 gap-3') + '">';
+        + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3' : ' grid-cols-1 gap-3') + '">';
       for (const s of list) {
         html += renderCard(s);
       }
