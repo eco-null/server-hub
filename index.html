@@ -255,7 +255,7 @@
   <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col min-h-[calc(100vh-3rem)]">
 
     <!-- Header -->
-    <header class="flex flex-col gap-6 lg:flex-row lg:gap-8">
+    <header class="flex flex-col gap-6">
       <div class="flex-1 min-w-0 flex flex-col gap-6">
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="flex items-start gap-3">
@@ -290,8 +290,25 @@
           <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-[color:var(--fg-muted)] border border-[color:var(--border)] rounded-md font-mono">/</kbd>
         </div>
       </div>
+    </header>
 
-      <aside class="lg:w-80 shrink-0 flex flex-col gap-6">
+    <!-- Services + sidebar: side by side so a tall bookmarks list never
+         pushes services down or leaves a gap under the search bar. -->
+    <div class="lg:flex lg:gap-8">
+      <div class="flex-1 min-w-0">
+        <!-- Services container -->
+        <div id="root" class="mt-3 space-y-8">
+          <div id="skeletons" class="flex flex-wrap items-start gap-x-6 gap-y-8">
+            <div class="glass skeleton-card p-3 skel w-full"></div>
+            <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+            <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+            <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
+          </div>
+          <div id="groups" class="space-y-8"></div>
+        </div>
+      </div>
+
+      <aside class="lg:w-80 shrink-0 flex flex-col gap-6 lg:mt-3">
         <!-- System stats -->
         <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
           <div class="flex items-center justify-between mb-3">
@@ -340,17 +357,6 @@
           </form>
         </section>
       </aside>
-    </header>
-
-    <!-- Services container -->
-    <div id="root" class="mt-3 space-y-8 flex-1">
-      <div id="skeletons" class="flex flex-wrap items-start gap-x-6 gap-y-8">
-        <div class="glass skeleton-card p-3 skel w-full"></div>
-        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
-        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
-        <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
-      </div>
-      <div id="groups" class="space-y-8"></div>
     </div>
 
     <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
@@ -633,13 +639,16 @@
     BOOKMARKS.forEach(b => {
       const a = document.createElement('a');
       a.target = '_blank'; a.rel = 'noopener noreferrer';
-      a.className = 'glass px-3 py-2 rounded-lg flex items-center gap-2 text-sm hover:brightness-110 transition';
+      // grow: chips fill each row edge-to-edge (no ragged right gap);
+      // min-w-0 + truncate keeps long names on one line instead of wrapping.
+      a.className = 'glass px-3 py-2 rounded-lg flex items-center justify-center gap-2 grow min-w-0 text-sm hover:brightness-110 transition';
       // Only assign href for http(s) URLs; anything else (javascript:, data:)
       // is rendered non-clickable to prevent stored code execution.
       a.href = /^https?:\/\//i.test(b.url) ? b.url : '#';
       if (!/^https?:\/\//i.test(b.url)) a.classList.add('cursor-default', 'opacity-70');
       const color = /^#[0-9a-fA-F]{6}$/.test(b.color || '') ? b.color : 'var(--accent)';
-      a.innerHTML = '<span class="w-2 h-2 rounded-full shrink-0" style="background:' + color + '"></span>' + esc(b.name);
+      a.innerHTML = '<span class="w-2 h-2 rounded-full shrink-0" style="background:' + color + '"></span>'
+        + '<span class="truncate min-w-0">' + esc(b.name) + '</span>';
       box.appendChild(a);
     });
   }
@@ -734,7 +743,7 @@
       html += '<section class="group' + (big ? ' w-full' : ' flex-1 min-w-[240px]') + '" data-category="' + esc(cat) + '">'
         + '<h2 class="group-header text-xs font-semibold uppercase">' + esc(cat)
         + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
-        + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3' : ' grid-cols-1 gap-3') + '">';
+        + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 gap-3' : ' grid-cols-1 gap-3') + '">';
       for (const s of list) {
         html += renderCard(s);
       }
