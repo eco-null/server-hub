@@ -223,38 +223,7 @@
       to   { opacity: 1; }
     }
 
-    /* Services + floating sidebar share one CSS grid. #groups is the grid;
-       the side panel (System/Bookmarks) is pinned to column 3 and spans
-       var(--sb-rows) rows (sticky), so categories wrap 2-up beside it and
-       3-up below it on large screens; it collapses to a full-width block on
-       smaller viewports. */
-    #groups {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-auto-flow: row dense;
-      gap: 2rem 1.5rem;
-      align-items: start;
-      animation: groups-in 500ms var(--ease) both;
-    }
-    @media (max-width: 1023px) {
-      #groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 639px) {
-      #groups { grid-template-columns: 1fr; }
-    }
-    #groups > .group { min-width: 0; }
-    #groups > .group.big   { grid-column: 1 / -1; }
-    #groups > .group.small { grid-column: span 1; }
-    #side-panel {
-      grid-column: 3;
-      grid-row: 1 / span var(--sb-rows, 3);
-      position: sticky;
-      top: 1rem;
-      align-self: start;
-    }
-    @media (max-width: 1023px) {
-      #side-panel { grid-column: 1 / -1; grid-row: auto; position: static; }
-    }
+    #groups-cols { animation: groups-in 500ms var(--ease) both; }
     @keyframes groups-in {
       from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -264,7 +233,7 @@
       .card, .reveal, .skel, body { transition: none; }
       .reveal { opacity: 1; transform: none; }
       .skel { animation: none; }
-      #groups, .section { animation: none; }
+      #groups-cols, .section { animation: none; }
     }
     #fab-add:hover { transform: scale(1.06); }
     #fab-add:active { transform: scale(0.96); }
@@ -286,7 +255,7 @@
   <main class="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col min-h-[calc(100vh-3rem)]">
 
     <!-- Header -->
-    <header class="flex flex-col gap-6">
+    <header class="flex flex-col gap-6 lg:flex-row lg:gap-8">
       <div class="flex-1 min-w-0 flex flex-col gap-6">
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="flex items-start gap-3">
@@ -321,6 +290,56 @@
           <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-xs text-[color:var(--fg-muted)] border border-[color:var(--border)] rounded-md font-mono">/</kbd>
         </div>
       </div>
+
+      <aside class="lg:w-80 shrink-0 flex flex-col gap-6">
+        <!-- System stats -->
+        <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase group-header">System</h2>
+            <span id="stats-host" class="text-xs text-[color:var(--fg-muted)] font-mono">—</span>
+          </div>
+          <div class="grid grid-cols-3 gap-3 sm:gap-4" id="stats-grid">
+            <div class="space-y-1.5">
+              <div class="flex items-baseline justify-between">
+                <span class="text-xs text-[color:var(--fg-muted)]">CPU</span>
+                <span id="stat-cpu-val" class="font-mono text-sm tabular-nums">—</span>
+              </div>
+              <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-cpu-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-baseline justify-between">
+                <span class="text-xs text-[color:var(--fg-muted)]">Memory</span>
+                <span id="stat-mem-val" class="font-mono text-sm tabular-nums">—</span>
+              </div>
+              <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-mem-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex items-baseline justify-between">
+                <span class="text-xs text-[color:var(--fg-muted)]">Disk</span>
+                <span id="stat-disk-val" class="font-mono text-sm tabular-nums">—</span>
+              </div>
+              <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-disk-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bookmarks -->
+        <section aria-label="Bookmarks" id="bookmarks-card" class="glass p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase group-header">Bookmarks</h2>
+            <button id="bookmarks-add" class="btn-ghost text-xs" title="Add bookmark" aria-label="Add bookmark">+ Add</button>
+          </div>
+          <div id="bookmarks" class="flex flex-wrap gap-2"></div>
+          <form id="bookmarks-editor" class="hidden mt-3 space-y-2" autocomplete="off" novalidate>
+            <input id="bookmark-name" class="form-input" placeholder="Name (e.g. Homelab Wiki)" required />
+            <input id="bookmark-url" class="form-input" type="url" placeholder="https://…" required />
+            <div class="flex gap-2">
+              <button type="submit" class="btn-primary text-xs">Save</button>
+              <button type="button" id="bookmark-cancel" class="btn-ghost text-xs">Cancel</button>
+            </div>
+          </form>
+        </section>
+      </aside>
     </header>
 
     <!-- Services container -->
@@ -331,57 +350,7 @@
         <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
         <div class="glass skeleton-card p-3 skel flex-1 min-w-[240px]"></div>
       </div>
-      <div id="groups">
-        <aside id="side-panel" class="flex flex-col gap-6">
-          <!-- System stats -->
-          <section aria-label="System statistics" data-feature="stats" class="glass p-4 sm:p-5">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-xs font-semibold uppercase group-header">System</h2>
-              <span id="stats-host" class="text-xs text-[color:var(--fg-muted)] font-mono">—</span>
-            </div>
-            <div class="grid grid-cols-3 gap-3 sm:gap-4" id="stats-grid">
-              <div class="space-y-1.5">
-                <div class="flex items-baseline justify-between">
-                  <span class="text-xs text-[color:var(--fg-muted)]">CPU</span>
-                  <span id="stat-cpu-val" class="font-mono text-sm tabular-nums">—</span>
-                </div>
-                <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-cpu-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
-              </div>
-              <div class="space-y-1.5">
-                <div class="flex items-baseline justify-between">
-                  <span class="text-xs text-[color:var(--fg-muted)]">Memory</span>
-                  <span id="stat-mem-val" class="font-mono text-sm tabular-nums">—</span>
-                </div>
-                <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-mem-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
-              </div>
-              <div class="space-y-1.5">
-                <div class="flex items-baseline justify-between">
-                  <span class="text-xs text-[color:var(--fg-muted)]">Disk</span>
-                  <span id="stat-disk-val" class="font-mono text-sm tabular-nums">—</span>
-                </div>
-                <div class="h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div id="stat-disk-bar" class="h-full w-0 bg-[color:var(--accent)] transition-all duration-700 ease-out"></div></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Bookmarks -->
-          <section aria-label="Bookmarks" id="bookmarks-card" class="glass p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-xs font-semibold uppercase group-header">Bookmarks</h2>
-              <button id="bookmarks-add" class="btn-ghost text-xs" title="Add bookmark" aria-label="Add bookmark">+ Add</button>
-            </div>
-            <div id="bookmarks" class="flex flex-wrap gap-2"></div>
-            <form id="bookmarks-editor" class="hidden mt-3 space-y-2" autocomplete="off" novalidate>
-              <input id="bookmark-name" class="form-input" placeholder="Name (e.g. Homelab Wiki)" required />
-              <input id="bookmark-url" class="form-input" type="url" placeholder="https://…" required />
-              <div class="flex gap-2">
-                <button type="submit" class="btn-primary text-xs">Save</button>
-                <button type="button" id="bookmark-cancel" class="btn-ghost text-xs">Cancel</button>
-              </div>
-            </form>
-          </section>
-        </aside>
-      </div>
+      <div id="groups" class="space-y-8"></div>
     </div>
 
     <p id="empty" class="hidden mt-12 text-center text-[color:var(--fg-muted)]">No services match “<span id="empty-term"></span>”.</p>
@@ -761,11 +730,11 @@
     // multi-column (horizontal) grid; categories with few apps sit side by
     // side as columns with their apps listed vertically underneath.
     const BIG_ROW = 4;
-    let html = '';
+    let html = '<div class="flex flex-wrap items-start gap-x-6 gap-y-8" id="groups-cols">';
     for (const cat of order) {
       const list = grouped[cat];
       const big = list.length >= BIG_ROW;
-      html += '<section class="group' + (big ? ' big' : ' small') + '" data-category="' + esc(cat) + '">'
+      html += '<section class="group' + (big ? ' w-full' : ' flex-1 min-w-[240px]') + '" data-category="' + esc(cat) + '">'
         + '<h2 class="group-header text-xs font-semibold uppercase">' + esc(cat)
         + ' <span class="text-[color:var(--fg-muted)]/60 font-normal">· ' + list.length + '</span></h2>'
         + '<div class="grid mt-2' + (big ? ' grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3' : ' grid-cols-1 gap-3') + '">';
@@ -774,12 +743,8 @@
       }
       html += '</div></section>';
     }
-    // Replace only the category sections; keep #side-panel (the floating
-    // sidebar) in place so its grid placement (col 3) is preserved.
-    groupsEl.querySelectorAll('.group').forEach(el => el.remove());
-    const tmp = document.createElement('div');
-    tmp.innerHTML = html;
-    while (tmp.firstChild) groupsEl.appendChild(tmp.firstChild);
+    html += '</div>';
+    groupsEl.innerHTML = html;
     skeletonsEl.classList.add('hidden');
 
     requestAnimationFrame(() => {
@@ -1113,28 +1078,6 @@
   }
 
   /* ============================================================
-     Floating sidebar — keep #side-panel's grid row span in sync
-     with its height so categories wrap 2-up beside it on large
-     screens and 3-up below once it ends.
-     ============================================================ */
-  const sidePanelEl = document.getElementById('side-panel');
-  function measureSidebarRows() {
-    const grid = document.getElementById('groups');
-    const panel = document.getElementById('side-panel');
-    if (!grid || !panel) return;
-    // Approximate height of one card + vertical gap (~92px card + 32px gap).
-    const ROW_H = 124;
-    const rows = Math.max(1, Math.ceil(panel.offsetHeight / ROW_H));
-    grid.style.setProperty('--sb-rows', rows);
-  }
-  if (sidePanelEl && typeof ResizeObserver !== 'undefined') {
-    const ro = new ResizeObserver(measureSidebarRows);
-    ro.observe(sidePanelEl);
-  }
-  measureSidebarRows();
-  window.addEventListener('load', measureSidebarRows);
-
-  /* ============================================================
      Status ping
      ============================================================ */
   function pingService(card) {
@@ -1370,7 +1313,6 @@
     openSearch, closeSearch,
     loadBookmarks, renderBookmarks, BOOKMARKS,
     pollStats, renderBeszel,
-    measureSidebarRows,
   };
 
   /* ============================================================
