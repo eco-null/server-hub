@@ -126,6 +126,7 @@
 
      /* Float the sidebar through the services flow without changing the DOM. */
      @media (min-width: 1024px) {
+       main[class] { display: block !important; }
        header.flex { display: block !important; }
        header > div:first-child {
          display: block !important;
@@ -150,10 +151,28 @@
          width: auto !important;
          min-width: 0;
        }
-       #groups .group + .group { margin-top: 2rem; }
+       #groups .group { margin-top: 0 !important; }
+       #groups .group.w-full { margin-bottom: 2rem; }
+       #groups .group:not(.w-full) {
+         display: inline-block !important;
+         width: calc(25% - 18px) !important;
+         vertical-align: top;
+         margin-right: 1.5rem;
+       }
+       #groups .group:not(.w-full):nth-of-type(4n) { margin-right: 0; }
+       #groups .group.w-full > div.grid {
+         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+       }
+       #groups .group { container-type: inline-size; }
+       @container (min-width: 1000px) {
+         #groups .group.w-full > div.grid {
+           grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+         }
+       }
      }
 
      @media (max-width: 1023px) {
+       main[class] { display: flex; }
        header::after { display: none; }
        header > div:first-child { float: none; width: auto; }
        header > aside {
@@ -161,6 +180,12 @@
          width: auto !important;
          margin-left: 0 !important;
          margin-bottom: 0 !important;
+       }
+       #groups-cols { display: flex !important; }
+       #groups .group {
+         display: block !important;
+         width: auto !important;
+         margin: 0 !important;
        }
      }
 
