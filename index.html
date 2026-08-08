@@ -133,7 +133,6 @@
          float: left;
          width: calc(100% - 352px);
        }
-       header > div:first-child > div[data-feature="search"] { margin-top: 1.5rem; }
        header > aside {
          float: right !important;
          width: 320px !important;
@@ -166,11 +165,12 @@
          display: contents !important;
        }
        #groups .group.w-full > div.grid > .card {
-          display: inline-flex;
-          vertical-align: top;
-          width: calc(33.333% - 1.5rem) !important;
-          margin: 0 1.5rem 0.75rem 0;
-        }
+         display: inline-flex;
+         vertical-align: top;
+         width: calc(33.333% - 1rem) !important;
+         margin: 0 1.5rem 0.75rem 0;
+       }
+       #groups .group.w-full > div.grid > .card:nth-child(3n) { margin-right: 0; }
      }
 
      @media (max-width: 1023px) {
