@@ -124,6 +124,19 @@
     input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
     .focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+     /* Let services flow beside the sidebar instead of waiting for it to end. */
+     @media (min-width: 1024px) {
+       header { display: block; }
+       header > div:first-child { display: block; }
+       header > aside {
+         float: right;
+         width: 320px;
+         margin-left: 1.5rem;
+         margin-bottom: 1.5rem;
+       }
+       #root { display: block; }
+     }
+
     /* Theme toggle button — 3-state cycle */
     .theme-btn {
       width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
