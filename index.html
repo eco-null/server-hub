@@ -124,17 +124,44 @@
     input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
     .focus-ring:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-     /* Let services flow beside the sidebar instead of waiting for it to end. */
+     /* Float the sidebar through the services flow without changing the DOM. */
      @media (min-width: 1024px) {
-       header.flex { display: block; }
-       header > div:first-child { display: block; }
-       header > aside {
-         float: right;
-         width: 320px;
-         margin-left: 1.5rem;
-         margin-bottom: 1.5rem;
+       header.flex { display: block !important; }
+       header > div:first-child {
+         display: block !important;
+         float: left;
+         width: calc(100% - 352px);
        }
-       #root { display: block; }
+       header > aside {
+         float: right !important;
+         width: 320px !important;
+         margin-left: 1.5rem !important;
+         margin-bottom: 1.5rem !important;
+       }
+       header::after {
+         content: '';
+         display: block;
+         clear: left;
+       }
+       #root { display: block !important; }
+       #groups-cols { display: contents !important; }
+       #groups .group {
+         display: flow-root !important;
+         width: auto !important;
+         min-width: 0;
+       }
+       #groups .group + .group { margin-top: 2rem; }
+     }
+
+     @media (max-width: 1023px) {
+       header::after { display: none; }
+       header > div:first-child { float: none; width: auto; }
+       header > aside {
+         float: none !important;
+         width: auto !important;
+         margin-left: 0 !important;
+         margin-bottom: 0 !important;
+       }
      }
 
     /* Theme toggle button — 3-state cycle */
