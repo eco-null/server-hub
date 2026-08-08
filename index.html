@@ -155,16 +155,11 @@
        #groups .group { margin-top: 0 !important; }
        #groups .group.w-full { margin-bottom: 2rem; }
        #groups .group:not(.w-full) {
-         display: block !important;
-         float: left;
+         display: inline-block !important;
          width: calc(25% - 1.5rem) !important;
+         vertical-align: top;
          margin-right: 1.5rem;
          margin-bottom: 2rem;
-       }
-       #groups::after {
-         content: '';
-         display: block;
-         clear: both;
        }
        #groups .group.w-full > div.grid {
          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
