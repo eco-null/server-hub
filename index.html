@@ -147,7 +147,7 @@
        #root { display: block !important; }
        #groups-cols { display: contents !important; }
        #groups .group {
-         display: flow-root !important;
+         display: block !important;
          width: auto !important;
          min-width: 0;
        }
@@ -161,14 +161,15 @@
        }
        #groups .group:not(.w-full):nth-of-type(4n) { margin-right: 0; }
        #groups .group.w-full > div.grid {
-         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+         display: contents !important;
        }
-       #groups .group { container-type: inline-size; }
-       @container (min-width: 1000px) {
-         #groups .group.w-full > div.grid {
-           grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-         }
+       #groups .group.w-full > div.grid > .card {
+         display: inline-flex !important;
+         vertical-align: top;
+         width: calc(33.333% - 1rem) !important;
+         margin: 0 1.5rem 0.75rem 0;
        }
+       #groups .group.w-full > div.grid > .card:nth-child(3n) { margin-right: 0; }
      }
 
      @media (max-width: 1023px) {
@@ -186,6 +187,12 @@
          display: block !important;
          width: auto !important;
          margin: 0 !important;
+       }
+       #groups .group.w-full > div.grid { display: grid !important; }
+       #groups .group.w-full > div.grid > .card {
+         display: flex !important;
+         width: auto !important;
+         margin: 0;
        }
      }
 
