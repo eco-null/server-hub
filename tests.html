@@ -382,6 +382,13 @@
     sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown' }));
     let sel = w.document.querySelector('#search-suggestions button[aria-selected="true"]');
     ok(sel === rows[0], 'ArrowDown selects the first suggestion');
+    ok(sel && sel.classList.contains('suggestion-selected'), 'selected suggestion gets the .suggestion-selected class');
+    ok(rows[1] && !rows[1].classList.contains('suggestion-selected'), 'unselected rows do not get the highlight class');
+    const selCss = Array.from(w.document.styleSheets).flatMap(sh => {
+      try { return Array.from(sh.cssRules); } catch { return []; }
+    }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ').includes('.suggestion-selected'));
+    ok(selCss && /border/.test(selCss.style.cssText),
+       'selected suggestion has a visible border frame', selCss && selCss.style.cssText);
     sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown' }));
     sel = w.document.querySelector('#search-suggestions button[aria-selected="true"]');
     ok(sel === rows[1], 'ArrowDown moves to the second suggestion');

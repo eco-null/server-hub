@@ -299,6 +299,14 @@
     }
     #search-modal-input { font-size: 1.25rem; padding: 0.85rem 1rem; }
 
+    /* Keyboard-selected suggestion — a thin accent frame plus the surface
+       highlight so the current row is clearly visible in both themes. */
+    #search-suggestions .suggestion-selected {
+      background: var(--surface-hi);
+      border: 1px solid var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-glow), 0 0 12px -4px var(--accent-glow);
+    }
+
     /* Modal open/close animation (fade + scale from center) */
     @keyframes modal-in {
       from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
@@ -1156,7 +1164,7 @@
     matches.forEach(s => {
       const row = document.createElement('button');
       row.type = 'button';
-      row.className = 'flex items-center gap-2 text-left px-3 py-2 rounded-lg hover:bg-[color:var(--surface-hi)] transition text-sm';
+      row.className = 'flex items-center gap-2 text-left px-3 py-2 rounded-lg hover:bg-[color:var(--surface-hi)] transition text-sm border border-transparent';
       row.setAttribute('aria-selected', 'false');
       row.innerHTML = '<span class="shrink-0">' + svgFor(s.icon) + '</span><span class="min-w-0 flex-1 truncate">' + esc(s.name) + '</span><span class="text-[10px] text-[color:var(--fg-muted)] truncate">' + esc(s.category) + '</span>';
       row.addEventListener('click', () => { window.open(s.url.startsWith('http') ? s.url : 'https://' + s.url, '_blank', 'noopener'); closeSearch(); });
@@ -1174,7 +1182,7 @@
     rows.forEach((r, idx) => {
       const on = idx === i;
       r.setAttribute('aria-selected', String(on));
-      r.classList.toggle('bg-[color:var(--surface-hi)]', on);
+      r.classList.toggle('suggestion-selected', on);
     });
     if (rows[i]) rows[i].scrollIntoView({ block: 'nearest' });
   }
