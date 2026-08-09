@@ -474,7 +474,7 @@
     ok(w.document.activeElement === w.document.getElementById('search-modal-input'), '/ focuses the search popup input');
     w.__HUB__.closeSearch();
 
-    // f focuses the inline search bar when not typing
+    // f opens the search popup when not typing
     w.document.getElementById('add-form').classList.remove('hidden');
     w.document.getElementById('add-name').focus();
     w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'f' }));
@@ -482,7 +482,9 @@
     w.document.getElementById('add-form').classList.add('hidden');
     w.document.activeElement.blur();
     w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'f' }));
-    ok(w.document.activeElement === w.document.getElementById('search'), 'f with no input focused focuses the search bar');
+    ok(!w.document.getElementById('search-modal').classList.contains('hidden'), 'f with no input focused opens the search popup');
+    ok(w.document.activeElement === w.document.getElementById('search-modal-input'), 'f focuses the search popup input');
+    w.__HUB__.closeSearch();
 
     // f while the search popup is open must not close it or steal focus
     w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));

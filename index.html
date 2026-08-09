@@ -1089,7 +1089,7 @@
     }
     if (e.key === 'f' && !typing && window.HubSettings.get().features.search !== false
         && searchModal.classList.contains('hidden')) {
-      e.preventDefault(); searchInput.focus();
+      e.preventDefault(); openSearch();
     }
     if (e.key === 'Escape' && document.activeElement === searchInput) {
       searchInput.value = ''; filter(''); searchInput.blur();
