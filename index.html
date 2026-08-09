@@ -62,6 +62,17 @@
     body.wallpaper { background-color: transparent; }
     html.wallpaper-dark, html.wallpaper-light { background-color: transparent; }
 
+    /* Butter-smooth wallpaper appearance — a gentle fade+settle instead of a
+       hard snap when a wallpaper is first applied (page load, or switching
+       from "none" to a wallpaper). The .wp-fresh class is added by
+       HubSettings.applyWallpaper only on fresh activations, so tweaking the
+       wallpaper in settings doesn't re-flash the page. */
+    body.wallpaper.wp-fresh { animation: wallpaper-in 700ms var(--ease); }
+    @keyframes wallpaper-in {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
     html, body { background-color: var(--bg-deep); color: var(--fg); }
     body {
       background:
@@ -75,6 +86,10 @@
       position: fixed; border-radius: 9999px; filter: blur(60px);
       opacity: var(--blob-opacity); pointer-events: none; z-index: 0;
       animation: drift 22s var(--ease) infinite alternate;
+      /* Promote to its own compositor layer so the drift animation never
+         touches the main thread — keeps scrolling buttery smooth. */
+      will-change: transform;
+      transform: translateZ(0);
     }
     .blob.a { width: 420px; height: 420px; background: var(--blob-a); top: -120px; left: -80px; }
     .blob.b { width: 360px; height: 360px; background: var(--blob-b); top: 10vh;  right: -120px; animation-delay: -6s; }
@@ -299,7 +314,7 @@
       .card, .reveal, .skel, body { transition: none; }
       .reveal { opacity: 1; transform: none; }
       .skel { animation: none; }
-      #groups-cols, .section { animation: none; }
+      #groups-cols, .section, body.wallpaper.wp-fresh { animation: none; }
     }
     #fab-add:hover { transform: scale(1.06); }
     #fab-add:active { transform: scale(0.96); }
