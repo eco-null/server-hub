@@ -697,6 +697,13 @@
     sel.dispatchEvent(new sw.Event('change'));
     ok(row.style.display === 'none', 'settings: switching back to Google hides the URL row');
 
+    // Startpage is an available provider, persists, and keeps the URL row hidden
+    ok(Array.from(sel.options).some(o => o.value === 'startpage' && o.text === 'Startpage'), 'settings: Startpage option exists in the provider menu');
+    sel.value = 'startpage';
+    sel.dispatchEvent(new sw.Event('change'));
+    eq(sw.HubSettings.get().search.provider, 'startpage', 'settings: Startpage provider persisted');
+    ok(row.style.display === 'none', 'settings: Startpage keeps the searxng URL row hidden');
+
     // Cleanup — leave defaults for other suites
     sw.HubSettings.set({ search: { provider: 'google', searxngUrl: '' } });
   };
