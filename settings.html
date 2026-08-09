@@ -45,6 +45,18 @@
       min-height: 100vh;
       transition: background-color 400ms var(--ease), color 400ms var(--ease);
     }
+    /* Wallpaper readability — html.wallpaper-light / html.wallpaper-dark
+       toggled by HubSettings.applyWallpaper (settings.js). Keeps glass + text
+       readable over any wallpaper; .wallpaper is set on <body>. The body's own
+       opaque gradient is cleared so the fixed #wallpaper layer shows through. */
+    html.wallpaper-light { --surface: rgba(255,255,255,0.75); --surface-hi: rgba(255,255,255,0.85); --border: rgba(0,0,0,0.12); --border-hi: rgba(0,0,0,0.2); --fg: #111318; --fg-muted: #3d4148; }
+    html.wallpaper-light .glass { backdrop-filter: blur(14px); }
+    html.wallpaper-dark { --surface: rgba(0,0,0,0.55); --surface-hi: rgba(0,0,0,0.65); --border: rgba(255,255,255,0.1); --border-hi: rgba(255,255,255,0.18); --fg: #EDEDEF; --fg-muted: #A7ABB3; }
+    html.wallpaper-dark .glass { backdrop-filter: blur(14px); }
+    html.wallpaper .glass, body.wallpaper .glass { box-shadow: 0 4px 24px -8px rgba(0,0,0,0.35); }
+    body.wallpaper { background-color: transparent; background-image: none; }
+    html.wallpaper-dark, html.wallpaper-light { background-color: transparent; }
+
     /* Wallpaper layer — fixed, viewport-sized, behind content (z-index -1).
        `cover` is computed against the viewport, so navigating or content
        height changes never re-scale the image (no zoom); opacity cross-fades

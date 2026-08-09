@@ -425,6 +425,11 @@
     ok(w.document.getElementById('wallpaper') !== null, 'wallpaper layer element exists in the DOM');
     ok(w.document.getElementById('wallpaper').parentElement === w.document.body,
        'wallpaper layer is a direct child of body');
+    const wpShowRule = Array.from(w.document.styleSheets).flatMap(sh => {
+      try { return Array.from(sh.cssRules); } catch { return []; }
+    }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ') === 'body.wallpaper');
+    ok(wpShowRule && /background-image\s*:\s*none/.test(wpShowRule.style.cssText),
+       'body background is cleared while wallpaper is active (layer shows through)', wpShowRule && wpShowRule.style.cssText);
 
     // Blobs use pre-blurred radial gradients, not filter: blur() — the blur
     // forces per-frame re-rasterization (scroll jank); gradient is the same
