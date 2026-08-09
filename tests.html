@@ -474,6 +474,16 @@
     ok(w.document.activeElement === w.document.getElementById('search-modal-input'), '/ focuses the search popup input');
     w.__HUB__.closeSearch();
 
+    // f focuses the inline search bar when not typing
+    w.document.getElementById('add-form').classList.remove('hidden');
+    w.document.getElementById('add-name').focus();
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'f' }));
+    ok(w.document.activeElement === w.document.getElementById('add-name'), 'f while typing in an input does not steal focus');
+    w.document.getElementById('add-form').classList.add('hidden');
+    w.document.activeElement.blur();
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'f' }));
+    ok(w.document.activeElement === w.document.getElementById('search'), 'f with no input focused focuses the search bar');
+
     // Scheme dropdown: pasting a full URL strips the scheme and sets the select
     const addScheme = w.document.getElementById('add-scheme');
     const addUrlField = w.document.getElementById('add-url');
