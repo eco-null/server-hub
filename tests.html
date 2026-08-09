@@ -484,6 +484,14 @@
     w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'f' }));
     ok(w.document.activeElement === w.document.getElementById('search'), 'f with no input focused focuses the search bar');
 
+    // f while the search popup is open must not close it or steal focus
+    w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
+    ok(!w.document.getElementById('search-modal').classList.contains('hidden'), 'popup open for f guard test');
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'f' }));
+    ok(w.document.activeElement === w.document.getElementById('search-modal-input'), 'f with popup open keeps focus in popup input');
+    ok(!w.document.getElementById('search-modal').classList.contains('hidden'), 'f does not close the search popup');
+    w.__HUB__.closeSearch();
+
     // Scheme dropdown: pasting a full URL strips the scheme and sets the select
     const addScheme = w.document.getElementById('add-scheme');
     const addUrlField = w.document.getElementById('add-url');

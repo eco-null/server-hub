@@ -1087,7 +1087,8 @@
     if (e.key === '/' && !typing && window.HubSettings.get().features.search !== false) {
       e.preventDefault(); openSearch();
     }
-    if (e.key === 'f' && !typing && window.HubSettings.get().features.search !== false) {
+    if (e.key === 'f' && !typing && window.HubSettings.get().features.search !== false
+        && searchModal.classList.contains('hidden')) {
       e.preventDefault(); searchInput.focus();
     }
     if (e.key === 'Escape' && document.activeElement === searchInput) {
