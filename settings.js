@@ -187,9 +187,9 @@ function applyWallpaper(s) {
   const setBlobs = (show) => { if (blobsEl) blobsEl.style.display = show ? '' : 'none'; };
   if (w.mode === 'gradient' && GRADIENTS[w.gradient]) {
     body.classList.add('wallpaper', 'wp-active');
-    // The wallpaper is painted on body::before — a fixed, viewport-sized layer
-    // (see CSS). It never re-scales when services are added or when navigating
-    // between pages, so the image never zooms. Opacity cross-fades smoothly.
+    // The wallpaper is painted on the fixed #wallpaper layer (see CSS) — a
+    // viewport-sized element, so it never re-scales when services are added or
+    // when navigating between pages. Opacity cross-fades smoothly.
     body.style.setProperty('--wp-image', GRADIENTS[w.gradient]);
     root.classList.add(GradientLuminance[w.gradient] ? 'wallpaper-light' : 'wallpaper-dark');
     setBlobs(true);

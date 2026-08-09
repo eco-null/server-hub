@@ -49,8 +49,7 @@
        `cover` is computed against the viewport, so navigating or content
        height changes never re-scale the image (no zoom); opacity cross-fades
        smoothly via the wp-active class. */
-    body.wallpaper::before {
-      content: '';
+    #wallpaper {
       position: fixed;
       inset: 0;
       z-index: -1;
@@ -62,11 +61,11 @@
       opacity: 0;
       transition: opacity 700ms var(--ease);
     }
-    body.wallpaper.wp-active::before {
+    body.wallpaper.wp-active #wallpaper {
       opacity: 1;
     }
     @media (prefers-reduced-motion: reduce) {
-      body.wallpaper::before { transition: none; }
+      #wallpaper { transition: none; }
     }
     .glass {
       background: var(--surface);
@@ -148,6 +147,7 @@
   </style>
 </head>
 <body class="font-sans antialiased">
+  <div id="wallpaper" aria-hidden="true"></div>
   <main class="mx-auto w-full max-w-3xl px-4 sm:px-6 py-10 space-y-6">
 
     <header class="flex items-center justify-between gap-3">

@@ -32,13 +32,15 @@
         linear-gradient(180deg, var(--bg-elev) 0%, var(--bg-deep) 70%);
     }
     .blob {
-      position: fixed; border-radius: 9999px; filter: blur(60px);
+      position: fixed; border-radius: 9999px;
       opacity: var(--blob-opacity); pointer-events: none; z-index: 0;
       animation: drift 22s var(--ease) infinite alternate;
+      will-change: transform;
+      transform: translateZ(0);
     }
-    .blob.a { width: 420px; height: 420px; background: var(--blob-a); top: -120px; left: -80px; }
-    .blob.b { width: 360px; height: 360px; background: var(--blob-b); top: 10vh; right: -120px; animation-delay: -6s; }
-    .blob.c { width: 320px; height: 320px; background: var(--blob-c); bottom: -120px; left: 35%; opacity: calc(var(--blob-opacity) * 0.55); animation-delay: -12s; }
+    .blob.a { width: 420px; height: 420px; background: radial-gradient(circle, var(--blob-a) 0%, transparent 72%); top: -120px; left: -80px; }
+    .blob.b { width: 360px; height: 360px; background: radial-gradient(circle, var(--blob-b) 0%, transparent 72%); top: 10vh; right: -120px; animation-delay: -6s; }
+    .blob.c { width: 320px; height: 320px; background: radial-gradient(circle, var(--blob-c) 0%, transparent 72%); bottom: -120px; left: 35%; opacity: calc(var(--blob-opacity) * 0.55); animation-delay: -12s; }
     @keyframes drift {
       0%   { transform: translate3d(0,0,0) scale(1); }
       50%  { transform: translate3d(40px,30px,0) scale(1.08); }

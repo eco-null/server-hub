@@ -62,14 +62,13 @@
     body.wallpaper { background-color: transparent; }
     html.wallpaper-dark, html.wallpaper-light { background-color: transparent; }
 
-    /* Wallpaper layer — body::before is a fixed, viewport-sized layer behind
+    /* Wallpaper layer — #wallpaper is a fixed, viewport-sized element behind
        the content (z-index -1). Painting the wallpaper here (via --wp-image,
        toggled by HubSettings.applyWallpaper with the wp-active class) means
        `cover` is always computed against the viewport: adding services or
        navigating between pages never re-scales the image, so there is no zoom.
        Opacity cross-fades smoothly when the wallpaper appears or changes. */
-    body.wallpaper::before {
-      content: '';
+    #wallpaper {
       position: fixed;
       inset: 0;
       z-index: -1;
@@ -81,7 +80,7 @@
       opacity: 0;
       transition: opacity 700ms var(--ease);
     }
-    body.wallpaper.wp-active::before {
+    body.wallpaper.wp-active #wallpaper {
       opacity: 1;
     }
 
@@ -94,8 +93,13 @@
       min-height: 100vh;
       transition: background-color 400ms var(--ease), color 400ms var(--ease);
     }
+    /* Ambient blobs — pre-blurred radial gradients instead of filter: blur().
+       A blurred solid circle looks exactly like a soft radial fade, but the
+       filter would force the browser to re-rasterize a huge blurred region on
+       every animation frame (the main-page scroll jank). Gradient = same look,
+       ~zero cost. */
     .blob {
-      position: fixed; border-radius: 9999px; filter: blur(60px);
+      position: fixed; border-radius: 9999px;
       opacity: var(--blob-opacity); pointer-events: none; z-index: 0;
       animation: drift 22s var(--ease) infinite alternate;
       /* Promote to its own compositor layer so the drift animation never
@@ -103,9 +107,9 @@
       will-change: transform;
       transform: translateZ(0);
     }
-    .blob.a { width: 420px; height: 420px; background: var(--blob-a); top: -120px; left: -80px; }
-    .blob.b { width: 360px; height: 360px; background: var(--blob-b); top: 10vh;  right: -120px; animation-delay: -6s; }
-    .blob.c { width: 320px; height: 320px; background: var(--blob-c); bottom: -120px; left: 35%; opacity: calc(var(--blob-opacity) * 0.55); animation-delay: -12s; }
+    .blob.a { width: 420px; height: 420px; background: radial-gradient(circle, var(--blob-a) 0%, transparent 72%); top: -120px; left: -80px; }
+    .blob.b { width: 360px; height: 360px; background: radial-gradient(circle, var(--blob-b) 0%, transparent 72%); top: 10vh;  right: -120px; animation-delay: -6s; }
+    .blob.c { width: 320px; height: 320px; background: radial-gradient(circle, var(--blob-c) 0%, transparent 72%); bottom: -120px; left: 35%; opacity: calc(var(--blob-opacity) * 0.55); animation-delay: -12s; }
     @keyframes drift {
       0%   { transform: translate3d(0,0,0) scale(1); }
       50%  { transform: translate3d(40px,30px,0) scale(1.08); }
@@ -337,7 +341,7 @@
       .reveal { opacity: 1; transform: none; }
       .skel { animation: none; }
       #groups-cols, .section { animation: none; }
-      body.wallpaper::before { transition: none; }
+      #wallpaper { transition: none; }
     }
     #fab-add:hover { transform: scale(1.06); }
     #fab-add:active { transform: scale(0.96); }
@@ -350,6 +354,7 @@
   </style>
 </head>
 <body class="font-sans antialiased">
+  <div id="wallpaper" aria-hidden="true"></div>
   <div data-feature="blobs">
     <div class="blob a" aria-hidden="true"></div>
     <div class="blob b" aria-hidden="true"></div>

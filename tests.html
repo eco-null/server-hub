@@ -413,7 +413,7 @@
     // Wallpaper layer is a fixed, viewport-sized element (never re-scales/zooms)
     const wpLayerRule = Array.from(w.document.styleSheets).flatMap(sh => {
       try { return Array.from(sh.cssRules); } catch { return []; }
-    }).find(r => r.selectorText && r.selectorText.includes('body.wallpaper::before'));
+    }).find(r => r.selectorText && r.selectorText.includes('#wallpaper'));
     ok(wpLayerRule && /position\s*:\s*fixed/.test(wpLayerRule.style.cssText),
        'wallpaper layer is position:fixed (viewport-locked, no zoom)', wpLayerRule && wpLayerRule.style.cssText);
     ok(wpLayerRule && /z-index\s*:\s*-1/.test(wpLayerRule.style.cssText),
@@ -422,6 +422,26 @@
        'wallpaper layer uses cover against the viewport', wpLayerRule && wpLayerRule.style.cssText);
     ok(wpLayerRule && /transition\s*:\s*opacity/.test(wpLayerRule.style.cssText),
        'wallpaper layer cross-fades smoothly', wpLayerRule && wpLayerRule.style.cssText);
+    ok(w.document.getElementById('wallpaper') !== null, 'wallpaper layer element exists in the DOM');
+    ok(w.document.getElementById('wallpaper').parentElement === w.document.body,
+       'wallpaper layer is a direct child of body');
+
+    // Blobs use pre-blurred radial gradients, not filter: blur() — the blur
+    // forces per-frame re-rasterization (scroll jank); gradient is the same
+    // look at ~zero cost.
+    function findCssRule(sel) {
+      return Array.from(w.document.styleSheets).flatMap(sh => {
+        try { return Array.from(sh.cssRules); } catch { return []; }
+      }).find(r => r.selectorText && r.selectorText.replace(/\s+/g, ' ') === sel);
+    }
+    const blobRule = findCssRule('.blob');
+    ok(blobRule && !/filter\s*:\s*blur/.test(blobRule.style.cssText),
+       'blobs avoid filter:blur (main scroll-lag source)', blobRule && blobRule.style.cssText);
+    ok(blobRule && /will-change\s*:\s*transform/.test(blobRule.style.cssText),
+       'blobs stay on a compositor layer', blobRule && blobRule.style.cssText);
+    const blobARule = findCssRule('.blob.a');
+    ok(blobARule && /radial-gradient/.test(blobARule.style.cssText),
+       'blob.a uses a pre-blurred radial-gradient', blobARule && blobARule.style.cssText);
 
     // Scroll performance: off-screen category sections are skipped entirely by
     // the renderer (content-visibility: auto) — the invisible, standard fix for
