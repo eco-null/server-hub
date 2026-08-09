@@ -179,44 +179,23 @@ const GradientLuminance = { aurora: false, dusk: false, ocean: false, forest: fa
 function applyWallpaper(s) {
   const w = (s && s.wallpaper) || DEFAULTS.wallpaper;
   const body = document.body;
-  // A fresh activation means the page was showing no wallpaper and now will
-  // show one (e.g. first load, or switching from "none"). Only then run the
-  // buttery fade-in; tweaking wallpapers in settings must not re-flash.
-  const wasWallpaper = body.classList.contains('wallpaper');
-  const willWallpaper = (w.mode === 'gradient' && GRADIENTS[w.gradient]) || (w.mode === 'custom' && w.url);
-  // remove prior state
-  body.classList.remove('wallpaper', 'wp-fresh');
-  body.style.backgroundImage = '';
-  body.style.backgroundSize = '';
-  body.style.backgroundPosition = '';
-  body.style.backgroundRepeat = '';
-  body.style.backgroundAttachment = '';
+  body.classList.remove('wallpaper', 'wp-active');
   const root = document.documentElement;
   root.classList.remove('wallpaper-dark', 'wallpaper-light');
   // Hide the animated gradient blobs behind a custom URL wallpaper.
   const blobsEl = document.querySelector('[data-feature="blobs"]');
   const setBlobs = (show) => { if (blobsEl) blobsEl.style.display = show ? '' : 'none'; };
   if (w.mode === 'gradient' && GRADIENTS[w.gradient]) {
-    body.classList.add('wallpaper');
-    if (!wasWallpaper && willWallpaper) body.classList.add('wp-fresh');
-    body.style.background = GRADIENTS[w.gradient];
-    body.style.backgroundSize = 'cover';
-    body.style.backgroundRepeat = 'no-repeat';
-    // Anchor to the viewport: `cover` is computed against the document height,
-    // so adding services / navigating used to re-scale the wallpaper (sharp
-    // zoom). Fixed attachment sizes it to the viewport — no zoom, and it no
-    // longer repaints on scroll (smoother scrolling).
-    body.style.backgroundAttachment = 'fixed';
+    body.classList.add('wallpaper', 'wp-active');
+    // The wallpaper is painted on body::before — a fixed, viewport-sized layer
+    // (see CSS). It never re-scales when services are added or when navigating
+    // between pages, so the image never zooms. Opacity cross-fades smoothly.
+    body.style.setProperty('--wp-image', GRADIENTS[w.gradient]);
     root.classList.add(GradientLuminance[w.gradient] ? 'wallpaper-light' : 'wallpaper-dark');
     setBlobs(true);
   } else if (w.mode === 'custom' && w.url) {
-    body.classList.add('wallpaper');
-    if (!wasWallpaper && willWallpaper) body.classList.add('wp-fresh');
-    body.style.backgroundImage = 'url("' + w.url.replace(/"/g, '%22') + '")';
-    body.style.backgroundSize = 'cover';
-    body.style.backgroundPosition = 'center';
-    body.style.backgroundRepeat = 'no-repeat';
-    body.style.backgroundAttachment = 'fixed';
+    body.classList.add('wallpaper', 'wp-active');
+    body.style.setProperty('--wp-image', 'url("' + w.url.replace(/"/g, '%22') + '")');
     setBlobs(false);
     sampleImageLuminance(w.url).then(dark => {
       root.classList.toggle('wallpaper-dark', dark);
@@ -234,6 +213,7 @@ function applyWallpaper(s) {
       try { window.__hubToast && window.__hubToast('Wallpaper failed to load — reverted'); } catch {}
     });
   } else {
+    body.style.removeProperty('--wp-image');
     setBlobs(true);
   }
 }

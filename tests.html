@@ -185,18 +185,19 @@
   ok(window.HubSettings.GRADIENTS && typeof window.HubSettings.GRADIENTS.aurora === 'string', 'GRADIENTS map exported');
   ok(typeof window.HubSettings.applyWallpaper === 'function', 'applyWallpaper exported');
 
-  // gradient mode adds classes/background
+  // gradient mode adds classes/background on the fixed wallpaper layer
   window.HubSettings.applyWallpaper({ wallpaper: { mode: 'gradient', gradient: 'aurora' } });
   ok(document.body.classList.contains('wallpaper'), 'gradient mode adds wallpaper class to body');
-  ok(document.body.style.background, 'gradient mode sets body background');
+  ok(document.body.classList.contains('wp-active'), 'gradient mode activates the wallpaper layer');
+  ok(document.body.style.getPropertyValue('--wp-image'), 'gradient mode sets --wp-image on body');
   ok(document.documentElement.classList.contains('wallpaper-dark'), 'gradient mode adds wallpaper-dark to <html>');
   ok(!document.documentElement.classList.contains('wallpaper-light'), 'gradient mode does not add wallpaper-light');
 
   // none mode strips prior state
   window.HubSettings.applyWallpaper({ wallpaper: { mode: 'none' } });
   ok(!document.body.classList.contains('wallpaper'), 'none mode removes wallpaper class from body');
-  ok(!document.body.style.backgroundImage, 'none mode clears body background-image');
-  ok(!document.body.style.background, 'none mode clears body background');
+  ok(!document.body.classList.contains('wp-active'), 'none mode deactivates the wallpaper layer');
+  ok(!document.body.style.getPropertyValue('--wp-image'), 'none mode clears --wp-image');
   ok(!document.documentElement.classList.contains('wallpaper-dark'), 'none mode removes wallpaper-dark from <html>');
   ok(!document.documentElement.classList.contains('wallpaper-light'), 'none mode removes wallpaper-light from <html>');
 
@@ -393,19 +394,46 @@
     // Wallpaper — settings change re-applies on the dashboard (init + subscribe)
     w.HubSettings.set({ wallpaper: { mode: 'gradient', gradient: 'ocean' } });
     ok(w.document.body.classList.contains('wallpaper'), 'wallpaper setting adds wallpaper class to body');
-    ok(w.document.body.style.background && w.document.body.style.background.trim() !== '',
-       'wallpaper gradient sets a non-empty background', String(w.document.body.style.background).slice(0, 60));
+    ok(w.document.body.classList.contains('wp-active'), 'wallpaper setting activates the wallpaper layer');
+    ok(w.document.body.style.getPropertyValue('--wp-image') &&
+       w.document.body.style.getPropertyValue('--wp-image').trim() !== '',
+       'wallpaper gradient sets a non-empty --wp-image', String(w.document.body.style.getPropertyValue('--wp-image')).slice(0, 60));
 
     // Custom URL wallpaper hides the animated gradient blobs; back to none restores them
     const wBlobs = w.document.querySelector('[data-feature="blobs"]');
     w.HubSettings.set({ wallpaper: { mode: 'custom', url: 'https://example.com/wall.jpg' } });
     ok(wBlobs && wBlobs.style.display === 'none', 'custom wallpaper hides gradient blobs');
     ok(w.document.body.classList.contains('wallpaper'), 'custom mode adds wallpaper class to body');
-    ok(w.document.body.style.backgroundImage.includes('example.com'), 'custom mode sets background-image');
+    ok(w.document.body.style.getPropertyValue('--wp-image').includes('example.com'), 'custom mode sets --wp-image to the URL');
     ok(w.document.getElementById('theme-toggle').disabled === true, 'custom wallpaper disables theme toggle');
     w.HubSettings.set({ wallpaper: { mode: 'none' } });
     ok(wBlobs && wBlobs.style.display !== 'none', 'none mode restores gradient blobs');
     ok(w.document.getElementById('theme-toggle').disabled === false, 'none mode re-enables theme toggle');
+
+    // Wallpaper layer is a fixed, viewport-sized element (never re-scales/zooms)
+    const wpLayerRule = Array.from(w.document.styleSheets).flatMap(sh => {
+      try { return Array.from(sh.cssRules); } catch { return []; }
+    }).find(r => r.selectorText && r.selectorText.includes('body.wallpaper::before'));
+    ok(wpLayerRule && /position\s*:\s*fixed/.test(wpLayerRule.style.cssText),
+       'wallpaper layer is position:fixed (viewport-locked, no zoom)', wpLayerRule && wpLayerRule.style.cssText);
+    ok(wpLayerRule && /z-index\s*:\s*-1/.test(wpLayerRule.style.cssText),
+       'wallpaper layer sits behind content (z-index:-1)', wpLayerRule && wpLayerRule.style.cssText);
+    ok(wpLayerRule && /background-size\s*:\s*cover/.test(wpLayerRule.style.cssText),
+       'wallpaper layer uses cover against the viewport', wpLayerRule && wpLayerRule.style.cssText);
+    ok(wpLayerRule && /transition\s*:\s*opacity/.test(wpLayerRule.style.cssText),
+       'wallpaper layer cross-fades smoothly', wpLayerRule && wpLayerRule.style.cssText);
+
+    // Scroll performance: off-screen category sections are skipped entirely by
+    // the renderer (content-visibility: auto) — the invisible, standard fix for
+    // long-page scroll jank (settings has no blobs, which is why it feels
+    // smoother; this makes the services grid skip work too).
+    const cvRule = Array.from(w.document.styleSheets).flatMap(sh => {
+      try { return Array.from(sh.cssRules); } catch { return []; }
+    }).find(r => r.selectorText && r.selectorText.includes('#groups .group'));
+    ok(cvRule && /content-visibility\s*:\s*auto/.test(cvRule.style.cssText),
+       'category sections use content-visibility:auto (skip off-screen paint)', cvRule && cvRule.style.cssText);
+    ok(cvRule && /contain-intrinsic-size/.test(cvRule.style.cssText),
+       'content-visibility sections have a stable intrinsic size (no scrollbar jump)', cvRule && cvRule.style.cssText);
 
     // autoCategorize passthrough
     eq(w.__HUB__.autoCategorize('Jellyfin', 'https://media.local', 'Movies').category, 'Media', '__HUB__.autoCategorize passthrough');

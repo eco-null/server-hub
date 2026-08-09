@@ -62,15 +62,27 @@
     body.wallpaper { background-color: transparent; }
     html.wallpaper-dark, html.wallpaper-light { background-color: transparent; }
 
-    /* Butter-smooth wallpaper appearance — a gentle fade+settle instead of a
-       hard snap when a wallpaper is first applied (page load, or switching
-       from "none" to a wallpaper). The .wp-fresh class is added by
-       HubSettings.applyWallpaper only on fresh activations, so tweaking the
-       wallpaper in settings doesn't re-flash the page. */
-    body.wallpaper.wp-fresh { animation: wallpaper-in 700ms var(--ease); }
-    @keyframes wallpaper-in {
-      from { opacity: 0; }
-      to   { opacity: 1; }
+    /* Wallpaper layer — body::before is a fixed, viewport-sized layer behind
+       the content (z-index -1). Painting the wallpaper here (via --wp-image,
+       toggled by HubSettings.applyWallpaper with the wp-active class) means
+       `cover` is always computed against the viewport: adding services or
+       navigating between pages never re-scales the image, so there is no zoom.
+       Opacity cross-fades smoothly when the wallpaper appears or changes. */
+    body.wallpaper::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image: var(--wp-image, none);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0;
+      transition: opacity 700ms var(--ease);
+    }
+    body.wallpaper.wp-active::before {
+      opacity: 1;
     }
 
     html, body { background-color: var(--bg-deep); color: var(--fg); }
@@ -305,6 +317,16 @@
     }
 
     #groups-cols { animation: groups-in 500ms var(--ease) both; }
+
+    /* Scroll performance: off-screen category sections are skipped by the
+       renderer instead of being laid out/painted every scroll frame. This is
+       invisible (content looks identical when scrolled into view) and is the
+       standard fix for long-page scroll jank. contain-intrinsic-size keeps the
+       scrollbar stable before a section has been painted. */
+    #groups .group {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 240px;
+    }
     @keyframes groups-in {
       from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -314,7 +336,8 @@
       .card, .reveal, .skel, body { transition: none; }
       .reveal { opacity: 1; transform: none; }
       .skel { animation: none; }
-      #groups-cols, .section, body.wallpaper.wp-fresh { animation: none; }
+      #groups-cols, .section { animation: none; }
+      body.wallpaper::before { transition: none; }
     }
     #fab-add:hover { transform: scale(1.06); }
     #fab-add:active { transform: scale(0.96); }

@@ -45,12 +45,28 @@
       min-height: 100vh;
       transition: background-color 400ms var(--ease), color 400ms var(--ease);
     }
-    /* Butter-smooth wallpaper appearance — gentle fade instead of a hard snap
-       on fresh activation (page load / switching from none). */
-    body.wallpaper.wp-fresh { animation: wallpaper-in 700ms var(--ease); }
-    @keyframes wallpaper-in {
-      from { opacity: 0; }
-      to   { opacity: 1; }
+    /* Wallpaper layer — fixed, viewport-sized, behind content (z-index -1).
+       `cover` is computed against the viewport, so navigating or content
+       height changes never re-scale the image (no zoom); opacity cross-fades
+       smoothly via the wp-active class. */
+    body.wallpaper::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image: var(--wp-image, none);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0;
+      transition: opacity 700ms var(--ease);
+    }
+    body.wallpaper.wp-active::before {
+      opacity: 1;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body.wallpaper::before { transition: none; }
     }
     .glass {
       background: var(--surface);
