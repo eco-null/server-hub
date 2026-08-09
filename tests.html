@@ -369,6 +369,49 @@
     ok(searchModal.classList.contains('hidden'), 'popup closes after suggestion click');
     w.open = prevOpen;
 
+    // Keyboard navigation — ArrowDown/ArrowUp move a highlight across results,
+    // Enter opens the selected service (web search only when nothing selected).
+    w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
+    sInput.value = '';
+    sInput.dispatchEvent(new w.Event('input'));
+    opened = [];
+    const prevOpen2 = w.open;
+    w.open = (url, target, features) => { opened.push({ url, target, features }); return null; };
+    const rows = w.document.querySelectorAll('#search-suggestions button');
+    ok(rows.length > 0, 'suggestions rendered for keyboard nav', rows.length + ' rows');
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    let sel = w.document.querySelector('#search-suggestions button[aria-selected="true"]');
+    ok(sel === rows[0], 'ArrowDown selects the first suggestion');
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    sel = w.document.querySelector('#search-suggestions button[aria-selected="true"]');
+    ok(sel === rows[1], 'ArrowDown moves to the second suggestion');
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowUp' }));
+    sel = w.document.querySelector('#search-suggestions button[aria-selected="true"]');
+    ok(sel === rows[0], 'ArrowUp moves back to the first suggestion');
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter' }));
+    ok(opened.length === 1, 'Enter opens the selected service', 'opened=' + opened.length);
+    ok(opened[0] && opened[0].url === 'https://grafana.example.com', 'Enter opens the highlighted service URL', opened[0] && opened[0].url);
+    ok(searchModal.classList.contains('hidden'), 'popup closes after Enter on a selection');
+
+    // Enter with a selection cleared resets to web search; no selection → web search
+    w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
+    sInput.value = 'grafana';
+    sInput.dispatchEvent(new w.Event('input'));
+    opened = [];
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter' }));
+    ok(opened.length === 1 && opened[0].url === 'https://grafana.example.com', 're-typing then selecting opens the service');
+    w.open = prevOpen2;
+    w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
+    sInput.value = 'homelab wiki';
+    sInput.dispatchEvent(new w.Event('input'));
+    opened = [];
+    w.open = (url, target, features) => { opened.push({ url, target, features }); return null; };
+    sInput.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter' }));
+    ok(opened.length === 1 && opened[0].url === 'https://www.google.com/search?q=' + encodeURIComponent('homelab wiki'),
+       'Enter without a selection still does a web search', opened[0] && opened[0].url);
+    w.open = prevOpen;
+
     // Esc closes
     w.document.getElementById('search').dispatchEvent(new w.MouseEvent('click'));
     ok(!searchModal.classList.contains('hidden'), 'popup reopens for esc test');
