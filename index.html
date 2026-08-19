@@ -414,12 +414,17 @@
       #groups .group > div.grid {
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 0.6rem !important;
+        grid-auto-rows: 1fr !important;
+        align-items: stretch !important;
       }
-      /* Compact cards to fit 2 per row — fix cramped names */
+      /* Compact cards to fit 2 per row — fix cramped names + equal height */
       .card {
         padding: 0.65rem 0.6rem !important;
         gap: 0.55rem !important;
         border-radius: 14px !important;
+        height: 100% !important;
+        min-height: 74px !important;
+        align-items: center !important;
       }
       .card svg.w-6.h-6 { width: 1.25rem !important; height: 1.25rem !important; }
       /* Hidden edit/delete actions still occupied 36px on mobile (hover disabled);
