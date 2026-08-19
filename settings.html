@@ -6,6 +6,7 @@
   <title>Settings — Server Hub</title>
   <link rel="icon" type="image/png" href="logo.png" />
   <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
+  <link rel="preconnect" href="https://images.pexels.com" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -168,6 +169,17 @@
       .section { animation: none !important; }
       .btn:hover, .swatch:hover { transform: none !important; }
     }
+    @media (min-width: 769px) {
+      .glass {
+        backdrop-filter: blur(16px) saturate(135%) !important;
+        -webkit-backdrop-filter: blur(16px) saturate(135%) !important;
+      }
+      html.wallpaper-light .glass, html.wallpaper-dark .glass {
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+      }
+      .section { contain: layout style; }
+    }
   </style>
 </head>
 <body class="font-sans antialiased">
@@ -224,6 +236,16 @@
           <div class="flex items-center gap-2 flex-wrap justify-end">
             <button id="wp-none" class="btn focus-ring" aria-pressed="false">None</button>
             <div class="flex gap-1.5" id="wp-gradients" role="group" aria-label="Wallpaper gradients"></div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-2">
+          <div>
+            <p class="font-medium text-sm">Featured</p>
+            <p class="text-xs text-[color:var(--fg-muted)]">One-click preset — no URL needed.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="wp-preset-pexels" class="swatch focus-ring" style="width:64px;height:40px;background: url('https://images.pexels.com/photos/2387819/pexels-photo-2387819.jpeg') center/cover no-repeat" aria-label="Use Pexels mountain wallpaper" title="Pexels — Mountain (click to apply)"></button>
+            <span class="text-xs text-[color:var(--fg-muted)] hidden sm:inline">Pexels Mountain</span>
           </div>
         </div>
         <div class="flex items-center gap-2 pt-2">
@@ -440,10 +462,12 @@
   refreshAccent();
 
   // Wallpaper
+  const PEXELS_PRESET = 'https://images.pexels.com/photos/2387819/pexels-photo-2387819.jpeg';
   const wpGradientsEl = document.getElementById('wp-gradients');
   const wpNoneBtn     = document.getElementById('wp-none');
   const wpUrlInput    = document.getElementById('wp-url');
   const wpApplyBtn    = document.getElementById('wp-apply');
+  const wpPexelsBtn   = document.getElementById('wp-preset-pexels');
 
   Object.keys(S.GRADIENTS || {}).forEach(k => {
     const s = document.createElement('button');
@@ -473,6 +497,15 @@
     toast('Wallpaper applied');
   });
 
+  if (wpPexelsBtn) {
+    wpPexelsBtn.addEventListener('click', () => {
+      S.set({ wallpaper: { mode: 'custom', url: PEXELS_PRESET } });
+      wpUrlInput.value = PEXELS_PRESET;
+      refreshWallpaper();
+      toast('Wallpaper: Pexels Mountain');
+    });
+  }
+
   wpUrlInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') wpApplyBtn.click();
   });
@@ -487,7 +520,15 @@
       s.classList.toggle('active', active);
       s.setAttribute('aria-pressed', String(active));
     });
+    const isPexels = mode === 'custom' && w.url === PEXELS_PRESET;
+    if (wpPexelsBtn) {
+      wpPexelsBtn.classList.toggle('active', isPexels);
+      wpPexelsBtn.setAttribute('aria-pressed', String(isPexels));
+    }
     if (mode === 'custom' && w.url) wpUrlInput.value = w.url;
+    else if (!isPexels && mode !== 'custom') {
+      // keep input as-is when switching to gradient/none; no clear needed
+    }
     S.apply(S.get());
     window.HubSettings.applyWallpaper(S.get());
   }
