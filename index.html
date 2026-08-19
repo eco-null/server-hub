@@ -415,13 +415,21 @@
         grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 0.6rem !important;
       }
-      /* Compact cards to fit 2 per row */
+      /* Compact cards to fit 2 per row — fix cramped names */
       .card {
-        padding: 0.6rem 0.55rem !important;
-        gap: 0.45rem !important;
+        padding: 0.65rem 0.6rem !important;
+        gap: 0.55rem !important;
         border-radius: 14px !important;
       }
       .card svg.w-6.h-6 { width: 1.25rem !important; height: 1.25rem !important; }
+      /* Hidden edit/delete actions still occupied 36px on mobile (hover disabled);
+         hide completely to free width for name/host */
+      .card-actions { display: none !important; }
+      /* Ensure truncate can actually use the freed space (nested flex needs min-w-0) */
+      .card > span.min-w-0.flex-1 { min-width: 0 !important; flex: 1 1 0% !important; }
+      .card > span.min-w-0.flex-1 > span.flex { min-width: 0 !important; }
+      /* Give 2-col grid a bit more breathing room on narrow phones */
+      main { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
       /* Keep long hostnames readable in narrow 2-col cards */
       .card .text-\[11px\] { font-size: 10px !important; }
       /* Fix "short" groups: placeholder was 320px, 8 items single-col ≈680px;
