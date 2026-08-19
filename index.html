@@ -435,6 +435,10 @@
       .card > span.min-w-0.flex-1 > span.flex { min-width: 0 !important; }
       /* Give 2-col grid a bit more breathing room on narrow phones */
       main { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+      /* Last odd card should fill the row — no empty half-gap on the right */
+      #groups .group > div.grid > .card:last-child:nth-child(odd) {
+        grid-column: 1 / -1 !important;
+      }
       /* Keep long hostnames readable in narrow 2-col cards */
       .card .text-\[11px\] { font-size: 10px !important; }
       /* Fix "short" groups: placeholder was 320px, 8 items single-col ≈680px;
