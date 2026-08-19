@@ -6,7 +6,10 @@
   <title>Server Hub — Self-Hosted Services</title>
   <meta name="description" content="Launchpad for self-hosted apps and services." />
   <link rel="icon" type="image/png" href="logo.png" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <script>
     tailwind.config = { darkMode: 'class', theme: { extend: {
       fontFamily: {
@@ -15,9 +18,7 @@
       },
     }}};
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="categorize.js"></script>
   <script src="settings.js"></script>
   <style>
@@ -84,7 +85,10 @@
       opacity: 1;
     }
 
+    * { -webkit-tap-highlight-color: transparent; }
+    html { -webkit-text-size-adjust: 100%; scrollbar-gutter: stable; }
     html, body { background-color: var(--bg-deep); color: var(--fg); }
+    body { overscroll-behavior-y: contain; }
     body {
       background:
         radial-gradient(1200px 800px at 12% -8%, color-mix(in srgb, var(--blob-a) 16%, transparent), transparent 60%),
@@ -122,6 +126,9 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       transition: background-color 300ms var(--ease), border-color 300ms var(--ease);
+      /* Isolate backdrop sampling to this element's stacking context — prevents
+         the blur from re-sampling the entire page on every scroll frame. */
+      isolation: isolate;
     }
     .glass:hover { background: var(--surface-hi); border-color: var(--border-hi); }
     .toast {
@@ -350,6 +357,45 @@
       .skel { animation: none; }
       #groups-cols, .section { animation: none; }
       #wallpaper { transition: none; }
+    }
+
+    /* ============================================================
+       Mobile performance — backdrop-filter is the #1 FPS killer.
+       Every .glass card with blur(20px) forces the browser to
+       sample and blur the backdrop per-card, per-frame while
+       scrolling. On desktop GPUs this is okay; on mobile it
+       drops to 12-13fps. These overrides keep layout/colors
+       identical but remove/rationalize GPU-heavy effects on
+       touch and small viewports to restore 60fps.
+       ============================================================ */
+    @media (max-width: 768px), (pointer: coarse), (hover: none) {
+      .glass,
+      html.wallpaper-light .glass,
+      html.wallpaper-dark .glass {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+      #search-modal .modal-backdrop {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(0,0,0,0.60) !important;
+      }
+      .blob { animation: none !important; will-change: auto !important; transform: none !important; }
+      .card { transition: background-color 200ms var(--ease), border-color 200ms var(--ease) !important; }
+      .card:hover { transform: none !important; box-shadow: none !important; }
+      .glass:hover { background: var(--surface) !important; border-color: var(--border) !important; }
+      .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .reveal.shown { transition: none !important; }
+      #groups-cols { animation: none !important; }
+      .skel { animation: none !important; }
+      #fab-add:hover, #fab-settings:hover { transform: none !important; }
+      #groups .group { contain-intrinsic-size: auto 320px; }
+    }
+    @media (max-width: 480px) {
+      #wallpaper { transition: none !important; }
+    }
+    @media (prefers-reduced-transparency: reduce) {
+      .glass, #search-modal .modal-backdrop { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
     }
     #fab-add:hover { transform: scale(1.06); }
     #fab-add:active { transform: scale(0.96); }
@@ -803,13 +849,19 @@
   bookmarkEditor.addEventListener('submit', saveBookmark);
   document.getElementById('bookmark-cancel').addEventListener('click', closeBookmarkEditor);
 
-  // Categorize at render time using categorize.js
+  // Categorize at render time using categorize.js — memoized per SERVICES reference
+  let _catCache = null;
+  let _catCacheRef = null;
+  let _catCacheLen = -1;
   function categorized() {
-    return SERVICES.map(s => {
+    if (_catCache && _catCacheRef === SERVICES && _catCacheLen === SERVICES.length) return _catCache;
+    const out = SERVICES.map(s => {
       const override = s.categoryOverride;
       const auto = override ? { category: override, matched: '(override)' } : window.autoCategorize(s.name, s.url, s.desc);
       return { ...s, category: auto.category, matched: auto.matched };
     });
+    _catCache = out; _catCacheRef = SERVICES; _catCacheLen = SERVICES.length;
+    return out;
   }
 
   const groupsEl    = document.getElementById('groups');
@@ -865,13 +917,57 @@
     groupsEl.innerHTML = html;
     skeletonsEl.classList.add('hidden');
 
-    requestAnimationFrame(() => {
-      document.querySelectorAll('.card.reveal').forEach((el, i) => {
-        setTimeout(() => el.classList.add('shown'), Math.min(i * 25, 500));
+    // Reveal: on mobile/touch instant (no staggered timers), on desktop staggered but cheap
+    const _isCoarse = window.matchMedia('(max-width: 768px)').matches
+      || window.matchMedia('(pointer: coarse)').matches
+      || window.matchMedia('(hover: none)').matches
+      || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (_isCoarse) {
+      document.querySelectorAll('.card.reveal').forEach(el => el.classList.add('shown'));
+    } else {
+      requestAnimationFrame(() => {
+        const cards = document.querySelectorAll('.card.reveal');
+        // Use rAF + micro-stagger via timeout but batch to avoid N timers on huge lists
+        cards.forEach((el, i) => {
+          if (i < 12) setTimeout(() => el.classList.add('shown'), i * 22);
+          else el.classList.add('shown');
+        });
       });
-    });
+    }
 
-    document.querySelectorAll('[data-ping-url]').forEach(el => pingService(el));
+    // Status pings: only when feature enabled; defer off-screen via IntersectionObserver
+    const _pingsEnabled = window.HubSettings.get().features.statusPings !== false;
+    if (_pingsEnabled) {
+      const _cards = document.querySelectorAll('[data-ping-url]');
+      const _obs = (() => {
+        if (!('IntersectionObserver' in window)) return null;
+        try {
+          return new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                obs.unobserve(entry.target);
+                pingService(entry.target);
+              }
+            });
+          }, { rootMargin: '240px' });
+        } catch { return null; }
+      })();
+      if (_obs) {
+        _cards.forEach(el => { if (el.dataset.pingUrl) _obs.observe(el); });
+        // Fallback: any remaining not observed after 4s (observer edge cases) — ping
+        setTimeout(() => { _cards.forEach(el => { try{ _obs.unobserve(el);}catch{}; if (el.isConnected && el.querySelector('[data-status].status-wait, [data-status].status-idle')) pingService(el); }); }, 4200);
+      } else {
+        // No observer: stagger pings to avoid network burst (6 at a time)
+        let _idx = 0;
+        function _pingNext(){
+          const batch = Array.from(_cards).slice(_idx, _idx + 6);
+          batch.forEach(el => pingService(el));
+          _idx += 6;
+          if (_idx < _cards.length) setTimeout(_pingNext, 120);
+        }
+        _pingNext();
+      }
+    }
 
     // Re-apply current filter
     filter(searchInput.value);
@@ -1130,7 +1226,14 @@
   /* ============================================================
      Search filter
      ============================================================ */
-  searchInput.addEventListener('input', e => filter(e.target.value));
+  let _searchDebounce = 0;
+  searchInput.addEventListener('input', e => {
+    clearTimeout(_searchDebounce);
+    const v = e.target.value;
+    // immediate rAF for empty query (clear), debounce for typing
+    if (!v.trim()) { scheduleFilter(v); }
+    else { _searchDebounce = setTimeout(() => scheduleFilter(v), 80); }
+  }, { passive: true });
 
   document.addEventListener('keydown', e => {
     const el = document.activeElement;
@@ -1155,12 +1258,14 @@
 
   function openSearch() { searchModal.classList.remove('hidden'); searchModalInput.value = ''; renderSearchSuggestions(''); searchModalInput.focus(); }
   function closeSearch() { searchModal.classList.add('hidden'); searchSuggestions.innerHTML = ''; selectedSuggestion = -1; }
+  let _suggestDebounce = 0;
   function renderSearchSuggestions(q) {
     const items = categorized();
     const ql = q.toLowerCase();
     const matches = ql ? items.filter(s => (s.name + ' ' + (s.desc || '')).toLowerCase().includes(ql)).slice(0, 8) : items.slice(0, 8);
     searchSuggestions.innerHTML = '';
     selectedSuggestion = -1;
+    const frag = document.createDocumentFragment();
     matches.forEach(s => {
       const row = document.createElement('button');
       row.type = 'button';
@@ -1168,8 +1273,13 @@
       row.setAttribute('aria-selected', 'false');
       row.innerHTML = '<span class="shrink-0">' + svgFor(s.icon) + '</span><span class="min-w-0 flex-1 truncate">' + esc(s.name) + '</span><span class="text-[10px] text-[color:var(--fg-muted)] truncate">' + esc(s.category) + '</span>';
       row.addEventListener('click', () => { window.open(s.url.startsWith('http') ? s.url : 'https://' + s.url, '_blank', 'noopener'); closeSearch(); });
-      searchSuggestions.appendChild(row);
+      frag.appendChild(row);
     });
+    searchSuggestions.appendChild(frag);
+  }
+  function scheduleSuggestions(q){
+    clearTimeout(_suggestDebounce);
+    _suggestDebounce = setTimeout(() => renderSearchSuggestions(q), 90);
   }
   function openSuggestion(row) {
     if (!row) return false;
@@ -1186,7 +1296,7 @@
     });
     if (rows[i]) rows[i].scrollIntoView({ block: 'nearest' });
   }
-  searchModalInput.addEventListener('input', () => renderSearchSuggestions(searchModalInput.value));
+  searchModalInput.addEventListener('input', () => scheduleSuggestions(searchModalInput.value), { passive: true });
   searchModalInput.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeSearch();
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -1213,38 +1323,73 @@
   searchModal.addEventListener('keydown', e => { if (e.key === 'Escape') closeSearch(); });
   document.getElementById('search').addEventListener('click', openSearch);
 
-  function filter(q) {
+  let _filterRaf = 0;
+  let _filterPending = '';
+  function _filterNow(q) {
     q = q.trim().toLowerCase();
+    const groups = document.querySelectorAll('.group');
     let visible = 0;
-    document.querySelectorAll('.group').forEach(group => {
+    for (let gi = 0; gi < groups.length; gi++) {
+      const group = groups[gi];
+      const cards = group.querySelectorAll('.card');
       let gv = 0;
-      group.querySelectorAll('.card').forEach(card => {
+      for (let ci = 0; ci < cards.length; ci++) {
+        const card = cards[ci];
         const match = !q || card.dataset.name.includes(q) || card.dataset.desc.includes(q);
-        card.style.display = match ? '' : 'none';
+        // Avoid layout thrash: only touch display when it actually changes
+        const shouldHide = !match;
+        const isHidden = card.style.display === 'none';
+        if (shouldHide !== isHidden) card.style.display = shouldHide ? 'none' : '';
         if (match) gv++;
-      });
-      group.style.display = gv ? '' : 'none';
+      }
+      const groupHidden = group.style.display === 'none';
+      const shouldGroupHide = gv === 0;
+      if (shouldGroupHide !== groupHidden) group.style.display = shouldGroupHide ? 'none' : '';
       visible += gv;
-    });
+    }
     emptyEl.classList.toggle('hidden', visible !== 0);
     if (visible === 0) emptyTerm.textContent = q;
+  }
+  function filter(q) { _filterNow(q); }
+  function scheduleFilter(q) {
+    _filterPending = q;
+    if (_filterRaf) return;
+    _filterRaf = requestAnimationFrame(() => { _filterRaf = 0; _filterNow(_filterPending); });
   }
 
   /* ============================================================
      Status ping
      ============================================================ */
-  function pingService(card) {
+  let _pingActive = 0;
+  const _pingQueue = [];
+  const _PING_CONCURRENCY = 6;
+  function _runPing(card) {
     const url = card.dataset.pingUrl;
-    if (!url) return;
+    if (!url) { _pingActive--; if (_pingQueue.length) _runPing(_pingQueue.shift()); return; }
     const dot = card.querySelector('[data-status]');
+    if (!dot) { _pingActive--; if (_pingQueue.length) _runPing(_pingQueue.shift()); return; }
     const ctrl = new AbortController();
-    const tmo  = setTimeout(() => ctrl.abort(), 6000);
+    const tmo  = setTimeout(() => ctrl.abort(), 5500);
     dot.classList.remove('status-idle'); dot.classList.add('status-wait');
     dot.setAttribute('aria-label', 'checking ' + hostOf(url));
-    fetch(url, { mode: 'no-cors', signal: ctrl.signal, cache: 'no-store', redirect: 'follow' })
+    // Defer fetch to idle on mobile to avoid scroll jank
+    const doFetch = () => fetch(url, { mode: 'no-cors', signal: ctrl.signal, cache: 'no-store', redirect: 'follow' })
       .then(() => mark(dot, true, hostOf(url)))
       .catch(err => mark(dot, !(err instanceof DOMException && err.name === 'AbortError') ? false : 'timeout', hostOf(url)))
-      .finally(() => clearTimeout(tmo));
+      .finally(() => { clearTimeout(tmo); _pingActive--; if (_pingQueue.length) _runPing(_pingQueue.shift()); });
+    if ('requestIdleCallback' in window) requestIdleCallback(doFetch, { timeout: 1200 });
+    else setTimeout(doFetch, 0);
+  }
+  function pingService(card) {
+    if (!card || !card.dataset.pingUrl) return;
+    if (document.hidden) { // defer while tab hidden
+      const onVis = () => { document.removeEventListener('visibilitychange', onVis); pingService(card); };
+      document.addEventListener('visibilitychange', onVis, { once: true });
+      return;
+    }
+    _pingActive++;
+    if (_pingActive > _PING_CONCURRENCY) { _pingActive--; _pingQueue.push(card); return; }
+    _runPing(card);
   }
   function mark(dot, up, host) {
     dot.classList.remove('status-wait');
@@ -1260,15 +1405,33 @@
   const dateEl  = document.getElementById('date');
   const greetEl = document.getElementById('greeting');
   const pad = n => String(n).padStart(2, '0');
+  let _lastDateStr = '', _lastGreetKey = '', _lastHour = -1;
+  let _fmtLong = null, _fmtShort = null;
+  try {
+    _fmtLong  = new Intl.DateTimeFormat(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    _fmtShort = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+  } catch {}
+  function _formatLong(d){ return _fmtLong ? _fmtLong.format(d) : d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' }); }
+  function _formatShort(d){ return _fmtShort ? _fmtShort.format(d) : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
   function tick() {
     const d = new Date();
     clockEl.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-    dateEl.textContent  = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    const dayKey = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+    if (dayKey !== _lastDateStr) { _lastDateStr = dayKey; dateEl.textContent = _formatLong(d); }
     const h = d.getHours();
-    const part = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-    greetEl.textContent = part + (greetEl.dataset.userName ? ', ' + greetEl.dataset.userName : '') + ' — ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const greetKey = dayKey + '-' + h + '-' + (greetEl.dataset.userName || '');
+    if (greetKey !== _lastGreetKey) {
+      _lastGreetKey = greetKey; _lastHour = h;
+      const part = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+      greetEl.textContent = part + (greetEl.dataset.userName ? ', ' + greetEl.dataset.userName : '') + ' — ' + _formatShort(d);
+    }
   }
-  tick(); setInterval(tick, 1000);
+  tick();
+  let _tickTimer = setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { clearInterval(_tickTimer); _tickTimer = null; }
+    else if (!_tickTimer) { tick(); _tickTimer = setInterval(tick, 1000); }
+  }, { passive: true });
 
   /* ============================================================
      System stats — wire to /api/stats { host, cpu, mem, disk }
@@ -1302,6 +1465,7 @@
     } catch {}
   }
   async function pollStats() {
+    if (document.hidden) return;
     try {
       const r = await fetch('/api/beszel', { cache: 'no-store' });
       if (r.ok) {
@@ -1346,7 +1510,12 @@
       '<div class="flex-1 h-1.5 bg-[color:var(--surface-hi)] rounded-full overflow-hidden"><div class="h-full" style="width:' + w + ';background:' + (val >= 90 ? 'var(--red)' : val >= 75 ? 'var(--amber)' : 'var(--accent)') + '"></div></div>' +
       '<span class="font-mono text-[10px] tabular-nums w-8 text-right">' + pct + '</span></div>';
   }
-  pollStats(); setInterval(pollStats, 15000);
+  pollStats();
+  let _statsTimer = setInterval(pollStats, 15000);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { clearInterval(_statsTimer); _statsTimer = null; }
+    else if (!_statsTimer) { pollStats(); _statsTimer = setInterval(pollStats, 15000); }
+  }, { passive: true });
 
   /* ============================================================
      Theme — auto / light / dark, persisted
