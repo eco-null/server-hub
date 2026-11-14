@@ -15,7 +15,7 @@
   max-width: 80rem;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 2rem 2rem 6.5rem;
+  padding: 2rem 2rem 2.5rem;
 }
 
 .page-head {
@@ -51,7 +51,7 @@
       'main'
       'aside';
     grid-template-rows: auto;
-    padding: 1.5rem 1rem 6.5rem;
+    padding: 1.5rem 1rem 2rem;
   }
 }
 
@@ -82,6 +82,7 @@
 }
 
 .greeting {
+  min-height: 1.3125rem;
   font-size: 0.875rem;
   color: var(--fg-muted);
 }
@@ -138,12 +139,26 @@
   }
 }
 
-/* ---------- search trigger ---------- */
+/* ---------- search trigger and the add button ---------- */
+.head-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.btn-add {
+  flex: none;
+  min-height: 3.25rem;
+  padding-inline: 1.25rem;
+  font-size: 0.9375rem;
+}
+
 .search-trigger {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   min-height: 3.25rem;
   padding: 0.75rem 1rem;
   color: var(--fg-muted);
@@ -218,7 +233,12 @@
 }
 
 .sys-meta {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.6875rem;
   color: var(--fg-muted);
 }
@@ -267,6 +287,7 @@ a.bookmark:hover {
 
 .bookmark-name {
   min-width: 0;
+  max-width: 14rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -308,23 +329,13 @@ a.bookmark:hover {
   container-name: groups;
 }
 
+/* Column counts come from features/services.js (layout()), which balances the
+   rows: --group-cols for the groups with few services, --cols inside big groups. */
 .groups {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(var(--group-cols, 1), minmax(0, 1fr));
   gap: 2rem 1.5rem;
   align-items: start;
-}
-
-@container groups (min-width: 34rem) {
-  .groups {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container groups (min-width: 52rem) {
-  .groups {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 /* Groups with 4+ services span the full row as a multi-column grid; smaller
@@ -335,6 +346,11 @@ a.bookmark:hover {
      bottom border and shadow from being clipped at fractional pixel heights. */
   padding: 0 0.375rem 0.5rem;
   margin: 0 -0.375rem -0.5rem;
+}
+
+/* Only long dashboards skip painting off-screen groups: the size estimate is
+   wrong at first, so using it on short pages makes content jump while it loads. */
+.groups-long .group {
   content-visibility: auto;
   contain-intrinsic-size: auto 15rem;
 }
@@ -356,7 +372,7 @@ a.bookmark:hover {
 }
 
 .group-big .group-grid {
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
 }
 
 /* ---------- service card ---------- */
@@ -461,10 +477,11 @@ a.bookmark:hover {
   color: var(--fg-muted);
 }
 
+/* Bottom corner: the actions cover the host line, never the service name. */
 .card-actions {
   position: absolute;
-  top: 0.375rem;
   right: 0.375rem;
+  bottom: 0.375rem;
   z-index: 1;
   display: flex;
   gap: 0.125rem;
@@ -545,8 +562,8 @@ a.bookmark:hover {
 
   .card-actions {
     position: relative;
-    top: auto;
     right: auto;
+    bottom: auto;
     grid-area: actions;
     opacity: 1;
     justify-content: flex-end;
@@ -566,6 +583,16 @@ a.bookmark:hover {
 
   .card-host {
     font-size: 0.625rem;
+  }
+
+  /* Two lines for the name instead of an early ellipsis in the narrow cards. */
+  .card-link {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 
@@ -612,67 +639,6 @@ a.bookmark:hover {
   text-align: center;
   font-size: 0.75rem;
   color: var(--fg-muted);
-}
-
-/* ---------- floating buttons ---------- */
-.fab {
-  position: fixed;
-  bottom: 1.5rem;
-  z-index: var(--z-fab);
-  display: grid;
-  place-items: center;
-  border-radius: 9999px;
-  color: var(--fg);
-  text-decoration: none;
-  transition: transform var(--t) var(--ease), background-color var(--t) var(--ease);
-}
-
-.fab-add {
-  right: 1.5rem;
-  width: 3.5rem;
-  height: 3.5rem;
-  border: 0;
-  background: var(--accent);
-  color: var(--accent-fg);
-  box-shadow: 0 8px 28px -8px var(--accent-glow);
-}
-
-.fab-add svg.icon {
-  width: 1.75rem;
-  height: 1.75rem;
-  stroke-width: 2.2;
-}
-
-.fab-settings {
-  right: 6rem;
-  width: 3rem;
-  height: 3rem;
-}
-
-.fab:hover {
-  transform: scale(1.06);
-}
-
-.fab:active {
-  transform: scale(0.96);
-}
-
-@media (hover: none) {
-  .fab:hover {
-    transform: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .fab-add {
-    right: 1rem;
-    bottom: 1rem;
-  }
-
-  .fab-settings {
-    right: 5rem;
-    bottom: 1rem;
-  }
 }
 
 /* ---------- search palette ---------- */
@@ -852,4 +818,44 @@ dialog.dlg-palette {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-left: auto;
+}
+
+/* Narrow screens: the add button keeps only its icon so the search field stays readable. */
+@media (max-width: 480px) {
+  .head-actions:has(.search-trigger:not([hidden])) .btn-add {
+    width: 3.25rem;
+    padding-inline: 0;
+  }
+
+  .head-actions:has(.search-trigger:not([hidden])) .btn-add span {
+    display: none;
+  }
+}
+
+@media (pointer: coarse), (max-width: 768px) {
+  .bookmark {
+    min-height: 2.75rem;
+  }
+}
+
+/* Phones: the chips use the full width under the logo instead of the narrow text column. */
+@media (max-width: 480px) {
+  .brand {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 0.875rem;
+    align-items: start;
+  }
+
+  .brand-logo {
+    grid-row: 1 / span 3;
+  }
+
+  .brand-text {
+    display: contents;
+  }
+
+  .chips {
+    grid-column: 1 / -1;
+  }
 }

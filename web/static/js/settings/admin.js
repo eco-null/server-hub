@@ -84,7 +84,7 @@ export function mountAdmin(root, env) {
       'li',
       { class: 'list-row list-row-user' },
       h('span', { class: 'list-icon' }, icon('user')),
-      h('div', { class: 'list-main' }, h('p', { class: 'list-title' }, u.username, self ? h('span', { class: 'pill' }, 'you') : null), h('p', { class: 'list-sub' }, u.email)),
+      h('div', { class: 'list-main' }, h('p', { class: 'list-title' }, u.username, self ? h('span', { class: 'pill' }, 'you') : null), h('p', { class: 'list-sub', title: u.email }, u.email)),
       h('div', { class: 'list-meta' }, role.root, h('span', { class: 'pill' + (u.twofa_enabled ? ' pill-ok' : '') }, u.twofa_enabled ? '2FA on' : '2FA off')),
       h(
         'div',

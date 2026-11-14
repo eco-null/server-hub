@@ -66,10 +66,11 @@ function fallbackMessage(status, retryAfter) {
  * @param {{
  *   fetchImpl: typeof fetch,
  *   onUnauthenticated?: (err: ApiError) => void,
+ *   onWrite?: () => void,
  *   timeoutMs?: number,
  * }} opts
  */
-export function createApi({ fetchImpl, onUnauthenticated, timeoutMs = 15000 }) {
+export function createApi({ fetchImpl, onUnauthenticated, onWrite, timeoutMs = 15000 }) {
   /**
    * @param {string} method
    * @param {string} path
@@ -111,6 +112,7 @@ export function createApi({ fetchImpl, onUnauthenticated, timeoutMs = 15000 }) {
       clearTimeout(timer);
     }
 
+    if (res.ok && method !== 'GET' && onWrite) onWrite();
     if (res.status === 204) return null;
 
     /** @type {any} */

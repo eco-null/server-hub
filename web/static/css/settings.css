@@ -81,8 +81,14 @@
 }
 
 .card-title-sm {
+  min-width: 0;
   font-size: 0.9375rem;
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.sub-card-head > * {
+  min-width: 0;
 }
 
 /* ---------- choices: segmented, swatches ---------- */
@@ -248,9 +254,7 @@
 }
 
 .list-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -279,6 +283,10 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.375rem;
+}
+
+.list-title .pill {
+  margin-left: 0.5rem;
 }
 
 .list-row .bookmark-dot {
@@ -381,4 +389,10 @@
 .empty h2 {
   font-size: 1.125rem;
   font-weight: 600;
+}
+
+@media (pointer: coarse), (max-width: 768px) {
+  .settings-nav .chip {
+    min-height: 2.75rem;
+  }
 }

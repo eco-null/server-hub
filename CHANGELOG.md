@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Live demo: a static build of the real web interface with an in-browser mock of the HTTP API, published to GitHub Pages from `demo/` by `.github/workflows/pages.yml`. Data stays in the visitor's browser. See [demo/README.md](demo/README.md) for what is simulated.
+- Favicon set (`favicon.ico`, 32 px PNG, Apple touch icon) and a `theme-color` that follows the chosen theme.
+- Open dashboards refresh when the same browser changes data in another tab (for example in the settings page).
+- `CONTRIBUTING.md`, issue forms and a pull request template.
+- Git ignores `compose.override.yaml`, `certs/`, `*.pem` and `*.key`.
+
+### Changed
+
+- Dashboard layout: Settings is a chip in the header and "Add service" is a button next to the search field, replacing the floating buttons. The sign-out button reads "Sign out", and the greeting no longer repeats the date, which the clock shows. Groups and cards are laid out in balanced columns, and long names show their full text as a tooltip.
+- Search ranking is stricter: every query word must match, matches in the name rank above host and description, and only the service-specific part of a host is matched (not a shared suffix such as `home.arpa`). There is no fuzzy matching, and categories match only by prefix from four letters.
+- Image wallpapers get a veil in the theme's color so text stays readable on any photo.
+- Settings wording: "Links" is now "Services", American spelling ("color"), and "Add Beszel hub" is a primary button.
+- Sign-in and password forms work better with password managers and mobile keyboards.
+- TLS with Docker is enabled through a Git-ignored `compose.override.yaml` that mounts `./certs` and sets the two `SERVERHUB_TLS_*_FILE` variables, instead of uncommenting a volume in `compose.yaml`. `compose.yaml` documents this and works unchanged without an override. Complete example in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#tls).
+- `requirements.lock` and `requirements-dev.lock` were regenerated with a documented, reproducible procedure ([docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#updating-dependencies)); `colorama` is now a declared dev dependency so the dev lock records it for Windows.
+
+### Fixed
+
+- Documentation: the configuration table in the README now matches `.env.example` and `serverhub/config.py` (including the fixed container values for the data directory, host and port, and fractional session days). The `SERVERHUB_LOG_LEVEL` note is now exact: `warning` is the quietest level that still prints the setup token and the configuration warnings, while `error` and `critical` hide them.
+- Documentation: the README no longer tells readers to uncomment a volume in `compose.yaml` for TLS, and its screenshots and captions match the current interface.
+- `.env.example` documents `SERVERHUB_WEB_DIR` and the secret-key generation commands.
+
 ## [2.0.0] - 2026-11-14
 
 Server Hub was rebuilt from scratch. This is a breaking release: **data from the previous version (Supabase tables and single-user configuration) is not migrated, and there is no import path for it.** A new installation starts with an empty SQLite database; recreate your services and bookmarks by hand. The environment variables of the old version (`HUB_*`, `SUPABASE_*`, `SESSION_SECRET`, `BESZEL_*`) are not read any more.

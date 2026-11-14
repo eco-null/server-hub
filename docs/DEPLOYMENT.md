@@ -13,7 +13,7 @@ Contents: [Compose file](#the-compose-file) · [Data volume](#data-volume-and-bi
 | `build: .` and `image: server-hub:latest` | The image is built locally; nothing is pulled from a registry except the Python base image. |
 | `env_file: .env` | Loads your configuration. |
 | `environment:` `SERVERHUB_DATA_DIR`, `SERVERHUB_HOST`, `SERVERHUB_PORT` | Fixed inside the container (`/data`, `0.0.0.0`, `8642`). They override the same names in `.env`. Change the published port instead (below). |
-| `ports: "${SERVERHUB_PUBLISH_PORT:-8642}:8642"` | Publishes the container port on all host interfaces. Bind it to one address by editing the line, for example `"192.168.1.10:8642:8642"`. |
+| `ports: "${SERVERHUB_PUBLISH_PORT:-8642}:8642"` | Publishes the container port on all host interfaces. To bind it to one address, replace the list in `compose.override.yaml` (see [Local changes](#local-changes-composeoverrideyaml)), for example `"192.168.1.10:8642:8642"`. |
 | `volumes: server-hub-data:/data` | Named volume with the SQLite database. |
 | `read_only: true` and `tmpfs: /tmp` | The root filesystem cannot be written; only `/data` and a 16 MB in-memory `/tmp` can. The application files in the image cannot be modified at runtime. |
 | `cap_drop: ALL` | Removes every Linux capability; the app needs none (it listens on a port above 1024). |
@@ -24,11 +24,17 @@ Contents: [Compose file](#the-compose-file) · [Data volume](#data-volume-and-bi
 
 The `Dockerfile` creates a system user `serverhub` with uid and gid `10001`, sets `/data` to mode `0700` owned by that user, and runs the server as that user. It declares a `HEALTHCHECK` (see [Health check and logs](#health-check-and-logs)).
 
+### Local changes: compose.override.yaml
+
+Do not edit `compose.yaml`: your edit would conflict on the next `git pull`. Put local changes (TLS certificates, a bind-mounted data directory, a restricted port binding) in a file named `compose.override.yaml` next to it. Docker Compose reads that file automatically on every `docker compose` command, merges it over `compose.yaml`, and Git ignores it (see `.gitignore`). Without the file, `compose.yaml` works as it is.
+
+How the merge works: `environment` entries are merged by name; `volumes` entries are merged by the container path, so an entry for `/data` replaces the named volume and an entry for a new path such as `/certs` is added; a plain `ports` list is added to the original one (to replace it, tag the list `!override`, which needs Docker Compose 2.24 or newer). Check the result with `docker compose config`. If you start Compose with explicit `-f` options, the override file is not read automatically; list it yourself (`-f compose.yaml -f compose.override.yaml`).
+
 ## Data volume and bind mounts
 
 The default is a named volume (`server-hub-data`). Docker creates it with the right owner, so nothing needs to be done.
 
-If you prefer a directory on the host, replace the volume line in `compose.yaml` and set the owner yourself. The container runs as uid `10001` with a read-only root filesystem, so it cannot fix permissions:
+If you prefer a directory on the host, mount it in `compose.override.yaml` (it replaces the named volume for `/data`) and set the owner yourself. The container runs as uid `10001` with a read-only root filesystem, so it cannot fix permissions:
 
 ```bash
 mkdir -p data
@@ -37,6 +43,9 @@ chmod 700 data
 ```
 
 ```yaml
+# compose.override.yaml
+services:
+  server-hub:
     volumes:
       - ./data:/data
 ```
@@ -67,27 +76,37 @@ The certificate and key are read once at start. After renewing, restart: `docker
 
 Use a full-chain PEM certificate and its private key from your own CA, from Let's Encrypt (for a private name, use the DNS challenge) or from a tool such as `tailscale cert`.
 
-1. Put the files in `./certs` next to `compose.yaml`, and make the key readable by uid `10001`:
+1. Put the files in a `certs` directory next to `compose.yaml`, and make them readable by uid `10001`, the user the container runs as. The container has no capabilities, so not even its root user could bypass file permissions; only the file mode and owner count. Copy real files, not symlinks: a symlink that points outside `certs` (as in Let's Encrypt's `live/` directory) is not visible inside the container.
 
    ```bash
    mkdir -p certs
-   cp fullchain.pem privkey.pem certs/
+   cp -L fullchain.pem privkey.pem certs/
    sudo chown 10001:10001 certs/privkey.pem
    chmod 600 certs/privkey.pem
    chmod 644 certs/fullchain.pem
+   chmod 755 certs
    ```
 
-2. In `compose.yaml`, uncomment the volume line under `volumes:`:
+   Create `certs` before the first start: if the host directory is missing, Docker creates an empty root-owned one and the server stops with `TLS file not found`.
+
+2. Create `compose.override.yaml` next to `compose.yaml` (Git ignores it, so updates never conflict). Copy it as it is; the two paths are inside the container:
 
    ```yaml
+   # compose.override.yaml: local settings, merged into compose.yaml automatically
+   services:
+     server-hub:
+       volumes:
          - ./certs:/certs:ro
+       environment:
+         SERVERHUB_TLS_CERT_FILE: /certs/fullchain.pem
+         SERVERHUB_TLS_KEY_FILE: /certs/privkey.pem
    ```
+
+   The mount is read-only, which is all the server needs: it reads both files once at start and writes nothing to `/certs`. The container's root filesystem is read-only too, so there is nowhere else to put certificates; the volume is the only way in. (Setting the two variables in `.env` also works; use one place, not both.) With a different file name, change the paths to match.
 
 3. In `.env`:
 
    ```bash
-   SERVERHUB_TLS_CERT_FILE=/certs/fullchain.pem
-   SERVERHUB_TLS_KEY_FILE=/certs/privkey.pem
    SERVERHUB_PUBLIC_URL=https://hub.example.org:8642
    ```
 
@@ -96,6 +115,7 @@ Use a full-chain PEM certificate and its private key from your own CA, from Let'
 4. Restart and check:
 
    ```bash
+   docker compose config -q   # the override file is valid
    docker compose up -d
    docker compose logs server-hub | grep listening
    ```
@@ -116,7 +136,7 @@ sudo chown 10001:10001 certs/privkey.pem
 chmod 600 certs/privkey.pem
 ```
 
-Then follow steps 2 to 4 above. Browsers will warn until you trust `certs/fullchain.pem` on each client device. The `-addext` option needs OpenSSL 1.1.1 or newer.
+Then follow steps 2 to 4 above (`chmod 755 certs` as in step 1 too, and `chmod 644 certs/fullchain.pem`). Browsers will warn until you trust `certs/fullchain.pem` on each client device. The `-addext` option needs OpenSSL 1.1.1 or newer.
 
 ## Running behind a tunnel or proxy
 
@@ -132,7 +152,7 @@ SERVERHUB_ALLOWED_HOSTS=hub.example.org
 - `SERVERHUB_TRUSTED_PROXIES`: the source address (CIDR) of the proxy as Server Hub sees it (`172.18.0.0/16` above is only an example of a Docker network range). Only connections from these ranges may set `X-Forwarded-For` and `X-Forwarded-Proto`. Find the address in the proxy's own logs, or check the peer address the server sees. If you leave this empty, every visitor appears to come from the proxy, so rate limits and connection caps are shared by all of them. The proxy must overwrite `X-Forwarded-For` and `X-Forwarded-Proto` rather than pass client-supplied values through.
 - `SERVERHUB_ALLOWED_HOSTS`: any other host name the proxy forwards in the `Host` header. If the proxy rewrites `Host` to an address or `localhost`, nothing is needed.
 
-With an `https` public URL, no TLS in Server Hub and no trusted proxies configured, the server logs the "Secure cookies are on ... plain HTTP" warning. It is harmless if users only ever open the `https://` URL; setting `SERVERHUB_TRUSTED_PROXIES` silences it. Publish the port only to the proxy (for example `"127.0.0.1:8642:8642"` in `compose.yaml`) so nobody can bypass it.
+With an `https` public URL, no TLS in Server Hub and no trusted proxies configured, the server logs the "Secure cookies are on ... plain HTTP" warning. It is harmless if users only ever open the `https://` URL; setting `SERVERHUB_TRUSTED_PROXIES` silences it. Publish the port only to the proxy so nobody can bypass it: in `compose.override.yaml` write `ports: !override` followed by `- "127.0.0.1:8642:8642"` under the `server-hub` service (see [Local changes](#local-changes-composeoverrideyaml)).
 
 ## First run and users
 
@@ -222,6 +242,8 @@ Version 2 does not migrate data from the previous (Supabase) version; it starts 
 
 ```bash
 openssl rand -hex 24
+# without openssl:
+python -c "import secrets; print(secrets.token_hex(24))"
 ```
 
 Sub-keys are derived from it for two purposes: encrypting TOTP secrets and Beszel passwords, and keying the hashes of 2FA recovery codes. Passwords (Argon2id) and sessions do not depend on it.
@@ -278,7 +300,7 @@ Logs go to standard output:
 docker compose logs -f server-hub
 ```
 
-`SERVERHUB_LOG_LEVEL=info` is the default and prints start-up information, the setup token while no account exists, warnings and errors. Access logs are printed only at `debug`. Keep the level at `warning`, `info` or `debug` so configuration warnings stay visible.
+`SERVERHUB_LOG_LEVEL=info` is the default and prints start-up information, the setup token while no account exists, warnings and errors. Access logs are printed only at `debug`, which also turns on verbose output from the HTTP libraries; use it for troubleshooting only. The allowed values are `critical`, `error`, `warning`, `info` and `debug`. The setup token and the configuration warnings are logged as warnings, so `warning` is the quietest level that still shows them; `error` and `critical` hide them.
 
 ## Troubleshooting
 
@@ -296,5 +318,5 @@ docker compose logs -f server-hub
 | Beszel: "Stored password cannot be decrypted" | `SERVERHUB_SECRET_KEY` changed | Restore the old key, or re-enter the Beszel password. |
 | Host CPU, memory or disk show no values | Host statistics are read from `/proc` (Linux) and are admin-only | Use a Linux host and an admin account. |
 | Permission denied on `/data` with a bind mount | The host directory is not owned by uid `10001` | `sudo chown -R 10001:10001 ./data` |
-| TLS: `TLS file not found` or "must be set together" at start | Wrong path inside the container, volume not mounted, or only one of the two variables set | Check the `./certs:/certs:ro` volume and both variables. |
+| TLS: `TLS file not found` or "must be set together" at start | Wrong path inside the container, volume not mounted, or only one of the two variables set | Check that `compose.override.yaml` mounts `./certs:/certs:ro` and sets both variables (`docker compose config` shows the merged result). |
 | TLS: the container is unhealthy or the key cannot be read | The key file is not readable by uid `10001` | `sudo chown 10001:10001 certs/privkey.pem && chmod 600 certs/privkey.pem` |

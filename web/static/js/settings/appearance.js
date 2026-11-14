@@ -1,5 +1,5 @@
 // @ts-check
-/** Settings: theme, accent colour, wallpaper, grid overlay. */
+/** Settings: theme, accent color, wallpaper, grid overlay. */
 
 import { h } from '../dom.js';
 import { createField, createRadioGroup, createSwitch } from '../ui.js';
@@ -47,13 +47,13 @@ export function mountAppearance(root, env) {
 
   // Accent
   const accent = createRadioGroup({
-    legend: 'Accent colour',
+    legend: 'Accent color',
     value: ACCENTS.some(([c]) => c.toLowerCase() === s0.accent.toLowerCase()) ? ACCENTS.find(([c]) => c.toLowerCase() === s0.accent.toLowerCase())?.[0] ?? null : null,
     className: 'choice-swatches',
     options: ACCENTS.map(([c, name]) => ({ value: c, label: name, title: `${name} (${c})`, content: h('span', { class: 'swatch', style: { '--swatch': c } }) })),
     onChange: (v) => store.update({ accent: v }),
   });
-  const custom = createField({ label: 'Custom colour', control: h('input', { type: 'color', value: isHex(s0.accent) ? s0.accent : '#5e6ad2' }), className: 'field-inline' });
+  const custom = createField({ label: 'Custom color', control: h('input', { type: 'color', value: isHex(s0.accent) ? s0.accent : '#5e6ad2' }), className: 'field-inline' });
   custom.input.addEventListener('input', () => store.update({ accent: custom.input.value }));
   env.register('accent', custom);
 

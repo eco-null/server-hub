@@ -35,6 +35,7 @@ export function createHeader({ store, api }) {
       const label = themeLabel(s.theme);
       const iconId = s.theme === 'auto' ? 'ui-theme-auto' : s.theme === 'light' ? 'ui-theme-light' : 'ui-theme-dark';
       themeBtn.replaceChildren(icon(iconId), h('span', null, `Theme: ${label}`));
+      themeBtn.title = `Theme: ${label}`;
       themeBtn.setAttribute('aria-label', `Theme: ${label}. Activate to switch theme.`);
     },
     /** @param {import('../types.js').User | null} user */

@@ -19,7 +19,7 @@ import { fieldMessage } from './lib/format.js';
  *   label: string, name?: string, type?: string, value?: string, hint?: string, placeholder?: string,
  *   required?: boolean, autocomplete?: string, inputMode?: string, maxLength?: number, minLength?: number,
  *   pattern?: string, control?: HTMLElement, className?: string, autofocus?: boolean, spellcheck?: boolean,
- *   labelHidden?: boolean, readOnly?: boolean,
+ *   labelHidden?: boolean, readOnly?: boolean, enterKeyHint?: string,
  * }} o
  * @returns {Field}
  */
@@ -39,6 +39,9 @@ export function createField(o) {
       minlength: o.minLength,
       pattern: o.pattern,
       spellcheck: o.spellcheck === undefined ? undefined : String(o.spellcheck),
+      // Fields that are not prose (usernames, addresses, codes) must not be auto-capitalised.
+      autocapitalize: o.spellcheck === false ? 'off' : undefined,
+      enterkeyhint: o.enterKeyHint,
       readOnly: o.readOnly,
       'data-autofocus': o.autofocus,
     });

@@ -96,8 +96,8 @@ function viewSignIn(state) {
   const notice = createNotice();
   if (pendingMessage) notice.show('info', pendingMessage);
   else if (params.get('expired') === '1') notice.show('info', 'Your session has expired. Please sign in again.');
-  const identifier = createField({ label: 'Username or email', name: 'identifier', autocomplete: 'username', required: true, autofocus: true, spellcheck: false });
-  const password = createField({ label: 'Password', name: 'password', type: 'password', autocomplete: 'current-password', required: true });
+  const identifier = createField({ label: 'Username or email', name: 'identifier', autocomplete: 'username', required: true, autofocus: true, spellcheck: false, enterKeyHint: 'next' });
+  const password = createField({ label: 'Password', name: 'password', type: 'password', autocomplete: 'current-password', required: true, enterKeyHint: 'go' });
   const f = form({
     submitLabel: 'Sign in',
     busyLabel: 'Signing in…',

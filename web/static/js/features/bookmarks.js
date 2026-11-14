@@ -30,7 +30,7 @@ export function renderBookmarkChips(bookmarks) {
     const dot = h('span', { class: 'bookmark-dot', 'aria-hidden': 'true', style: isHex(b.color) ? { '--dot': b.color } : {} });
     const label = h('span', { class: 'bookmark-name' }, b.name);
     return href
-      ? h('a', { class: 'bookmark glass', href, target: '_blank', rel: 'noopener noreferrer' }, dot, label, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
+      ? h('a', { class: 'bookmark glass', href, title: b.name, target: '_blank', rel: 'noopener noreferrer' }, dot, label, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
       : h('span', { class: 'bookmark glass bookmark-invalid', title: 'Not a valid web address' }, dot, label);
   });
 }

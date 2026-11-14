@@ -11,6 +11,8 @@ export const THEME_MODES = /** @type {const} */ (['auto', 'light', 'dark']);
 
 /** Surfaces text sits on; accent-coloured text must reach AA against these. */
 const BG = { dark: '#0b101a', light: '#f3f6fb' };
+/** Page background colours reported to the browser (theme-color). */
+const BROWSER_UI = { dark: '#080b12', light: '#f3f6fb' };
 const DEFAULT_ACCENT = '#5E6AD2';
 
 /** @param {string} mode */
@@ -41,6 +43,17 @@ export function accentVars(accent) {
 }
 
 /**
+ * Makes the browser UI colour follow the chosen theme instead of the OS one.
+ * @param {boolean} dark
+ */
+export function setThemeColor(dark) {
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
+    m.removeAttribute('media');
+    m.setAttribute('content', BROWSER_UI[dark ? 'dark' : 'light']);
+  }
+}
+
+/**
  * Applies theme + accent to the document and remembers them for the next
  * first paint (device-level, survives logout).
  * @param {string} mode
@@ -51,6 +64,7 @@ export function applyTheme(mode, accent) {
   const root = document.documentElement;
   root.classList.toggle('dark', dark);
   root.classList.toggle('light', !dark);
+  setThemeColor(dark);
   const vars = accentVars(accent);
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
   const prev = readJson(storage, UI_KEY) || {};

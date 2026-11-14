@@ -8,9 +8,17 @@ import { h } from '../dom.js';
 import { icon, serviceIcon } from '../icons.js';
 import { resolveCategory } from '../categorize.js';
 import { hostOf, safeUrl } from '../lib/url.js';
+import { balancedColumns, columnsFor } from '../lib/layout.js';
 
 /** Groups with at least this many services span the full row. */
 export const BIG_GROUP = 4;
+
+/** Minimum widths in rem (match the CSS): one group column, one card in a big group. */
+const GROUP_MIN_REM = 17;
+const CARD_MIN_REM = 15;
+const MAX_GROUP_COLUMNS = 3;
+/** From this many services on, off-screen groups are not painted (see .groups-long). */
+const LONG_LIST = 150;
 
 const STATUS_TEXT = {
   up: 'Online',
@@ -53,6 +61,27 @@ export function createServicesView({ root, onEdit, onDelete }) {
   let cardLinks = new Map();
 
   /**
+   * Sets the column counts from the available width, so rows stay balanced:
+   * the small groups share rows evenly and a big group never ends with a lone card.
+   * Cards keep their minimum width; only the number of columns changes.
+   */
+  function layout() {
+    const width = root.clientWidth;
+    if (!width) return;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const gap = 0.75 * rem;
+    const small = root.querySelectorAll('.group-small').length;
+    const groupCols = Math.min(MAX_GROUP_COLUMNS, columnsFor(width, GROUP_MIN_REM * rem, 1.5 * rem));
+    root.style.setProperty('--group-cols', String(balancedColumns(small, groupCols)));
+    for (const grid of root.querySelectorAll('.group-big .group-grid')) {
+      const cols = balancedColumns(grid.childElementCount, columnsFor(width, CARD_MIN_REM * rem, gap));
+      /** @type {HTMLElement} */ (grid).style.setProperty('--cols', String(cols));
+    }
+  }
+
+  if (typeof ResizeObserver === 'function') new ResizeObserver(layout).observe(root);
+
+  /**
    * @param {import('../types.js').Service} s
    * @param {boolean} showStatus
    */
@@ -60,7 +89,7 @@ export function createServicesView({ root, onEdit, onDelete }) {
     const href = safeUrl(s.url);
     const label = h('span', null, s.name);
     const link = href
-      ? h('a', { class: 'card-link', href, target: '_blank', rel: 'noopener noreferrer' }, label, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
+      ? h('a', { class: 'card-link', href, title: s.name, target: '_blank', rel: 'noopener noreferrer' }, label, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
       : h('span', { class: 'card-link card-link-invalid', title: 'This address is not a valid web URL.' }, label);
     if (href) cardLinks.set(s.id, link);
 
@@ -81,8 +110,8 @@ export function createServicesView({ root, onEdit, onDelete }) {
         'div',
         { class: 'card-body' },
         h('div', { class: 'card-title' }, link, status),
-        s.description ? h('p', { class: 'card-desc' }, s.description) : null,
-        h('p', { class: 'card-host mono' }, hostOf(s.url)),
+        s.description ? h('p', { class: 'card-desc', title: s.description }, s.description) : null,
+        h('p', { class: 'card-host mono', title: hostOf(s.url) }, hostOf(s.url)),
       ),
       h(
         'div',
@@ -114,7 +143,10 @@ export function createServicesView({ root, onEdit, onDelete }) {
           );
         }),
       );
+      root.classList.toggle('groups-long', services.length > LONG_LIST);
+      layout();
     },
+    layout,
     /**
      * Updates the dots in place from `/api/status` data.
      * @param {Record<string, { state: string }>} statuses

@@ -37,6 +37,9 @@ const LIGHT = Object.freeze({
 
 export const GRADIENT_IDS = Object.freeze(Object.keys(DARK));
 
+/** Veil laid over image wallpapers (see wallpaperSpec). */
+const IMAGE_SCRIM = Object.freeze({ dark: 'rgba(5, 8, 14, 0.78)', light: 'rgba(250, 252, 255, 0.86)' });
+
 /** Flat colours used for the preset swatches in settings. */
 export const GRADIENT_SWATCH = Object.freeze({
   dark: { aurora: '#0f2e1f', dusk: '#2a0f2e', ocean: '#0a1f33', forest: '#0a3321', mono: '#141414', grid: '#111111', slate: '#1a1a1a', sage: '#143322' },
@@ -65,12 +68,16 @@ export function wallpaperSpec(w, dark) {
   const showGrid = !w || w.showGrid !== false;
   const grid = dark ? GRID_DARK : GRID_LIGHT;
   const gridSize = w && w.gradient === 'grid' && mode === 'gradient' ? '44px 44px' : '32px 32px';
-  /** @param {string} base */
-  const build = (base) => ({
-    image: showGrid ? `${grid}, ${base}` : base,
-    size: showGrid ? `${gridSize}, ${gridSize}, cover` : 'cover',
-    repeat: showGrid ? 'repeat, repeat, no-repeat' : 'no-repeat',
-  });
+  /**
+   * @param {string} base
+   * @param {string} [scrim] extra layer between the grid and the base
+   */
+  const build = (base, scrim) => {
+    const layers = [...(showGrid ? [grid] : []), ...(scrim ? [scrim] : []), base];
+    const sizes = [...(showGrid ? [gridSize, gridSize] : []), ...(scrim ? ['cover'] : []), 'cover'];
+    const repeats = [...(showGrid ? ['repeat', 'repeat'] : []), ...(scrim ? ['no-repeat'] : []), 'no-repeat'];
+    return { image: layers.join(', '), size: sizes.join(', '), repeat: repeats.join(', ') };
+  };
 
   if (mode === 'gradient') {
     const palette = dark ? DARK : LIGHT;
@@ -81,33 +88,14 @@ export function wallpaperSpec(w, dark) {
   if (mode === 'image') {
     const url = cssUrl(w && w.url);
     if (url) {
-      const b = build(url);
+      // A photo can be any brightness and its pixels cannot always be read (no CORS), so a
+      // veil in the theme's own colour keeps text readable on every photo.
+      const veil = dark ? IMAGE_SCRIM.dark : IMAGE_SCRIM.light;
+      const b = build(url, `linear-gradient(${veil}, ${veil})`);
       return { kind: 'image', ...b, key: `i|${w && w.url}|${dark}|${showGrid}`, showGrid };
     }
   }
   return { kind: 'none', image: null, size: '', repeat: '', key: 'none', showGrid };
-}
-
-/**
- * Average luminance of an image: true when it is dark. Cross-origin images
- * without CORS cannot be read; those default to dark.
- * @param {HTMLImageElement} img
- */
-function imageIsDark(img) {
-  try {
-    const c = document.createElement('canvas');
-    c.width = 32;
-    c.height = 32;
-    const ctx = c.getContext('2d');
-    if (!ctx) return true;
-    ctx.drawImage(img, 0, 0, 32, 32);
-    const d = ctx.getImageData(0, 0, 32, 32).data;
-    let sum = 0;
-    for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    return sum / (d.length / 4) < 128;
-  } catch {
-    return true;
-  }
 }
 
 /**
@@ -174,7 +162,7 @@ export function createWallpaper(container, hooks = {}) {
       img.onload = () => {
         if (mine !== seq) return;
         addLayer(spec);
-        setReadability(imageIsDark(img) ? 'dark' : 'light');
+        setReadability(dark ? 'dark' : 'light');
       };
       img.onerror = () => {
         if (mine !== seq) return;

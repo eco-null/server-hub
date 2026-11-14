@@ -1,0 +1,46 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the troubleshooting table in docs/DEPLOYMENT.md first. Do not paste secrets: remove the setup token, the secret key and passwords from logs.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Output of `git rev-parse --short HEAD`, or the release tag.
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run Server Hub?
+      options:
+        - Docker Compose
+        - Without Docker
+        - Live demo (GitHub Pages)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines and browser console errors
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: Browser and operating system

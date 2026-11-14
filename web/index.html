@@ -6,7 +6,12 @@
   <meta name="color-scheme" content="dark light">
   <meta name="description" content="Server Hub: your apps and services, reachable from one place.">
   <title>Server Hub</title>
-  <link rel="icon" type="image/png" href="/static/img/logo.png">
+  <meta name="theme-color" content="#080b12" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f3f6fb" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="/static/img/favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/static/img/logo.png">
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
   <link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
   <script src="/static/js/theme-boot.js"></script>
   <link rel="stylesheet" href="/static/css/tokens.css">
@@ -36,12 +41,16 @@
               <span class="chip chip-user" id="user-chip" hidden></span>
               <button type="button" class="chip" id="logout-btn">
                 <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-logout"/></svg>
-                <span>Log out</span>
+                <span>Sign out</span>
               </button>
               <button type="button" class="chip" id="theme-btn" aria-label="Switch theme">
                 <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-theme-auto"/></svg>
                 <span>Theme</span>
               </button>
+              <a class="chip" href="/settings" id="settings-link">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-settings"/></svg>
+                <span>Settings</span>
+              </a>
             </div>
           </div>
         </div>
@@ -51,31 +60,18 @@
         </div>
       </div>
 
-      <button type="button" class="search-trigger glass glass-blur" id="search-btn" data-feature="search" aria-haspopup="dialog" aria-keyshortcuts="/">
-        <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-search"/></svg>
-        <span class="search-trigger-text">Search services or the web…</span>
-        <kbd aria-hidden="true">/</kbd>
-      </button>
+      <div class="head-actions">
+        <button type="button" class="search-trigger glass glass-blur" id="search-btn" data-feature="search" aria-haspopup="dialog" aria-keyshortcuts="/">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-search"/></svg>
+          <span class="search-trigger-text">Search services or the web…</span>
+          <kbd aria-hidden="true">/</kbd>
+        </button>
+        <button type="button" class="btn btn-primary btn-add" id="add-service" aria-label="Add service" title="Add service">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-plus"/></svg>
+          <span>Add service</span>
+        </button>
+      </div>
     </header>
-
-    <aside class="page-aside" aria-label="Overview">
-      <section class="glass glass-blur widget" aria-labelledby="bookmarks-title">
-        <div class="widget-head">
-          <h2 class="eyebrow" id="bookmarks-title">Bookmarks</h2>
-          <button type="button" class="btn btn-sm" id="bookmarks-add" aria-expanded="false" aria-controls="bookmarks-form-host">
-            <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-plus"/></svg>
-            <span>Add</span>
-          </button>
-        </div>
-        <div id="bookmarks" class="bookmarks"></div>
-        <div id="bookmarks-form-host"></div>
-      </section>
-
-      <section class="glass glass-blur widget" id="stats-card" data-feature="stats" aria-labelledby="stats-title" hidden>
-        <h2 class="eyebrow" id="stats-title">System</h2>
-        <div id="stats-body" class="stats-body"></div>
-      </section>
-    </aside>
 
     <main class="page-main">
       <div class="banner banner-info banner-row" id="offline-banner" role="status" hidden>
@@ -115,13 +111,25 @@
         <p class="mono">Server Hub</p>
       </footer>
     </main>
-  </div>
 
-  <a href="/settings" class="fab fab-settings glass" aria-label="Open settings" title="Settings">
-    <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-settings"/></svg>
-  </a>
-  <button type="button" class="fab fab-add" id="fab-add" aria-label="Add service" title="Add service">
-    <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-plus"/></svg>
-  </button>
+    <aside class="page-aside" aria-label="Overview">
+      <section class="glass glass-blur widget" aria-labelledby="bookmarks-title">
+        <div class="widget-head">
+          <h2 class="eyebrow" id="bookmarks-title">Bookmarks</h2>
+          <button type="button" class="btn btn-sm" id="bookmarks-add" aria-expanded="false" aria-controls="bookmarks-form-host">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-plus"/></svg>
+            <span>Add</span>
+          </button>
+        </div>
+        <div id="bookmarks" class="bookmarks"></div>
+        <div id="bookmarks-form-host"></div>
+      </section>
+
+      <section class="glass glass-blur widget" id="stats-card" data-feature="stats" aria-labelledby="stats-title" hidden>
+        <h2 class="eyebrow" id="stats-title">System</h2>
+        <div id="stats-body" class="stats-body"></div>
+      </section>
+    </aside>
+  </div>
 </body>
 </html>

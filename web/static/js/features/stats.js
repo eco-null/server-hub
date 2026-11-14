@@ -55,7 +55,7 @@ export function createStatsWidget(o) {
       // Hosts that report no metrics at all (all null) add nothing, so the widget can hide.
       const hostBars = bars(s);
       if (hostBars.length) {
-        blocks.push(h('div', { class: 'sys' }, h('div', { class: 'sys-head' }, h('span', { class: 'sys-name' }, 'This server'), h('span', { class: 'sys-meta mono' }, hostName)), ...hostBars));
+        blocks.push(h('div', { class: 'sys' }, h('div', { class: 'sys-head' }, h('span', { class: 'sys-name' }, 'This server'), h('span', { class: 'sys-meta mono', title: hostName }, hostName)), ...hostBars));
       }
     }
 
@@ -64,7 +64,7 @@ export function createStatsWidget(o) {
       for (const inst of instances) {
         const prefix = instances.length > 1 ? `${inst.name} · ` : '';
         if (!inst.ok) {
-          blocks.push(h('div', { class: 'sys' }, h('div', { class: 'sys-head' }, h('span', { class: 'sys-name' }, inst.name || 'Beszel'), h('span', { class: 'sys-meta' }, 'Unreachable'))));
+          blocks.push(h('div', { class: 'sys' }, h('div', { class: 'sys-head' }, h('span', { class: 'sys-name', title: inst.name || 'Beszel' }, inst.name || 'Beszel'), h('span', { class: 'sys-meta' }, 'Unreachable'))));
           continue;
         }
         for (const sys of inst.systems || []) {
@@ -73,7 +73,7 @@ export function createStatsWidget(o) {
             h(
               'div',
               { class: 'sys' },
-              h('div', { class: 'sys-head' }, h('span', { class: 'sys-name', title: sys.host || '' }, prefix + sys.name), h('span', { class: 'sys-meta mono' }, [sys.status, up].filter(Boolean).join(' · '))),
+              h('div', { class: 'sys-head' }, h('span', { class: 'sys-name', title: [prefix + sys.name, sys.host].filter(Boolean).join(' · ') }, prefix + sys.name), h('span', { class: 'sys-meta mono' }, [sys.status, up].filter(Boolean).join(' · '))),
               ...bars(sys),
             ),
           );

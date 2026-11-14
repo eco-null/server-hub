@@ -64,6 +64,27 @@ jobs:
           node --version
           npm test
 
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Demo tests
+        working-directory: demo
+        run: |
+          set -euo pipefail
+          node --version
+          npm test
+
+      - name: Build demo
+        run: |
+          set -euo pipefail
+          node demo/build.js --base /server-hub/ --out demo/dist
+
   docker:
     runs-on: ubuntu-latest
     steps:
