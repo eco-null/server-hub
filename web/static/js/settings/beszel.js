@@ -19,7 +19,7 @@ export function mountBeszel(root, env) {
   const list = h('div', { class: 'stack' });
   const empty = h('p', { class: 'muted' }, 'No hubs yet. Add a Beszel hub to see CPU, memory and disk usage of your servers on the dashboard.');
   const loadNote = h('p', { class: 'muted', role: 'status' }, 'Loading…');
-  const addBtn = h('button', { type: 'button', class: 'btn', onclick: () => addDraft() }, icon('ui-plus'), h('span', null, 'Add Beszel hub'));
+  const addBtn = h('button', { type: 'button', class: 'btn btn-primary', onclick: () => addDraft() }, icon('ui-plus'), h('span', null, 'Add Beszel hub'));
   root.append(h('p', { class: 'muted panel-intro' }, 'Connect one or more Beszel hubs. Passwords are stored on the server and never shown again.'), loadNote, list, empty, h('div', null, addBtn));
   empty.hidden = true;
 

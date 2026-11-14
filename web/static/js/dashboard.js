@@ -6,6 +6,7 @@ import { createPageContext } from './page.js';
 import { createState } from './state.js';
 import { byId } from './dom.js';
 import { canUseShortcut } from './lib/hotkeys.js';
+import { onChanged } from './lib/sync.js';
 import { isModalOpen } from './dialog.js';
 import { toastError } from './toast.js';
 import { createHeader } from './features/header.js';
@@ -65,13 +66,13 @@ const services = createServicesView({
       },
       onDeleted: (id) => {
         state.set({ services: state.get().services.filter((x) => x.id !== id) });
-        $('fab-add').focus();
+        $('add-service').focus();
       },
     }),
   onDelete: async (s) => {
     if (await removeService(api, s)) {
       state.set({ services: state.get().services.filter((x) => x.id !== s.id) });
-      $('fab-add').focus();
+      $('add-service').focus();
     }
   },
 });
@@ -109,10 +110,11 @@ let lastStatsFeature = store.get().features.stats;
 function renderServices() {
   const s = state.get();
   const showStatus = store.get().features.statusChecks;
+  // Visible before rendering so the grid can measure its width and pick balanced columns at once.
+  groupsEl.hidden = s.services.length === 0;
   services.render(s.services, { showStatus });
   services.applyStatuses(s.statuses);
   skeletons.hidden = true;
-  groupsEl.hidden = s.services.length === 0;
   emptyState.hidden = !(s.loaded && s.services.length === 0);
   void status.refresh();
 }
@@ -182,6 +184,7 @@ stats.start();
 status.start();
 
 // ---------- interactions ----------
+let lastLoad = Date.now();
 byId('retry-load').addEventListener('click', () => {
   skeletons.hidden = false;
   void load();
@@ -193,14 +196,14 @@ function openSearch() {
   openSearchPalette({ getServices: () => state.get().services, getSearch: () => store.get().search });
 }
 byId('search-btn').addEventListener('click', openSearch);
-byId('fab-add').addEventListener('click', () =>
+byId('add-service').addEventListener('click', () =>
   openAddService({
     api,
     defaultDomain: store.get().defaultDomain,
     onSaved: (svc) => state.set({ services: [...state.get().services, svc] }),
   }),
 );
-byId('empty-add').addEventListener('click', () => byId('fab-add').click());
+byId('empty-add').addEventListener('click', () => byId('add-service').click());
 
 document.addEventListener('keydown', (e) => {
   if (e.key === '/' && canUseShortcut(e, { modalOpen: isModalOpen() })) {
@@ -209,8 +212,18 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Another tab (settings, a second dashboard) changed something: reload once the burst of writes settles.
+/** @type {ReturnType<typeof setTimeout> | undefined} */
+let syncTimer;
+onChanged(() => {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    lastLoad = Date.now();
+    void load();
+  }, 400);
+});
+
 // Refresh when coming back to a tab that has been in the background for a while.
-let lastLoad = Date.now();
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && Date.now() - lastLoad > 60000) {
     lastLoad = Date.now();

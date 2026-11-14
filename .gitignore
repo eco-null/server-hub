@@ -31,7 +31,12 @@ data/
 .env
 .env.*
 !.env.example
+# Local Compose customization (TLS mount, bind-mounted data) and key material
+compose.override.yaml
+compose.override.yml
 certs/
+*.pem
+*.key
 
 # Personal data exported from the settings page - never commit
 server-hub-backup*.json

@@ -1,8 +1,21 @@
 # Exact runtime dependency set (direct + transitive) used by the Docker image,
 # with sha256 hashes of every published file. Install with:
 #   pip install --require-hashes --no-deps -r requirements.lock
-# Regenerate after changing pyproject.toml (same pins + hashes from PyPI), e.g.
-#   pip-compile --generate-hashes --strip-extras -o requirements.lock pyproject.toml
+# Generated with pip-tools 7.6.2 (pip 26.1.2, Python 3.14.6); the full
+# procedure is in docs/DEVELOPMENT.md ("Updating dependencies"). Core command:
+#   pip-compile --generate-hashes --strip-extras --no-annotate --no-header \
+#       --output-file requirements.lock pyproject.toml
+# Re-running it keeps the pins already in this file; --upgrade or
+# --upgrade-package NAME moves them.
+# Exact runtime dependency set (direct + transitive) used by the Docker image,
+# with sha256 hashes of every published file. Install with:
+#   pip install --require-hashes --no-deps -r requirements.lock
+# Generated with pip-tools 7.6.2 (pip 26.1.2, Python 3.14.6); procedure in
+# docs/DEVELOPMENT.md ("Updating dependencies"). The core command is:
+#   pip-compile --generate-hashes --strip-extras --no-annotate --no-header \
+#       --output-file requirements.lock pyproject.toml
+# Re-running it keeps the pins already in this file; pass --upgrade or
+# --upgrade-package NAME to move them.
 annotated-types==0.8.0 \
     --hash=sha256:13b2beaad985e05e2d6407ee4c4f35590b11f8d693a258a561055cac8f64cab7 \
     --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
@@ -239,10 +252,7 @@ pycparser==3.12 \
 pydantic==2.14.3 \
     --hash=sha256:1054f237f4d4733e5a30e1e2333bd33a2004ab9ab1510bd053a9a31bb48e232d \
     --hash=sha256:3f7b347782ab7e4cf4c798496ae3a82787d9f21ec12676a9c564355eeef8daa8
-pydantic-settings==2.16.3 \
-    --hash=sha256:10e36f616623ebb586c05ca3d3cd22927146869db413d4f14c20c514442a1337 \
-    --hash=sha256:d1db16a2d34006323a1b42c0640898da58adfbad7ec30baaa9e2b18aafc08999
-pydantic_core==2.50.4 \
+pydantic-core==2.50.4 \
     --hash=sha256:0001d6920e3a5d92758cda460d6dc9f918a78ad6d5d092f1c8b5395e6b775356 \
     --hash=sha256:0574866e05f6adeecc520d87e87dd06210c0a51706341f6ef8421572f5a64444 \
     --hash=sha256:09450778e3ab58d3f565899fcfbf6c82926e31af29e28e799d1d50941316e0cb \
@@ -383,7 +393,10 @@ pydantic_core==2.50.4 \
     --hash=sha256:fb2bb5b557080da398b866408117d98fe9731a12334afd0cdff221b458cdc5dc \
     --hash=sha256:fc04affef30be98c1f36f0c422a4061ef618fdc1dde79f5ad5458dd496fecffa \
     --hash=sha256:ffb616d8d55965839670301dc3bae3abacff560a7e137a89056058a8a9da4d96
-PyOTP==2.10.0 \
+pydantic-settings==2.16.3 \
+    --hash=sha256:10e36f616623ebb586c05ca3d3cd22927146869db413d4f14c20c514442a1337 \
+    --hash=sha256:d1db16a2d34006323a1b42c0640898da58adfbad7ec30baaa9e2b18aafc08999
+pyotp==2.10.0 \
     --hash=sha256:1df2f6a1bcc3bb0716172a5215ddc2f8c7c7fd26a13df9927d52e1746934836c \
     --hash=sha256:d01e9703443616b03c57c700b5cbffd56a1f929c1b0f8f03131bc78c1fca9d3f
 python-dotenv==1.2.4 \
@@ -395,12 +408,12 @@ segno==1.6.6 \
 starlette==1.10.0 \
     --hash=sha256:478c0ab3b4ced6e82719849c118fa406f0278a3499c1a898cd15cd31bdc38ce4 \
     --hash=sha256:b8399098d4c1e3522734f7235dc79b1fc967f96cf139c81e0fa30479e0685f9b
+typing-extensions==4.16.0 \
+    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8 \
+    --hash=sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5
 typing-inspection==0.4.5 \
     --hash=sha256:7f16c411e7930dc79596d42ab44672a3fe5f60eb34b781a1647e7872363120c7 \
     --hash=sha256:bc210535442b39e1bf2805e0c7a17dfd6a4ace760c84c7f7d16245d23a6b1c39
-typing_extensions==4.16.0 \
-    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8 \
-    --hash=sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5
 uvicorn==0.54.0 \
     --hash=sha256:505bdb0f318731d45f1f712071fc781a8981f6847a31c902c9f5e652d4f67faf \
     --hash=sha256:a2e33cbfaa0306f8e6b0c13e0cb89d7d7a2da3e62b90c66e18c33d9807b28620

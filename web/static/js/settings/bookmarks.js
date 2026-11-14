@@ -87,7 +87,7 @@ export function mountBookmarks(root, env) {
       'li',
       { class: 'list-row' },
       h('span', { class: 'bookmark-dot', 'aria-hidden': 'true', style: isHex(b.color) ? { '--dot': b.color } : {} }),
-      h('div', { class: 'list-main' }, h('p', { class: 'list-title' }, b.name), h('p', { class: 'list-sub mono' }, hostOf(b.url) || b.url)),
+      h('div', { class: 'list-main' }, h('p', { class: 'list-title', title: b.name }, b.name), h('p', { class: 'list-sub mono', title: b.url }, hostOf(b.url) || b.url)),
       h(
         'div',
         { class: 'list-actions' },

@@ -13,8 +13,8 @@ import { openAddService, openEditService, removeService } from '../features/serv
  */
 export function mountLinks(root, env) {
   const { api, store, state } = env;
-  const list = h('ul', { class: 'list', 'aria-label': 'Your links' });
-  const empty = h('p', { class: 'muted' }, 'No links yet. Add the apps and services you want on your dashboard.');
+  const list = h('ul', { class: 'list', 'aria-label': 'Services' });
+  const empty = h('p', { class: 'muted' }, 'No services yet. Add the apps you run and they show up on your dashboard.');
   const addBtn = h(
     'button',
     {
@@ -28,9 +28,9 @@ export function mountLinks(root, env) {
         }),
     },
     icon('ui-plus'),
-    h('span', null, 'Add link'),
+    h('span', null, 'Add service'),
   );
-  root.append(h('p', { class: 'muted panel-intro' }, 'Links are stored on the server and shared across your devices. The category is detected automatically unless you choose one.'), list, empty, h('div', null, addBtn));
+  root.append(h('p', { class: 'muted panel-intro' }, 'Services are stored on the server and shared across your devices. The category is detected automatically unless you choose one.'), list, empty, h('div', null, addBtn));
 
   /** @param {import('../types.js').Service} s */
   function row(s) {
@@ -42,8 +42,8 @@ export function mountLinks(root, env) {
       h(
         'div',
         { class: 'list-main' },
-        h('p', { class: 'list-title' }, s.name),
-        h('p', { class: 'list-sub mono' }, hostOf(s.url) || s.url),
+        h('p', { class: 'list-title', title: s.name }, s.name),
+        h('p', { class: 'list-sub mono', title: s.url }, hostOf(s.url) || s.url),
       ),
       h('div', { class: 'list-meta' }, h('span', { class: 'pill' }, resolveCategory(s) + (auto ? ' · auto' : '')), h('span', { class: 'pill' + (s.check ? ' pill-ok' : '') }, s.check ? 'Status check on' : 'Status check off')),
       h(

@@ -13,7 +13,6 @@ import { createPoller } from '../poller.js';
  */
 export function createClock(o) {
   const long = new Intl.DateTimeFormat(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
-  const short = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
   let lastDay = '';
   let lastGreet = '';
 
@@ -29,7 +28,7 @@ export function createClock(o) {
     const key = `${day}-${d.getHours()}-${name}`;
     if (key !== lastGreet) {
       lastGreet = key;
-      o.greeting.textContent = `${greetingFor(d.getHours())}${name ? ', ' + name : ''} — ${short.format(d)}`;
+      o.greeting.textContent = `${greetingFor(d.getHours())}${name ? ', ' + name : ''}`;
     }
   }
 

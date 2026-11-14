@@ -65,12 +65,14 @@ export function mountAccount(root, env) {
   const { api, state } = env;
 
   // ---- profile line ----
-  const who = h('p', { class: 'muted' });
+  const who = h('p', { class: 'muted panel-intro' });
 
   // ---- password ----
   const current = createField({ label: 'Current password', name: 'current_password', type: 'password', autocomplete: 'current-password', required: true });
   const next = createField({ label: 'New password', name: 'new_password', type: 'password', autocomplete: 'new-password', required: true, hint: '10 to 128 characters.', maxLength: 128 });
   const again = createField({ label: 'Repeat new password', type: 'password', autocomplete: 'new-password', required: true, maxLength: 128 });
+  // Password managers key a saved login on the username, so the form carries it invisibly.
+  const pwUser = h('input', { type: 'text', name: 'username', autocomplete: 'username', class: 'sr-only', tabindex: '-1', 'aria-hidden': 'true', readOnly: true });
   const pwNotice = createNotice();
   const pwSubmit = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Change password');
   const pwForm = h(
@@ -99,19 +101,21 @@ export function mountAccount(root, env) {
       },
     },
     h('h3', { class: 'card-title-sm' }, 'Change password'),
+    pwUser,
     pwNotice.el,
     h('div', { class: 'field-grid' }, current.root, next.root, again.root),
     h('div', { class: 'form-actions' }, pwSubmit),
   );
 
   // ---- two-factor ----
-  const twofaStatus = h('p', { class: 'muted' });
+  const twofaStatus = h('p', { class: 'muted panel-intro' });
   const twofaAction = h('div', { class: 'form-actions' });
   const setupHost = h('div');
 
   function renderTwofa() {
     const user = state.get().user;
     if (!user) return;
+    pwUser.value = user.username;
     who.textContent = `Signed in as ${user.username} (${user.email}), ${user.role === 'admin' ? 'administrator' : 'user'}.`;
     twofaStatus.textContent = user.twofa_enabled
       ? 'Two-factor authentication is on. Signing in needs a code from your authenticator app.'

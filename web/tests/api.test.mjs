@@ -145,3 +145,20 @@ test('boot cache is keyed by user id and never serves another user', () => {
   t += 8 * 24 * 3600 * 1000;
   assert.equal(cache.read(), null);
 });
+
+test('onWrite fires after successful writes only (so other tabs can refresh)', async () => {
+  let writes = 0;
+  let status = 200;
+  const { api } = setup(() => response({ status, body: status === 204 ? null : { ok: 1 } }), { onWrite: () => writes++ });
+  await api.get('/api/me');
+  assert.equal(writes, 0, 'reads do not notify');
+  await api.post('/api/services', { name: 'x' });
+  await api.del('/api/services/1');
+  assert.equal(writes, 2);
+  status = 204;
+  await api.patch('/api/settings', {});
+  assert.equal(writes, 3, 'a 204 counts as success');
+  status = 422;
+  await assert.rejects(api.post('/api/services', {}));
+  assert.equal(writes, 3, 'failed writes do not notify');
+});

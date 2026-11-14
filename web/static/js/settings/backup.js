@@ -122,5 +122,5 @@ export function mountReset(root, env) {
     },
     'Reset all settings',
   );
-  root.append(h('p', { class: 'muted panel-intro' }, 'Return appearance, personalization, features and search to their defaults. Your links, bookmarks and hubs stay as they are.'), h('div', null, btn));
+  root.append(h('p', { class: 'muted panel-intro' }, 'Return appearance, personalization, features and search to their defaults. Your services, bookmarks and hubs stay as they are.'), h('div', null, btn));
 }

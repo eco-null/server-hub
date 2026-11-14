@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canUseShortcut } from '../static/js/lib/hotkeys.js';
-import { buildSearchUrl, rankServices } from '../static/js/lib/search.js';
+import { balancedColumns, columnsFor } from '../static/js/lib/layout.js';
+import { buildSearchUrl, rankServices, hostLabels } from '../static/js/lib/search.js';
 import { formatUptime, clampPct, loadLevel, greetingFor, formatClock } from '../static/js/lib/format.js';
 import { contrast, ensureContrast, readableOn, isHex, rgba } from '../static/js/lib/color.js';
 
@@ -45,6 +46,94 @@ test('rankServices: all words must match, name matches first', () => {
   assert.deepEqual(rankServices(svcs, 'zzz'), []);
   assert.equal(rankServices(svcs, '').length, 3);
   assert.equal(rankServices(svcs, '', 2).length, 2);
+});
+
+test('rankServices: tiers are name prefix > name word > name substring > host or description', () => {
+  const svc = (name, description = '', host = 'x.example.com') => ({ name, description, url: 'https://' + host });
+  const svcs = [
+    svc('Alpha', 'a reverse proxy for apps'),
+    svc('Photo Proxy'),
+    svc('Reproduce'),
+    svc('Proxmox'),
+    svc('Beta', '', 'proxy.example.com'),
+  ];
+  assert.deepEqual(
+    rankServices(svcs, 'pro').map((s) => s.name),
+    ['Proxmox', 'Photo Proxy', 'Reproduce', 'Beta', 'Alpha'],
+  );
+});
+
+test('rankServices: no loose or domain-suffix matches', () => {
+  const svcs = [
+    { name: 'Nextcloud', description: 'Files, calendar and contacts', url: 'https://nextcloud.home.arpa' },
+    { name: 'Proxmox', description: '', url: 'https://proxmox.home.arpa:8006' },
+    { name: 'Paperless', description: '', url: 'https://paperless.home.arpa' },
+  ];
+  // "pro" is a subsequence of home.arpa-based strings and a prefix of the Productivity category, but not a match.
+  assert.deepEqual(rankServices(svcs, 'pro').map((s) => s.name), ['Proxmox']);
+  assert.deepEqual(rankServices(svcs, 'arpa'), []);
+  assert.deepEqual(rankServices(svcs, 'home'), []);
+  assert.deepEqual(rankServices(svcs, 'ncd'), [], 'no subsequence matching');
+  assert.deepEqual(rankServices(svcs, 'nxtcld'), []);
+  assert.deepEqual(rankServices(svcs, 'prod').map((s) => s.name), ['Nextcloud', 'Paperless'], 'a 4-letter category prefix still works');
+  assert.deepEqual(rankServices(svcs, 'cloud').map((s) => s.name), ['Nextcloud'], 'name substring');
+  assert.deepEqual(rankServices(svcs, 'calendar').map((s) => s.name), ['Nextcloud'], 'description word');
+});
+
+test('rankServices: unicode names and multi-word queries', () => {
+  const svcs = [
+    { name: 'Überwachung', description: '', url: 'https://u.example.com' },
+    { name: 'Home Assistant', description: '', url: 'https://ha.example.com' },
+    { name: 'خادم الملفات', description: '', url: 'https://f.example.com' },
+  ];
+  assert.deepEqual(rankServices(svcs, 'über').map((s) => s.name), ['Überwachung']);
+  assert.deepEqual(rankServices(svcs, 'ass home').map((s) => s.name), ['Home Assistant']);
+  assert.deepEqual(rankServices(svcs, 'الملفات').map((s) => s.name), ['خادم الملفات']);
+});
+
+test('hostLabels drops the domain suffix and the port', () => {
+  assert.deepEqual(hostLabels('nextcloud.home.arpa'), ['nextcloud']);
+  assert.deepEqual(hostLabels('a.b.example.com:8443'), ['a', 'b']);
+  assert.deepEqual(hostLabels('github.com'), ['github']);
+  assert.deepEqual(hostLabels('192.168.1.4:8080'), ['192.168.1.4']);
+  assert.deepEqual(hostLabels('nas'), ['nas']);
+  assert.deepEqual(hostLabels(''), []);
+});
+
+test('balancedColumns avoids a lone item in the last row', () => {
+  assert.equal(balancedColumns(4, 3), 2, '4 services with room for 3 give 2 x 2');
+  assert.equal(balancedColumns(4, 4), 4);
+  assert.equal(balancedColumns(4, 6), 4, 'one row when everything fits');
+  assert.equal(balancedColumns(5, 3), 3);
+  assert.equal(balancedColumns(5, 4), 3);
+  assert.equal(balancedColumns(7, 6), 4);
+  assert.equal(balancedColumns(9, 4), 3);
+  assert.equal(balancedColumns(10, 3), 2);
+  assert.equal(balancedColumns(13, 3) >= 2, true, 'an orphan that cannot be avoided stays harmless');
+  assert.equal(balancedColumns(2, 3), 2);
+  assert.equal(balancedColumns(1, 3), 1);
+  assert.equal(balancedColumns(0, 3), 1);
+  assert.equal(balancedColumns(8, 1), 1);
+  assert.equal(balancedColumns(8, 0), 1);
+  assert.equal(balancedColumns(8, NaN), 1);
+  for (let n = 1; n <= 60; n++) {
+    for (let m = 1; m <= 8; m++) {
+      const c = balancedColumns(n, m);
+      assert.ok(c >= 1 && c <= Math.max(1, m), `${n}/${m}`);
+      if (n > m && c > 1 && n % c === 1) {
+        // an orphan is only allowed when no column count in 2..m avoids it
+        for (let k = 2; k <= m; k++) assert.ok(n % k === 1, `${n} items, max ${m}: ${c} columns leave an orphan but ${k} would not`);
+      }
+    }
+  }
+});
+
+test('columnsFor counts the columns that fit', () => {
+  assert.equal(columnsFor(240, 240, 12), 1);
+  assert.equal(columnsFor(492, 240, 12), 2);
+  assert.equal(columnsFor(491, 240, 12), 1);
+  assert.equal(columnsFor(0, 240, 12), 1);
+  assert.equal(columnsFor(1000, 0, 12), 1);
 });
 
 test('format helpers', () => {

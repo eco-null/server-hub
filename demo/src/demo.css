@@ -1,0 +1,101 @@
+/* Demo banner. Sits in the normal flow at the top of the page, so it reserves
+   its own space and never covers content or controls. Colours come from the
+   app's theme tokens (with fallbacks), so it follows light and dark mode. */
+
+.demo-banner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.25));
+  background: var(--bg-elev, #111827);
+  color: var(--fg-muted, #9096a0);
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.demo-banner p {
+  margin: 0;
+}
+
+.demo-banner strong {
+  color: var(--fg, #ededef);
+  font-weight: 600;
+}
+
+.demo-banner-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.demo-banner-btn,
+.demo-banner-link {
+  min-height: 1.75rem;
+  padding: 0.125rem 0.625rem;
+  border: 1px solid var(--border-hi, rgba(127, 127, 127, 0.4));
+  border-radius: 9999px;
+  background: transparent;
+  color: var(--fg, #ededef);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.demo-banner-btn:hover,
+.demo-banner-link:hover {
+  background: var(--surface-hi, rgba(127, 127, 127, 0.15));
+}
+
+.demo-banner-btn:focus-visible,
+.demo-banner-link:focus-visible {
+  outline: 2px solid var(--accent-text, #98a1ee);
+  outline-offset: 2px;
+}
+
+.demo-creds code {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 6px;
+  background: var(--surface-hi, rgba(127, 127, 127, 0.15));
+  color: var(--fg, #ededef);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8125rem;
+  user-select: all;
+}
+
+/* The login card is centred in the viewport; leave room for the banner. */
+.demo-banner + .auth-shell,
+.demo-banner ~ .auth-shell {
+  min-height: calc(100dvh - 5rem);
+}
+
+.demo-404 {
+  max-width: 32rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  color: var(--fg, #ededef);
+  text-align: center;
+}
+
+.demo-404 a {
+  color: var(--accent-text, #98a1ee);
+}
+
+@media (max-width: 30rem) {
+  .demo-banner {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+}

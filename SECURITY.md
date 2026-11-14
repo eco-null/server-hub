@@ -16,6 +16,8 @@ Please do not open a public issue for a security problem. Use GitHub private vul
 1. Go to <https://github.com/eco-null/server-hub/security/advisories/new> (or the **Security** tab, then **Report a vulnerability**).
 2. Describe the problem, the affected version or commit, and the steps to reproduce it. A proof of concept helps.
 
+The [live demo](https://eco-null.github.io/server-hub/) is a static page with a simulated backend and no real accounts. Its simulated behavior (for example, no rate limiting) is not a vulnerability in the server; a flaw in the web interface code itself is in scope.
+
 You will get an answer through the advisory thread. Please allow reasonable time for a fix before you disclose the issue publicly.
 
 ## Security model

@@ -69,7 +69,6 @@
   --shadow-pop: 0 24px 64px -20px rgba(0, 0, 0, 0.6);
 
   /* layering */
-  --z-fab: 30;
   --z-toast: 90;
 }
 
@@ -138,7 +137,7 @@ html.light.wallpaper-light {
   --border: rgba(15, 23, 42, 0.14);
   --border-hi: rgba(15, 23, 42, 0.22);
   --fg: #0f172a;
-  --fg-muted: #566074;
+  --fg-muted: #4b5568;
 }
 
 /* Reduced motion: every transition and animation reads these durations. */

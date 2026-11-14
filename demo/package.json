@@ -1,0 +1,10 @@
+{
+  "name": "server-hub-demo",
+  "private": true,
+  "type": "module",
+  "description": "Static GitHub Pages demo of Server Hub: an in-browser mock of the HTTP API plus a build script that generates the site from web/. No dependencies.",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "build": "node build.js"
+  }
+}
