@@ -1,0 +1,33 @@
+# Server Hub: one container, no reverse proxy. Configure it in .env
+# (copy .env.example to .env and set SERVERHUB_SECRET_KEY first).
+services:
+  server-hub:
+    build: .
+    image: server-hub:latest
+    container_name: server-hub
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Fixed inside the container; change the published port below instead.
+      SERVERHUB_DATA_DIR: /data
+      SERVERHUB_HOST: 0.0.0.0
+      SERVERHUB_PORT: "8642"
+    ports:
+      - "${SERVERHUB_PUBLISH_PORT:-8642}:8642"
+    volumes:
+      - server-hub-data:/data
+      # To let the app terminate TLS itself, mount a cert + key and set
+      # SERVERHUB_TLS_CERT_FILE=/certs/cert.pem and SERVERHUB_TLS_KEY_FILE=/certs/key.pem
+      # - ./certs:/certs:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    stop_grace_period: 20s
+
+volumes:
+  server-hub-data:

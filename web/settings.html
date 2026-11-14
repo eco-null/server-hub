@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Server Hub settings.">
+  <title>Settings · Server Hub</title>
+  <link rel="icon" type="image/png" href="/static/img/logo.png">
+  <link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <script src="/static/js/theme-boot.js"></script>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/css/settings.css">
+  <script type="module" src="/static/js/settings.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#settings-main">Skip to settings</a>
+  <div id="wallpaper" class="wallpaper" aria-hidden="true"></div>
+
+  <noscript>
+    <p class="noscript-msg">Settings need JavaScript. Please enable it and reload the page.</p>
+  </noscript>
+
+  <div class="settings">
+    <header class="settings-head">
+      <div>
+        <h1>Settings</h1>
+        <p class="muted save-status" id="save-status" role="status" aria-live="polite"></p>
+      </div>
+      <a href="/" class="btn">
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-arrow-left"/></svg>
+        <span>Back to dashboard</span>
+      </a>
+    </header>
+
+    <nav class="settings-nav" aria-label="Settings sections">
+      <a class="chip" href="#sec-appearance">Appearance</a>
+      <a class="chip" href="#sec-personalization">Personalization</a>
+      <a class="chip" href="#sec-features">Features</a>
+      <a class="chip" href="#sec-search">Search</a>
+      <a class="chip" href="#sec-beszel">Beszel hubs</a>
+      <a class="chip" href="#sec-links">Your links</a>
+      <a class="chip" href="#sec-bookmarks">Bookmarks</a>
+      <a class="chip" href="#sec-account">Account</a>
+      <a class="chip" href="#sec-admin" id="nav-admin" hidden>Administration</a>
+      <a class="chip" href="#sec-backup">Backup</a>
+      <a class="chip" href="#sec-reset">Reset</a>
+    </nav>
+
+    <main id="settings-main" class="settings-main" tabindex="-1">
+      <div class="glass empty" id="load-error" hidden>
+        <h2>Couldn't load your settings</h2>
+        <p class="muted" id="load-error-text" role="alert"></p>
+        <button type="button" class="btn btn-primary" id="retry-load">Try again</button>
+      </div>
+
+      <section class="panel glass glass-blur" id="sec-appearance" aria-labelledby="sec-appearance-h">
+        <h2 class="eyebrow" id="sec-appearance-h">Appearance</h2>
+        <div class="panel-body" id="sec-appearance-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-personalization" aria-labelledby="sec-personalization-h">
+        <h2 class="eyebrow" id="sec-personalization-h">Personalization</h2>
+        <div class="panel-body" id="sec-personalization-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-features" aria-labelledby="sec-features-h">
+        <h2 class="eyebrow" id="sec-features-h">Features</h2>
+        <div class="panel-body" id="sec-features-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-search" aria-labelledby="sec-search-h">
+        <h2 class="eyebrow" id="sec-search-h">Search</h2>
+        <div class="panel-body" id="sec-search-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-beszel" aria-labelledby="sec-beszel-h">
+        <h2 class="eyebrow" id="sec-beszel-h">Beszel hubs</h2>
+        <div class="panel-body" id="sec-beszel-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-links" aria-labelledby="sec-links-h">
+        <h2 class="eyebrow" id="sec-links-h">Your links</h2>
+        <div class="panel-body" id="sec-links-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-bookmarks" aria-labelledby="sec-bookmarks-h">
+        <h2 class="eyebrow" id="sec-bookmarks-h">Bookmarks</h2>
+        <div class="panel-body" id="sec-bookmarks-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-account" aria-labelledby="sec-account-h">
+        <h2 class="eyebrow" id="sec-account-h">Account and security</h2>
+        <div class="panel-body" id="sec-account-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-admin" aria-labelledby="sec-admin-h" hidden>
+        <h2 class="eyebrow" id="sec-admin-h">Administration</h2>
+        <div class="panel-body" id="sec-admin-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-backup" aria-labelledby="sec-backup-h">
+        <h2 class="eyebrow" id="sec-backup-h">Backup</h2>
+        <div class="panel-body" id="sec-backup-body"></div>
+      </section>
+
+      <section class="panel glass glass-blur" id="sec-reset" aria-labelledby="sec-reset-h">
+        <h2 class="eyebrow" id="sec-reset-h">Reset</h2>
+        <div class="panel-body" id="sec-reset-body"></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
