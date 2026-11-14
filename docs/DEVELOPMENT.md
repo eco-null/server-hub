@@ -74,10 +74,10 @@ serverhub/
   errors.py            ApiError and its helpers
   web.py               Page routes, /static, /healthz
   api/                 auth.py, data.py (settings, services, bookmarks, status, backup),
-                       beszel.py, admin.py; schemas.py holds request models and limits
+                       beszel.py, docker.py, admin.py; schemas.py holds request models and limits
   auth/                crypto.py (HKDF keys, Fernet, Argon2id), sessions.py, totp.py, ratelimit.py
   db/                  __init__.py (connection, migrations, backup), repo.py (queries), migrations/
-  integrations/        fetcher.py (hardened outbound client), status.py, beszel.py
+  integrations/        fetcher.py (hardened outbound client), status.py, beszel.py, docker.py (Docker discovery)
   system/stats.py      Host statistics from /proc
 web/                   HTML pages (index, login, settings) and static/{css,js,fonts,img}; tests/ holds the frontend tests
 demo/                  Static GitHub Pages demo: build script, in-browser mock API, tests (see below)
@@ -87,6 +87,17 @@ docs/                  API.md (contract), DEPLOYMENT.md, this file, screenshots/
 ```
 
 Where to look: a new endpoint goes in the matching module under `serverhub/api/`, with its request model in `schemas.py` (models forbid unknown fields and are strict), SQL in `db/repo.py`, and its description in [API.md](API.md). All SQL is parameterized and runs in a worker thread through `Database.run`. Any outbound HTTP request must use `SafeFetcher` from `integrations/fetcher.py`; never use `httpx` directly.
+
+## Docker discovery without Docker
+
+You do not need Docker to work on discovery. The backend only ever sends `GET /containers/json?all=true` to the address in `SERVERHUB_DOCKER_HOST` (`serverhub/integrations/docker.py`; the routes are in `serverhub/api/docker.py`), so the tests replace the Docker API with the `Stub` HTTP server from `tests/conftest.py`:
+
+- `stub.route("GET", "/containers/json", 200, [...])` answers with a list of container dicts. `tests/test_docker.py` builds them with small helpers (`container()`, `labelled()`, `tcp()`).
+- `running(tmp_path, docker_host=stub.url, docker_options=FAST)` starts the app against the stub. `docker_options` goes to `DockerClient`; the tests shorten its timeouts and cache TTLs there.
+- The `docker_stub` fixture listens on `127.0.0.2` instead of `127.0.0.1`: the outbound client never contacts the configured Docker endpoint on any port, so a status-check target on the same address would be refused.
+- `tests/test_docker.py` covers configuration, label parsing, suggestions, the client (single refresh in flight, error and size limits, timeouts) and the API (visibility, diagnostics, status checks, read-only cards). `tests/test_docker_review.py` holds regression tests, including checks that read `compose.yaml` for the proxy's single allow rule.
+
+Run them with `python -m pytest tests/test_docker.py tests/test_docker_review.py`. What no test here can show is how the real proxy behaves: that is checked by the `docker` job in `.github/workflows/ci.yml`, which starts the proxy on a real Docker engine and sends it allowed and refused requests. The demo has its own port of the label parsing (`demo/src/docker.js`, tested by `demo/test/docker.test.js`); keep it in step with `serverhub/integrations/docker.py` when labels change, as with the other mock API parts. Frontend helpers are tested in `web/tests/docker.test.mjs`.
 
 ## Frontend
 

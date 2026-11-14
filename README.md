@@ -40,6 +40,7 @@ Version 2 is a rewrite. It does not read data from the previous Supabase/Vercel 
 - Server-side status checks (`up`, `down`, `unknown`) with a short cache and a hard time limit; admins also see the HTTP status and latency.
 - Host CPU, memory and disk figures for admins, read from `/proc` (Linux only).
 - Beszel integration: list the systems of one or more Beszel hubs on the dashboard.
+- Docker discovery (optional, off by default): containers you label become service cards, and admins get one-click suggestions for other containers that publish a port. Server Hub never mounts the Docker socket; it reads the container list through a proxy that allows nothing else. See [Docker discovery](#docker-discovery).
 
 **Personalization**
 - Dark, light or automatic theme, accent color, wallpaper (gradient presets or an image URL), optional grid overlay.
@@ -65,6 +66,7 @@ Version 2 is a rewrite. It does not read data from the previous Supabase/Vercel 
 What is simulated, and how the demo differs from a real install:
 
 - There is no server. Status checks, Beszel hubs and host statistics are generated in the browser. The sample services point at `*.home.arpa` names that do not resolve.
+- Docker discovery runs against a made-up Docker host with a fixed list of containers, so you can see cards, skipped containers, warnings and suggestions, and try the "Show discovered services to all users" switch. No Docker API or socket proxy is involved.
 - A Beszel hub you add always connects and reports one or two made-up systems.
 - Changing your own password is checked but not applied, so the demo credentials keep working. Resetting the demo account's password is ignored for the same reason.
 - There is no rate limiting, only one demo session per browser, and the first-run setup is never shown.
@@ -94,7 +96,8 @@ The screenshots show the demo data.
     <td align="center"><img src="docs/screenshots/login.png" alt="Sign-in page with username and password fields" width="420"><br><sub>Sign-in page</sub></td>
   </tr>
   <tr>
-    <td align="center" colspan="2"><img src="docs/screenshots/mobile.png" alt="Dashboard on a phone with the Add service button reduced to a plus icon" width="240"><br><sub>Dashboard on a phone</sub></td>
+    <td align="center"><img src="docs/screenshots/docker-discovery.png" alt="Settings page, Docker section: connection status, the switch to show discovered services to all users, the label reference, skipped containers and suggestions" width="420"><br><sub>Settings: Docker discovery</sub></td>
+    <td align="center"><img src="docs/screenshots/mobile.png" alt="Dashboard on a phone with the Add service button reduced to a plus icon" width="240"><br><sub>Dashboard on a phone</sub></td>
   </tr>
 </table>
 
@@ -148,6 +151,10 @@ Settings are environment variables, read at startup. With Docker Compose, put th
 | `SERVERHUB_SESSION_IDLE_DAYS` | `7` | A session expires after this many idle days. Greater than 0, at most 365, may be fractional. |
 | `SERVERHUB_SESSION_MAX_DAYS` | `30` | A session expires after this many days regardless of activity. At least the idle value, at most 365. |
 | `SERVERHUB_LOG_LEVEL` | `info` | `critical`, `error`, `warning`, `info` or `debug`. `warning` is the quietest level that still prints the setup token and the configuration warnings; `error` and `critical` hide them. `debug` adds an access log line per request and is for troubleshooting only. |
+| `SERVERHUB_DOCKER_HOST` | unset (discovery off) | Address of the Docker socket proxy, `tcp://host:port` or `http://host:port`; `tcp://docker-proxy:2375` with the shipped `compose.yaml`. `unix://` sockets are refused. See [Docker discovery](#docker-discovery). |
+| `SERVERHUB_DOCKER_PUBLIC_HOST` | unset | Host name or IP address your browser uses for the Docker host, such as `nas.lan` (no scheme, port or path). Used to build the suggested URL of a published port; without it, suggestions have no URL. |
+| `COMPOSE_PROFILES` | unset | Read by Docker Compose, not by Server Hub. Set it to `docker` to start the socket proxy. |
+| `DOCKER_GID` | unset | Read by Docker Compose, not by Server Hub. The numeric group that owns the Docker socket on the host; the proxy runs with it. |
 | `SERVERHUB_WEB_DIR` | `web/` next to the `serverhub/` package | Directory with the frontend files. For development only; leave it unset in Docker. |
 
 ## HTTPS
@@ -217,6 +224,33 @@ echo "SERVERHUB_ALLOWED_HOSTS=hub.lan" >> .env
 docker compose up -d
 ```
 
+## Docker discovery
+
+Optional, off by default. Server Hub can show the containers on your Docker host as service cards. It never mounts the Docker socket: a separate `docker-proxy` container, which allows exactly one request (the container list), has the socket instead. Turn it on in `.env`, with the group that owns the socket (`stat -c %g /var/run/docker.sock`):
+
+```bash
+COMPOSE_PROFILES=docker
+SERVERHUB_DOCKER_HOST=tcp://docker-proxy:2375
+DOCKER_GID=998
+```
+
+```bash
+docker compose up -d
+```
+
+Then label a container. Both `serverhub.enable` and `serverhub.url` are required:
+
+```yaml
+services:
+  grafana:
+    image: grafana/grafana
+    labels:
+      serverhub.enable: "true"
+      serverhub.url: "http://nas.lan:3000"
+```
+
+Admins see the result, skipped containers and suggestions in Settings, Docker. Other users see discovered services only if an admin switches that on. Labels are trusted input from whoever can start containers on the host, because they choose the address the card opens and the server requests for status checks. All labels, the access model, status checks, the security considerations and troubleshooting are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#docker-discovery).
+
 ## Backup and restore
 
 All data lives in one SQLite file in the data volume. Take a consistent copy while the server is running. The first command writes inside the volume (the only writable place), the second copies the file to the host (create `./backups` first), the third removes the copy in the volume:
@@ -256,7 +290,7 @@ docker compose exec server-hub python -m serverhub create-admin --email you@exam
 
 ## Security
 
-Passwords use Argon2id, sessions are opaque server-side tokens in `HttpOnly` cookies, 2FA secrets are encrypted at rest, and every state-changing request passes a CSRF check. Pages are served with a strict Content Security Policy, login and 2FA attempts are rate limited in the database, and the outbound requests used for status checks go through a client that refuses loopback, link-local and cloud-metadata addresses. [SECURITY.md](SECURITY.md) describes the model, the known limitations and how to report a vulnerability.
+Passwords use Argon2id, sessions are opaque server-side tokens in `HttpOnly` cookies, 2FA secrets are encrypted at rest, and every state-changing request passes a CSRF check. Pages are served with a strict Content Security Policy, login and 2FA attempts are rate limited in the database, and the outbound requests used for status checks go through a client that refuses loopback, link-local and cloud-metadata addresses. Docker discovery reads containers through a proxy with a one-request allow-list instead of the Docker socket. [SECURITY.md](SECURITY.md) describes the model, the known limitations and how to report a vulnerability.
 
 ## Run without Docker
 

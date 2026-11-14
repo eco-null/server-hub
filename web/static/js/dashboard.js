@@ -80,7 +80,7 @@ const services = createServicesView({
         $('add-service').focus();
       },
     }),
-  onDetails: (s) => openDiscoveredDetails(s, { stale: state.get().docker.stale }),
+  onDetails: (s) => openDiscoveredDetails(s, { stale: state.get().docker.stale, updatedAt: state.get().docker.updatedAt }),
   onDelete: async (s) => {
     if (await removeService(api, s)) {
       state.set({ services: state.get().services.filter((x) => x.id !== s.id) });

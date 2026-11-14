@@ -8,7 +8,7 @@ import { openDialog, confirmDialog } from '../dialog.js';
 import { createField, createSelect, createNotice, createSwitch, showFormError, whileBusy } from '../ui.js';
 import { icon, ICON_IDS, ICON_SET, knownIcon } from '../icons.js';
 import { CATEGORIES, autoCategorize, resolveCategory, suggestIcon } from '../categorize.js';
-import { buildServiceUrl, safeUrl, splitScheme } from '../lib/url.js';
+import { buildServiceUrl, hasCredentials, safeUrl, splitScheme } from '../lib/url.js';
 import { toastSuccess, toastError } from '../toast.js';
 
 /** @typedef {import('../types.js').Service} Service */
@@ -126,6 +126,9 @@ function buildForm(o) {
     }
     if (!host.input.value.trim()) {
       host.setError('Enter the address of the service.');
+      ok = false;
+    } else if (hasCredentials(url)) {
+      host.setError("Remove the username and password from the address. A service address can't contain credentials (user:password@).");
       ok = false;
     } else if (!safeUrl(url)) {
       host.setError('Enter a valid address, for example grafana.example.com:3000.');

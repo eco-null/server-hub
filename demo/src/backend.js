@@ -10,9 +10,9 @@
  */
 
 import * as S from './validate.js';
-import { seedState, DEMO_USERNAME, DOCKER_CONTAINERS, DOCKER_PROXY_HOST, DOCKER_PUBLIC_HOST, DOCKER_SELF_ID_PREFIX } from './seed.js';
+import { seedState, DEMO_USERNAME, DOCKER_CONTAINERS, DOCKER_PUBLIC_HOST, DOCKER_SELF_ID_PREFIX } from './seed.js';
 import { serviceStatus, systemNow, systemsForNewHub, hostStats, dockerContainers, dockerServiceHealth } from './sim.js';
-import { discover, suggest } from './docker.js';
+import { discover, suggest, statusPlan } from './docker.js';
 import { matchStep, newSecret, newRecoveryCodes, normalizeRecoveryCode, provisioningUri } from './totp.js';
 import { qrSvg } from './qr.js';
 
@@ -457,8 +457,14 @@ export function createBackend(opts = {}) {
     }
     // Discovered Docker services (keyed "docker:<name>"), for users who may see them.
     if (dockerVisible(st, user)) {
-      for (const d of discover(dockerList(st)).services) {
-        if (!d.check) continue;
+      // Not running: down, no request. Only the first 100 running ones are checked; the rest are unknown.
+      const found = discover(dockerList(st)).services;
+      const plan = statusPlan(found);
+      for (const [id, state] of Object.entries(plan.fixed)) {
+        statuses[id] = state === 'down' ? { state, http_status: null, latency_ms: null, checked_at: iso() } : { state, http_status: null, latency_ms: null, checked_at: null };
+      }
+      for (const d of found) {
+        if (!plan.targets.includes(d.id)) continue;
         let entry = serviceStatus(d, dockerServiceHealth(d.container), now());
         if (user.role !== 'admin') entry = { ...entry, http_status: null, latency_ms: null };
         statuses[d.id] = entry;
@@ -470,10 +476,11 @@ export function createBackend(opts = {}) {
   // Docker discovery
   route('GET', '/api/docker', ({ st }) => {
     const user = requireUser(st);
-    if (!dockerVisible(st, user)) return { enabled: false, available: false, error: null, services: [] };
+    if (!dockerVisible(st, user)) return { enabled: false, available: false, error: null, stale: false, updated_at: null, services: [] };
     const found = discover(dockerList(st));
     /** @type {Record<string, any>} */
-    const body = { enabled: true, available: true, error: null, services: found.services };
+    // The simulated Docker API never fails, so the list is always current.
+    const body = { enabled: true, available: true, error: null, stale: false, updated_at: iso(), services: found.services };
     if (user.role === 'admin') {
       body.skipped = found.skipped;
       body.warnings = found.warnings;
@@ -485,7 +492,6 @@ export function createBackend(opts = {}) {
     const suggestions = suggest(dockerList(st), {
       publicHost: DOCKER_PUBLIC_HOST,
       existingUrls: userData(st, user.id).services.map((/** @type {any} */ r) => r.url),
-      excludeNames: [DOCKER_PROXY_HOST],
       excludeIdPrefix: DOCKER_SELF_ID_PREFIX,
     });
     return { available: true, error: null, suggestions };

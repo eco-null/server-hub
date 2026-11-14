@@ -64,7 +64,8 @@ deploys to GitHub Pages on pushes to `main` that touch `web/` or `demo/`.
   the clock (the one that is "starting" turns healthy after about a minute), and
   status checks of discovered services follow their container state. The
   "Show discovered services to all users" switch works, so you can sign in as
-  another user to see both sides.
+  another user to see both sides. The simulated Docker API never fails, so the
+  "not responding" and "unavailable" states cannot be seen here.
 - A Beszel hub you add always connects (use the password `wrong` to see a
   failed login) and reports one or two made-up systems.
 - Wallpaper images from other sites are blocked by the demo's CSP

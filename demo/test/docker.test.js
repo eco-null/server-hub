@@ -17,7 +17,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createBackend, memoryKv, STATE_KEY } from '../src/backend.js';
-import { discover, suggest, normalizeUrl, prettify, cleanText } from '../src/docker.js';
+import { discover, suggest, statusPlan, isSelfOrProxy, normalizeUrl, prettify, cleanText } from '../src/docker.js';
+import * as S from '../src/validate.js';
 import { humanDuration, dockerContainers, dockerServiceHealth } from '../src/sim.js';
 import { DOCKER_CONTAINERS, DOCKER_PUBLIC_HOST, DOCKER_PROXY_HOST, DOCKER_SELF_ID_PREFIX, DEMO_PASSWORD } from '../src/seed.js';
 
@@ -48,7 +49,7 @@ test.beforeEach(() => {
 
 // ---------- the port of integrations/docker.py ----------
 
-const opts = (o = {}) => ({ publicHost: 'docker.home.arpa', existingUrls: [], excludeNames: ['docker-proxy'], excludeIdPrefix: '5c1f0a9e2b4d', ...o });
+const opts = (o = {}) => ({ publicHost: 'docker.home.arpa', existingUrls: [], excludeIdPrefix: '5c1f0a9e2b4d', ...o });
 
 test('discover() and suggest() give what the real implementation gives', () => {
   assert.deepEqual(discover(parity.demo), parity.expected.demo.discover);
@@ -57,7 +58,10 @@ test('discover() and suggest() give what the real implementation gives', () => {
   assert.deepEqual(suggest(parity.demo, opts()), parity.expected.demo.suggest);
   assert.deepEqual(suggest(parity.demo, opts({ existingUrls: parity.expected.demo.existing })), parity.expected.demo.suggestExisting);
   assert.deepEqual(suggest(parity.tricky, opts()), parity.expected.tricky.suggest);
-  assert.deepEqual(suggest(parity.tricky, opts({ publicHost: null, excludeNames: [], excludeIdPrefix: null })), parity.expected.trickyNoHost.suggest);
+  assert.deepEqual(suggest(parity.tricky, opts({ publicHost: null, excludeIdPrefix: null })), parity.expected.trickyNoHost.suggest);
+  assert.deepEqual(discover(parity.many), parity.expected.many.discover);
+  assert.deepEqual(statusPlan(discover(parity.many).services), parity.expected.many.plan);
+  assert.deepEqual(suggest(parity.demo, opts({ existingUrls: parity.expected.normalize.existing })), parity.expected.normalize.suggest);
 });
 
 test('the awkward containers really exercise the rules (skips, warnings, fallbacks)', () => {
@@ -71,8 +75,58 @@ test('helpers: prettify, cleanText, normalizeUrl', () => {
   assert.equal(prettify('server-hub'), 'Server Hub');
   assert.equal(cleanText(' a\tb\u0007c\n', 20), 'a bc');
   assert.equal(cleanText(5, 10), '');
-  assert.equal(normalizeUrl('HTTPS://Docker.Home.Arpa:443/x/'), 'https://docker.home.arpa:443/x');
-  assert.equal(normalizeUrl('http://docker.home.arpa/'), 'http://docker.home.arpa:80');
+  // The documented rule (docs/API.md): scheme+host lowercased, default port dropped, all trailing slashes
+  // dropped, non-empty query kept, user info and fragment ignored, unparseable input trimmed and lowercased.
+  assert.equal(normalizeUrl('HTTPS://Docker.Home.Arpa:443/x/'), 'https://docker.home.arpa/x');
+  assert.equal(normalizeUrl('http://docker.home.arpa/'), 'http://docker.home.arpa');
+  assert.equal(normalizeUrl('HTTP://NAS.lan:80/'), normalizeUrl('http://nas.lan'));
+  assert.equal(normalizeUrl('http://nas.lan/app/#x'), 'http://nas.lan/app');
+  assert.equal(normalizeUrl('http://nas.lan/app///'), 'http://nas.lan/app');
+  assert.equal(normalizeUrl('https://me:pw@nas.lan/'), 'https://nas.lan');
+  assert.notEqual(normalizeUrl('http://nas.lan/?a=1'), normalizeUrl('http://nas.lan/?a=2'));
+  assert.equal(normalizeUrl('http://nas.lan/?'), 'http://nas.lan');
+  assert.notEqual(normalizeUrl('http://nas.lan:443'), normalizeUrl('https://nas.lan'));
+  assert.equal(normalizeUrl('http://[::1]:8080/x/'), 'http://[::1]:8080/x');
+  assert.equal(normalizeUrl('  Not A URL '), 'not a url');
+});
+
+test('skip reasons and exclusions are the real texts', () => {
+  const t = parity.expected.tricky.discover;
+  const reasons = Object.fromEntries(t.skipped.map((x) => [x.container, x.reason]));
+  const CREDS = 'serverhub.url must not contain credentials (user:password@)';
+  assert.equal(reasons['creds'], CREDS);
+  assert.equal(reasons['creds-user-only'], CREDS);
+  assert.equal(reasons['numeric-url'], 'serverhub.url is invalid');
+  assert.equal(reasons['url-2001'], 'serverhub.url is longer than 2000 characters');
+  assert.equal(reasons['long-url'], 'serverhub.url is longer than 2000 characters');
+  assert.equal(reasons['no-url'], 'serverhub.url is missing');
+  assert.equal(reasons['bad-scheme'], 'serverhub.url is not a valid http(s) URL');
+  assert.equal(reasons['dupe'], 'duplicate container name; only the first one is listed');
+  assert.deepEqual(t.services.filter((x) => x.id === 'docker:dupe').map((x) => x.url), ['https://dupe1.home.arpa']);
+  const names = parity.expected.tricky.suggest.map((x) => x.container.name);
+  for (const hidden of ['stack-docker-proxy-1', 'stack-hub-1', 'hub-by-image', 'proxy-by-image', 'lsio-proxy', 'opted-out-bad-value']) assert.ok(!names.includes(hidden), hidden);
+  assert.ok(names.includes('docker-proxy'), 'only the compose label and the image name identify the plumbing, not the container name');
+  assert.equal(names.filter((n) => n === 'twin').length, 1);
+  assert.ok(isSelfOrProxy({ Id: '5c1f0a9e2b4dff', Image: 'x', Labels: {} }, '5c1f0a9e2b4d'));
+  assert.equal(isSelfOrProxy({ Id: 'ff', Image: 'x', Labels: {} }, '5c1f0a9e2b4d'), false);
+});
+
+test('status plan: not running is down, only the first 100 running are checked, check=false is left out', () => {
+  const plan = parity.expected.many.plan;
+  assert.equal(plan.targets.length, 100);
+  assert.equal(plan.fixed['docker:svc-stopped'], 'down');
+  assert.equal(Object.values(plan.fixed).filter((v) => v === 'unknown').length, 5);
+  assert.ok(!('docker:svc-nocheck' in plan.fixed) && !plan.targets.includes('docker:svc-nocheck'));
+  assert.deepEqual(parity.expected.many.discover.warnings, [{ container: '*', reason: 'only the first 100 running discovered services (by name) are status-checked; the other 5 report unknown' }]);
+});
+
+test('service URLs refuse user info, like the real validators; backups still accept them', () => {
+  const CREDS = 'must not contain credentials (user:password@)';
+  assert.throws(() => S.validate(S.ServiceCreate, { name: 'x', url: 'https://u:p@nas.home.arpa' }), (e) => e.fields.url === CREDS);
+  assert.throws(() => S.validate(S.ServiceCreate, { name: 'x', url: 'http://u@nas.home.arpa' }), (e) => e.fields.url === CREDS);
+  assert.equal(S.validate(S.ServiceCreate, { name: 'x', url: 'https://nas.home.arpa/a@b' }).url, 'https://nas.home.arpa/a@b');
+  assert.equal(S.validatePatch(S.ServicePatch, { url: 'https://nas.home.arpa' }, ['category']).url, 'https://nas.home.arpa');
+  assert.throws(() => S.validatePatch(S.ServicePatch, { url: 'https://u:p@nas.home.arpa' }, ['category']), (e) => e.fields.url === CREDS);
 });
 
 // ---------- the simulated host ----------
@@ -125,7 +179,9 @@ test('the seed is believable: home.arpa addresses, one duplicate of a seeded ser
 
 test('GET /api/docker, suggestions and config: the real handlers\' responses, byte for byte', async () => {
   const { call, asJordan, asDemo } = setup();
-  const same = (name, r) => assert.deepEqual({ status: r.status, body: r.body }, real[name], name);
+  // updated_at is the time of the request; the fixture has it masked.
+  const mask = (o) => JSON.parse(JSON.stringify(o), (k, v) => (k === 'updated_at' && typeof v === 'string' ? 'MASKED' : v));
+  const same = (name, r) => assert.deepEqual(mask({ status: r.status, body: r.body }), real[name], name);
 
   // Signed in as the demo admin.
   same('admin:docker', await call('GET', '/api/docker'));
@@ -224,14 +280,14 @@ test('the config switch persists and survives a reload; reset restores the seed'
 test('non-admin users: discovered services only while the switch is on, without admin diagnostics', async () => {
   const { call, asJordan, asDemo } = setup();
   await asJordan();
-  assert.deepEqual((await call('GET', '/api/docker')).body, { enabled: false, available: false, error: null, services: [] });
+  assert.deepEqual((await call('GET', '/api/docker')).body, { enabled: false, available: false, error: null, stale: false, updated_at: null, services: [] });
   assert.deepEqual((await call('GET', '/api/bootstrap')).body.docker, { enabled: false });
   assert.deepEqual(Object.keys((await call('GET', '/api/status')).body.statuses), []);
   await asDemo();
   await call('PUT', '/api/admin/config', { docker_visible_to_users: true });
   await asJordan();
   const r = await call('GET', '/api/docker');
-  assert.deepEqual(Object.keys(r.body), ['enabled', 'available', 'error', 'services']);
+  assert.deepEqual(Object.keys(r.body), ['enabled', 'available', 'error', 'stale', 'updated_at', 'services']);
   assert.equal(r.body.services.length, 9);
   const st = (await call('GET', '/api/status')).body.statuses;
   assert.ok(Object.keys(st).every((k) => k.startsWith('docker:')));
@@ -274,7 +330,9 @@ test('status: discovered services follow their container, with the same entry sh
 test('GET /api/docker: the admin sees diagnostics, with the real shape', async () => {
   const { call } = setup();
   const r = await call('GET', '/api/docker');
-  assert.deepEqual(Object.keys(r.body), ['enabled', 'available', 'error', 'services', 'skipped', 'warnings']);
+  assert.deepEqual(Object.keys(r.body), ['enabled', 'available', 'error', 'stale', 'updated_at', 'services', 'skipped', 'warnings']);
+  assert.equal(r.body.stale, false);
+  assert.match(r.body.updated_at, /^\d{4}-\d\d-\d\dT[\d:]+Z$/);
   assert.deepEqual(r.body.skipped, [{ container: 'whoami', reason: 'serverhub.url is not a valid http(s) URL' }]);
   assert.deepEqual(r.body.warnings, [{ container: 'vikunja', reason: 'serverhub.icon is not a known icon id; using a default' }]);
   const s = r.body.services.find((x) => x.id === 'docker:mealie');

@@ -12,6 +12,7 @@ import {
   nextDockerView,
   unavailableNotice,
   formatPort,
+  agoText,
   hiddenDuplicates,
   suggestionToDraft,
 } from '../static/js/lib/docker.js';
@@ -42,8 +43,25 @@ test('urlKey: case, default ports, trailing slash and fragment do not matter; sc
   assert.notEqual(urlKey('https://x.example.com/?a=1'), urlKey('https://x.example.com/'));
 });
 
-test('urlKey: invalid or unsafe URLs have no key', () => {
-  for (const bad of ['', 'nope', 'javascript:alert(1)', 'ftp://x.example.com', null, undefined, 42]) assert.equal(urlKey(bad), null, String(bad));
+test('urlKey: all trailing slashes go, user info and fragment are ignored, a bare "?" is no query', () => {
+  assert.equal(urlKey('http://nas.lan/app///'), 'http://nas.lan/app');
+  assert.equal(urlKey('http://nas.lan//'), 'http://nas.lan');
+  assert.equal(urlKey('https://me:secret@nas.lan/app/#x'), 'https://nas.lan/app');
+  assert.equal(urlKey('http://nas.lan/?'), 'http://nas.lan');
+  assert.equal(urlKey('http://[::1]:8080/x/'), 'http://[::1]:8080/x');
+  // The documented examples (docs/API.md).
+  assert.equal(urlKey('HTTP://NAS.lan:80/'), urlKey('http://nas.lan'));
+  assert.equal(urlKey('http://nas.lan/app/#x'), urlKey('http://nas.lan/app'));
+  assert.notEqual(urlKey('http://nas.lan/?a=1'), urlKey('http://nas.lan/?a=2'));
+  assert.notEqual(urlKey('http://nas.lan:443'), urlKey('https://nas.lan'));
+  // The path is case-sensitive.
+  assert.notEqual(urlKey('http://nas.lan/App'), urlKey('http://nas.lan/app'));
+});
+
+test('urlKey: unparseable input compares as the trimmed, lower-cased string; empty and non-strings have no key', () => {
+  assert.equal(urlKey('  Not A URL '), 'not a url');
+  assert.equal(urlKey('nope'), 'nope');
+  for (const bad of ['', '   ', null, undefined, 42]) assert.equal(urlKey(bad), null, String(bad));
 });
 
 test('mergeServices: own wins on an equal address, everything else is kept', () => {
@@ -66,9 +84,9 @@ test('mergeServices: invalid discovered URLs are kept, two containers on one URL
   );
 });
 
-test('mergeServices: an invalid own URL never hides a discovered service', () => {
-  const merged = mergeServices([own('1', 'garbage')], [disc('a', 'garbage')]);
-  assert.equal(merged.length, 2);
+test('mergeServices: unparseable URLs are only equal when the lower-cased strings are', () => {
+  assert.equal(mergeServices([own('1', 'garbage')], [disc('a', ' GARBAGE ')]).length, 1);
+  assert.equal(mergeServices([own('1', 'garbage')], [disc('a', 'other')]).length, 2);
 });
 
 test('merged services group like the user\'s own (auto-categorised) and rank in search', () => {
@@ -189,4 +207,41 @@ test('hiddenDuplicates counts discovered services hidden behind an own service',
   assert.equal(hiddenDuplicates(mine, [disc('a', 'https://GRAFANA.example.com:443'), disc('b', 'http://h:1')]), 1);
   assert.equal(hiddenDuplicates(mine, []), 0);
   assert.equal(hiddenDuplicates([], [disc('a', 'http://h:1')]), 0);
+});
+
+test('nextDockerView: the server stale flag keeps the cards, available stays true, error comes from the admin warning', () => {
+  const a = nextDockerView(emptyDockerView(), { ...fresh([disc('a', 'http://h:1')]), updated_at: '2026-11-14T10:00:00Z' });
+  assert.equal(a.stale, false);
+  const st = nextDockerView(a, { ...fresh([disc('a', 'http://h:1')]), stale: true, updated_at: '2026-11-14T10:00:20Z', warnings: [{ container: '*', reason: 'Could not connect to the Docker API; check SERVERHUB_DOCKER_HOST and that the socket proxy is running; showing the container list from 20 s ago' }] });
+  assert.equal(st.available, true);
+  assert.equal(st.stale, true);
+  assert.equal(st.error, 'Could not connect to the Docker API; check SERVERHUB_DOCKER_HOST and that the socket proxy is running');
+  assert.equal(st.updatedAt, '2026-11-14T10:00:20Z');
+  const back = nextDockerView(st, { ...fresh([disc('a', 'http://h:1')]), stale: false, updated_at: '2026-11-14T10:01:00Z' });
+  assert.equal(back.stale, false);
+});
+
+test('nextDockerView: a moving updated_at does not repaint while fresh, but does while stale', () => {
+  const a = nextDockerView(emptyDockerView(), { ...fresh([disc('a', 'http://h:1')]), updated_at: '2026-11-14T10:00:00Z' });
+  assert.equal(nextDockerView(a, { ...fresh([disc('a', 'http://h:1')]), updated_at: '2026-11-14T10:00:10Z' }), a);
+  const s1 = nextDockerView(a, { ...fresh([disc('a', 'http://h:1')]), stale: true, updated_at: '2026-11-14T10:00:10Z' });
+  const s2 = nextDockerView(s1, { ...fresh([disc('a', 'http://h:1')]), stale: true, updated_at: '2026-11-14T10:00:10Z' });
+  assert.equal(s2, s1);
+});
+
+test('nextDockerView: missing stale/updated_at mean fresh', () => {
+  const v = nextDockerView(emptyDockerView(), fresh([disc('a', 'http://h:1')]));
+  assert.equal(v.stale, false);
+  assert.equal(v.updatedAt, null);
+});
+
+test('agoText and the stale notice', () => {
+  const now = Date.parse('2026-11-14T10:05:00Z');
+  assert.equal(agoText('2026-11-14T10:04:48Z', now), '12 s ago');
+  assert.equal(agoText('2026-11-14T10:02:00Z', now), '3 min ago');
+  assert.equal(agoText(null, now), null);
+  assert.equal(agoText('garbage', now), null);
+  const v = { enabled: true, available: true, error: 'The Docker API did not answer in time', services: [], stale: true, updatedAt: '2026-11-14T10:04:40Z' };
+  assert.equal(unavailableNotice(v, now), 'Docker discovery is not responding. The Docker API did not answer in time. Showing the container list from 20 s ago.');
+  assert.equal(unavailableNotice({ ...v, stale: false }, now), null);
 });

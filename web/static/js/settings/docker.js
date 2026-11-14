@@ -10,7 +10,7 @@ import { createSwitch } from '../ui.js';
 import { icon, serviceIcon } from '../icons.js';
 import { hostOf, safeUrl } from '../lib/url.js';
 import { copyText } from '../lib/clipboard.js';
-import { DEPLOYMENT_GUIDE_URL, formatPort, hiddenDuplicates, suggestionToDraft } from '../lib/docker.js';
+import { DEPLOYMENT_GUIDE_URL, formatPort, hiddenDuplicates, suggestionToDraft, agoText } from '../lib/docker.js';
 import { openAddService } from '../features/service-dialogs.js';
 import { toastSuccess, toastError } from '../toast.js';
 
@@ -53,7 +53,7 @@ export function mountDocker(root, env) {
   root.append(h('p', { class: 'muted', role: 'status' }, 'Loading…'));
 
   /** @param {...import('../dom.js').Child} children */
-  const show = (...children) => root.replaceChildren(...children.flat());
+  const show = (...children) => root.replaceChildren(...children.flat().filter((c) => c !== null && c !== undefined && c !== false));
 
   function notConfigured() {
     const guide = safeUrl(DEPLOYMENT_GUIDE_URL);
@@ -63,7 +63,19 @@ export function mountDocker(root, env) {
         { class: 'sub-card glass' },
         h('h3', { class: 'card-title-sm' }, 'Docker discovery is not set up'),
         h('p', { class: 'muted' }, 'Server Hub can show your running containers as services automatically. It reads them through a socket proxy that allows only the container list, so it never gets control of Docker. Containers labeled serverhub.enable=true then appear on the dashboard, and you can add other containers with one click from the suggestions here.'),
-        h('p', { class: 'muted' }, 'To turn it on, the operator sets ', h('code', { class: 'mono' }, 'COMPOSE_PROFILES=docker'), ' (this starts the proxy) and ', h('code', { class: 'mono' }, 'SERVERHUB_DOCKER_HOST'), ' (where Server Hub reaches it), then restarts Server Hub.'),
+        h(
+          'p',
+          { class: 'muted' },
+          'To turn it on, the operator sets ',
+          h('code', { class: 'mono' }, 'COMPOSE_PROFILES=docker'),
+          ' (this starts the proxy), ',
+          h('code', { class: 'mono' }, 'SERVERHUB_DOCKER_HOST'),
+          ' (where Server Hub reaches it) and ',
+          h('code', { class: 'mono' }, 'DOCKER_GID'),
+          ' (the group that owns the Docker socket; without it the proxy exits at start), then runs ',
+          h('code', { class: 'mono' }, 'docker compose up -d'),
+          '.',
+        ),
         guide
           ? h('div', null, h('a', { class: 'btn', href: guide, target: '_blank', rel: 'noopener noreferrer' }, h('span', null, 'Read the deployment guide'), icon('external-link'), h('span', { class: 'sr-only' }, ' (opens in a new tab)')))
           : null,
@@ -94,9 +106,9 @@ export function mountDocker(root, env) {
     return h(
       'div',
       { class: 'docker-status' },
-      h('span', { class: 'tag ' + (ok ? 'tag-ok' : 'tag-bad') }, ok ? 'Connected' : 'Unavailable'),
+      h('span', { class: 'tag ' + (!ok ? 'tag-bad' : dock.stale ? 'tag-warn' : 'tag-ok') }, !ok ? 'Unavailable' : dock.stale ? 'Not responding' : 'Connected'),
       ok
-        ? h('p', { class: 'muted' }, summary)
+        ? h('p', { class: 'muted' }, summary + (dock.stale ? ` Showing the container list${agoText(dock.updated_at) ? ' from ' + agoText(dock.updated_at) : ' it last received'}.` : ''))
         : h('p', { class: 'muted' }, dock.error || "Server Hub can't read the Docker socket proxy right now."),
       h('button', { type: 'button', class: 'btn btn-sm', onclick: () => void load() }, 'Refresh'),
     );

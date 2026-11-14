@@ -169,7 +169,9 @@ export function createServicesView({ root, onEdit, onDelete, onDetails }) {
      */
     applyStatuses(statuses) {
       for (const [id, { el, text, forceDown }] of statusEls) {
-        const known = forceDown ? 'down' : Object.hasOwn(statuses, id) ? statuses[id].state : null;
+        // A discovered id can be missing from a loaded map (no listing yet, or too old): that is unknown, not "checking".
+        const missing = id.startsWith('docker:') && Object.keys(statuses).length > 0 ? 'unknown' : null;
+        const known = forceDown ? 'down' : Object.hasOwn(statuses, id) ? statuses[id].state : missing;
         const state = known === 'up' || known === 'down' ? known : known === 'unknown' ? 'unknown' : 'checking';
         el.className = 'status status-' + (state === 'unknown' ? 'unknown' : state);
         const msg = STATUS_TEXT[/** @type {keyof typeof STATUS_TEXT} */ (state)];

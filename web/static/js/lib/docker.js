@@ -26,17 +26,26 @@ export function isDiscovered(s) {
 }
 
 /**
- * Key that makes two addresses count as the same service: lower-cased host,
- * default port dropped, no trailing slash, no fragment. The scheme stays part
- * of the key (http and https on one host are different endpoints). Returns
- * null for anything that is not a valid http(s) URL; those never match.
+ * Key that makes two addresses count as the same service. Mirrors the
+ * server's `normalize_url` (docs/API.md, "Docker discovery"): scheme and host
+ * lower-cased, the port dropped when it is the scheme's default, the path as
+ * written minus ALL trailing slashes, a non-empty query kept, user info and
+ * fragment ignored. The scheme stays part of the key (http and https are
+ * different endpoints). Input that cannot be parsed compares as the trimmed,
+ * lower-cased string. Returns null for non-strings and empty input.
  * @param {unknown} url
  * @returns {string | null}
  */
 export function urlKey(url) {
-  const href = safeUrl(url);
-  if (!href) return null;
-  const u = new URL(href);
+  if (typeof url !== 'string') return null;
+  const raw = url.trim();
+  if (!raw) return null;
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return raw.toLowerCase();
+  }
   const path = u.pathname.replace(/\/+$/, '');
   return `${u.protocol}//${u.host}${path}${u.search}`;
 }
@@ -129,12 +138,14 @@ export function containerTitle(s, opts = {}) {
 }
 
 /**
- * @typedef {{ enabled: boolean, available: boolean, error: string | null, services: DiscoveredService[], stale: boolean }} DockerView
+ * @typedef {{ enabled: boolean, available: boolean, error: string | null, services: DiscoveredService[], stale: boolean, updatedAt: string | null }} DockerView
+ * `stale`: the cards are not current. Either the server says so (it serves its last good list while Docker
+ * fails; `available` stays true) or Docker is unavailable and the cards are the last ones this page saw.
  */
 
 /** @returns {DockerView} */
 export function emptyDockerView() {
-  return { enabled: false, available: true, error: null, services: [], stale: false };
+  return { enabled: false, available: true, error: null, services: [], stale: false, updatedAt: null };
 }
 
 /**
@@ -166,28 +177,56 @@ export function nextDockerView(prev, res) {
   // Not a usable response (the request failed, or the body is not an object): keep what is shown.
   if (!r) return prev;
   if (r.enabled === false) {
-    next = { enabled: false, available: true, error: null, services: [], stale: false };
+    next = emptyDockerView();
   } else if (r.available === false) {
-    next = { enabled: true, available: false, error: typeof r.error === 'string' && r.error ? r.error : null, services: prev.services, stale: prev.services.length > 0 };
+    // Nothing usable on the server: keep what this page saw last, marked stale.
+    next = { enabled: true, available: false, error: typeof r.error === 'string' && r.error ? r.error : null, services: prev.services, stale: prev.services.length > 0, updatedAt: prev.updatedAt };
   } else {
     const services = Array.isArray(r.services) ? r.services.filter(isDiscoveredShape) : [];
-    next = { enabled: true, available: true, error: null, services, stale: false };
+    // The server's own stale flag (it serves its last good list while Docker fails); a missing field means fresh.
+    const stale = r.stale === true;
+    const updatedAt = typeof r.updated_at === 'string' ? r.updated_at : null;
+    // Admins get the error as the first listing-wide warning ("<error>; showing the container list from N s ago").
+    const note = stale && Array.isArray(r.warnings) ? r.warnings.find((w) => w && w.container === '*' && typeof w.reason === 'string') : null;
+    const error = note ? note.reason.replace(/;\s*showing the container list from .*$/i, '').trim() || null : null;
+    next = { enabled: true, available: true, error, services, stale, updatedAt };
   }
   return sameView(prev, next) ? prev : next;
 }
 
 /** @param {DockerView} a @param {DockerView} b */
 function sameView(a, b) {
-  return a.enabled === b.enabled && a.available === b.available && a.error === b.error && a.stale === b.stale && (a.services === b.services || JSON.stringify(a.services) === JSON.stringify(b.services));
+  // `updatedAt` moves on every server refresh; it only matters (and is only compared) while the cards are stale.
+  return a.enabled === b.enabled && a.available === b.available && a.error === b.error && a.stale === b.stale && (!a.stale || a.updatedAt === b.updatedAt) && (a.services === b.services || JSON.stringify(a.services) === JSON.stringify(b.services));
+}
+
+/**
+ * "12 s ago", "3 min ago"; null when the time is unknown.
+ * @param {string | null | undefined} iso
+ * @param {number} [now]
+ */
+export function agoText(iso, now = Date.now()) {
+  const t = typeof iso === 'string' ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(t)) return null;
+  const s = Math.max(0, Math.round((now - t) / 1000));
+  if (s < 60) return `${s} s ago`;
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
 }
 
 /**
  * One line for the admin notice, or null when there is nothing to say.
  * @param {DockerView} v
+ * @param {number} [now]
  */
-export function unavailableNotice(v) {
-  if (!v.enabled || v.available) return null;
+export function unavailableNotice(v, now = Date.now()) {
+  if (!v.enabled) return null;
   const why = v.error ? ` ${v.error.replace(/[.\s]+$/, '')}.` : '';
+  if (v.available) {
+    if (!v.stale) return null;
+    const ago = agoText(v.updatedAt, now);
+    return `Docker discovery is not responding.${why} Showing the container list${ago ? ' from ' + ago : ' it last received'}.`;
+  }
   return v.stale ? `Docker discovery is unavailable.${why} Showing the last known containers.` : `Docker discovery is unavailable.${why}`;
 }
 

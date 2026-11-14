@@ -5,11 +5,11 @@ import { h, nextId } from '../dom.js';
 import { openDialog } from '../dialog.js';
 import { resolveCategory } from '../categorize.js';
 import { safeUrl } from '../lib/url.js';
-import { stateLabel, healthLabel, containerBadge } from '../lib/docker.js';
+import { stateLabel, healthLabel, containerBadge, agoText } from '../lib/docker.js';
 
 /**
  * @param {import('../types.js').DiscoveredService} s
- * @param {{ stale?: boolean }} [opts]
+ * @param {{ stale?: boolean, updatedAt?: string | null }} [opts]
  */
 export function openDiscoveredDetails(s, opts = {}) {
   openDialog({
@@ -40,7 +40,7 @@ export function openDiscoveredDetails(s, opts = {}) {
       return h(
         'div',
         { class: 'dlg-content' },
-        opts.stale ? h('p', { class: 'banner banner-info', role: 'status' }, 'Docker is unavailable right now, so this is the last known state.') : null,
+        opts.stale ? h('p', { class: 'banner banner-info', role: 'status' }, 'Docker is not responding right now, so this is the last known state' + (agoText(opts.updatedAt) ? ` (from ${agoText(opts.updatedAt)}).` : '.')) : null,
         h('dl', { class: 'detail-list' }, rows),
         h('p', { id: hintId, class: 'field-hint' }, 'This service is managed by its container labels (serverhub.*). Change the labels and recreate the container to edit it here.'),
         h('div', { class: 'dlg-footer' }, h('button', { type: 'button', class: 'btn btn-primary', 'data-autofocus': '', onclick: () => ctrl.close() }, 'Close')),

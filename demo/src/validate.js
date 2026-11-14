@@ -69,6 +69,13 @@ export function httpUrl(v) {
   return v;
 }
 
+/** A service URL: an http(s) URL without user info (the server never sends credentials when checking). @param {string} v */
+export function serviceUrl(v) {
+  v = httpUrl(v);
+  if (/^[a-z]+:\/\/[^/?#]*@/i.test(v)) throw new ValueErr('must not contain credentials (user:password@)');
+  return v;
+}
+
 /** @param {string} v */
 function beszelUrl(v) {
   v = httpUrl(v);
@@ -278,6 +285,7 @@ export function validatePatch(model, data, nullable = []) {
 const optional = (fields) => Object.fromEntries(Object.entries(fields).map(([k, f]) => [k, { ...f, required: false, def: undefined, nullable: true }]));
 
 const URL_FIELD = /** @type {Field} */ ({ t: 'str', max: 2000, after: httpUrl, required: true });
+const SERVICE_URL_FIELD = /** @type {Field} */ ({ t: 'str', max: 2000, after: serviceUrl, required: true });
 const COLOR = /** @type {Field} */ ({ t: 'str', pattern: '^#[0-9a-fA-F]{6}$' });
 const NAME = /** @type {Field} */ ({ t: 'str', strip: true, min: 1, max: 200, required: true });
 
@@ -348,7 +356,7 @@ export function deepMerge(base, patch) {
 
 const SERVICE_FIELDS = /** @type {Record<string, Field>} */ ({
   name: NAME,
-  url: URL_FIELD,
+  url: SERVICE_URL_FIELD,
   description: { t: 'str', strip: true, max: 500, def: '' },
   icon: { t: 'str', after: icon, def: 'box' },
   category: { t: 'str', nullable: true, afterNull: true, after: category, def: null },
@@ -429,7 +437,8 @@ export const AdminConfigPatch = {
 export const ADMIN_CONFIG_KEYS = ['registration_open', 'docker_visible_to_users'];
 
 /** @type {Model} */
-const BackupService = { name: 'BackupService', fields: SERVICE_FIELDS, extra: 'ignore' };
+// Backups made before service URLs refused user info must still restore.
+const BackupService = { name: 'BackupService', fields: { ...SERVICE_FIELDS, url: URL_FIELD }, extra: 'ignore' };
 /** @type {Model} */
 const BackupBookmark = { name: 'BackupBookmark', fields: BOOKMARK_FIELDS, extra: 'ignore' };
 /** @type {Model} */

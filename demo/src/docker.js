@@ -11,6 +11,8 @@ import * as S from './validate.js';
 
 const MAX_LABEL_VALUE = 2048;
 const MAX_CONTAINERS = 500;
+const MAX_DISCOVERED_CHECKS = 100;
+const MAX_URL = 2000;
 const MAX_PORTS = 64;
 const LABEL_PREFIX = 'serverhub.';
 const STATES = new Set(['running', 'exited', 'paused', 'restarting', 'created', 'dead', 'removing']);
@@ -188,17 +190,35 @@ export function suggestedUrl(publicHost, port) {
   return `${scheme}://${host}${suffix}`;
 }
 
-/** Comparison key for "is this URL already one of my services?". @param {string} url */
+/**
+ * Comparison key for "is this URL already one of my services?" (the rule in
+ * docs/API.md, "Docker discovery"): scheme and host lowercased, user info
+ * dropped, the port dropped when it is the scheme's default (http 80, https
+ * 443), the path as written minus ALL trailing slashes, a non-empty query
+ * kept, the fragment dropped. Unparseable input: trimmed and lowercased.
+ * @param {string} url
+ */
 export function normalizeUrl(url) {
+  const raw = url.trim();
+  let u;
   try {
-    const u = new URL(url.trim());
-    const scheme = u.protocol.replace(/:$/, '').toLowerCase();
-    const port = u.port ? Number(u.port) : scheme === 'https' ? 443 : 80;
-    return `${scheme}://${u.hostname.toLowerCase().replace(/^\[|\]$/g, '')}:${port}${u.pathname.replace(/\/+$/, '')}`;
+    u = new URL(raw);
   } catch {
-    return url.trim().toLowerCase();
+    return raw.toLowerCase();
   }
+  return `${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, '')}${u.search}`;
 }
+
+// Skip reasons (admin diagnostics, documented in docs/API.md).
+const SKIP_NO_NAME = 'container has no usable name';
+const SKIP_UNKNOWN_STATE = 'unknown container state';
+const SKIP_DUPLICATE = 'duplicate container name; only the first one is listed';
+const SKIP_URL_MISSING = 'serverhub.url is missing';
+const SKIP_URL_INVALID = 'serverhub.url is invalid';
+const SKIP_URL_TOO_LONG = `serverhub.url is longer than ${MAX_URL} characters`;
+const SKIP_URL_CREDENTIALS = 'serverhub.url must not contain credentials (user:password@)';
+const SKIP_URL_NOT_HTTP = 'serverhub.url is not a valid http(s) URL';
+const SKIP_LABELS_INVALID = 'serverhub labels could not be validated';
 
 /**
  * @typedef {{ container: string, reason: string }} Note
@@ -223,11 +243,17 @@ function serviceFromLabels(c, name, labels, out) {
   const img = image(c);
   const [defaultIcon] = guessIconCategory(imageBase(img), name);
 
-  const [url, urlPresent] = label(labels, 'url');
-  if (url === null) {
-    out.skipped.push({ container: name, reason: !urlPresent ? 'serverhub.url is missing' : 'serverhub.url is invalid' });
+  const skip = (/** @type {string} */ reason) => {
+    out.skipped.push({ container: name, reason });
     return null;
-  }
+  };
+  const rawUrl = labels[LABEL_PREFIX + 'url'];
+  if (!(LABEL_PREFIX + 'url' in labels)) return skip(SKIP_URL_MISSING);
+  if (typeof rawUrl !== 'string') return skip(SKIP_URL_INVALID);
+  if (Array.from(rawUrl).length > MAX_URL) return skip(SKIP_URL_TOO_LONG);
+  const url = rawUrl;
+  // User info in the authority (the netloc of urlsplit contains "@").
+  if (/^[^/?#]*:\/\/[^/?#]*@/.test(url.trim()) || /^\/\/[^/?#]*@/.test(url.trim())) return skip(SKIP_URL_CREDENTIALS);
   /** @type {Record<string, any>} */
   const fields = { url, name: prettify(name), icon: defaultIcon };
 
@@ -273,10 +299,9 @@ function serviceFromLabels(c, name, labels, out) {
     } catch (e) {
       if (!(e instanceof S.ValidationError)) throw e;
       const bad = new Set(Object.keys(e.fields).map((k) => k.split('.')[0]));
-      if (bad.has('url') || !bad.size || [...bad].some((f) => !(f in defaults))) {
-        out.skipped.push({ container: name, reason: 'serverhub.url is not a valid http(s) URL' });
-        return null;
-      }
+      if (bad.has('url')) return skip(SKIP_URL_NOT_HTTP);
+      // A field without a default failed (not the URL): say so, do not blame serverhub.url.
+      if (!bad.size || [...bad].some((f) => !(f in defaults))) return skip(SKIP_LABELS_INVALID);
       for (const f of [...bad].sort()) {
         warn(`serverhub.${f} is invalid; using a default`);
         fields[f] = defaults[f];
@@ -305,6 +330,8 @@ function serviceFromLabels(c, name, labels, out) {
 export function discover(containers) {
   /** @type {Discovery} */
   const out = { services: [], skipped: [], warnings: [] };
+  /** @type {Set<string>} */
+  const seen = new Set();
   for (const c of containers.slice(0, MAX_CONTAINERS)) {
     if (!c || typeof c !== 'object' || Array.isArray(c)) continue;
     const labels = labelsOf(c);
@@ -312,19 +339,71 @@ export function discover(containers) {
     if (typeof enable !== 'string' || flag(enable.slice(0, 16)) !== true) continue;
     const name = containerName(c);
     if (name === null) {
-      out.skipped.push({ container: '?', reason: 'container has no usable name' });
+      out.skipped.push({ container: '?', reason: SKIP_NO_NAME });
+      continue;
+    }
+    if (seen.has(name)) {
+      // Docker names are unique; a second one means a misbehaving API.
+      out.skipped.push({ container: name, reason: SKIP_DUPLICATE });
       continue;
     }
     if (stateOf(c) === null) {
-      out.skipped.push({ container: name, reason: 'unknown container state' });
+      out.skipped.push({ container: name, reason: SKIP_UNKNOWN_STATE });
       continue;
     }
     const svc = serviceFromLabels(c, name, labels, out);
-    if (svc) out.services.push(svc);
+    if (svc) {
+      seen.add(name);
+      out.services.push(svc);
+    }
   }
   if (containers.length > MAX_CONTAINERS) out.warnings.push({ container: '*', reason: `only the first ${MAX_CONTAINERS} containers were examined` });
   out.services.sort((a, b) => cmp(a.name.toLowerCase(), b.name.toLowerCase()) || cmp(a.id, b.id));
+  const checked = out.services.filter((s) => s.check && s.container.state === 'running').length;
+  if (checked > MAX_DISCOVERED_CHECKS) {
+    out.warnings.push({ container: '*', reason: `only the first ${MAX_DISCOVERED_CHECKS} running discovered services (by name) are status-checked; the other ${checked - MAX_DISCOVERED_CHECKS} report unknown` });
+  }
   return out;
+}
+
+/**
+ * Which discovered services get a status check: `targets` = ids of running
+ * containers with `check` (the first 100 in list order); `fixed` = id ->
+ * 'down' (not running) | 'unknown' (over the cap) answered without a request.
+ * `check: false` services are in neither.
+ * @param {Array<{ id: string, check: boolean, container: { state: string } }>} services
+ * @returns {{ targets: string[], fixed: Record<string, 'down' | 'unknown'> }}
+ */
+export function statusPlan(services) {
+  /** @type {string[]} */
+  const targets = [];
+  /** @type {Record<string, 'down' | 'unknown'>} */
+  const fixed = {};
+  for (const s of services) {
+    if (!s.check) continue;
+    if (s.container.state !== 'running') fixed[s.id] = 'down';
+    else if (targets.length < MAX_DISCOVERED_CHECKS) targets.push(s.id);
+    else fixed[s.id] = 'unknown';
+  }
+  return { targets, fixed };
+}
+
+const SELF_COMPOSE_SERVICES = new Set(['server-hub', 'docker-proxy']);
+const SELF_IMAGES = new Set(['server-hub', 'serverhub']);
+const PROXY_IMAGE_MARKER = 'socket-proxy';
+
+/**
+ * Server Hub itself or the socket proxy: by Compose service label, image name
+ * (last path segment, no tag or digest) or the container id prefix.
+ * @param {any} c
+ * @param {string | null} [ownIdPrefix]
+ */
+export function isSelfOrProxy(c, ownIdPrefix = null) {
+  const svc = labelsOf(c)['com.docker.compose.service'];
+  if (typeof svc === 'string' && SELF_COMPOSE_SERVICES.has(svc)) return true;
+  const base = imageBase(image(c)).toLowerCase();
+  if (SELF_IMAGES.has(base) || base.includes(PROXY_IMAGE_MARKER)) return true;
+  return !!(ownIdPrefix && typeof c.Id === 'string' && c.Id.startsWith(ownIdPrefix));
 }
 
 /** @param {string} a @param {string} b */
@@ -333,18 +412,21 @@ const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 /**
  * Running, unlabelled containers that publish at least one TCP port.
  * @param {any[]} containers
- * @param {{ publicHost: string | null, existingUrls: Iterable<string>, excludeNames?: string[], excludeIdPrefix?: string | null }} o
+ * @param {{ publicHost: string | null, existingUrls: Iterable<string>, excludeIdPrefix?: string | null }} o
  */
-export function suggest(containers, { publicHost, existingUrls, excludeNames = [], excludeIdPrefix = null }) {
+export function suggest(containers, { publicHost, existingUrls, excludeIdPrefix = null }) {
   const existing = new Set([...existingUrls].map(normalizeUrl));
+  /** @type {Set<string>} */
+  const seen = new Set();
   /** @type {any[]} */
   const out = [];
   for (const c of containers.slice(0, MAX_CONTAINERS)) {
     if (!c || typeof c !== 'object' || Array.isArray(c) || stateOf(c) !== 'running') continue;
     if (LABEL_PREFIX + 'enable' in labelsOf(c)) continue; // labelled (either way): discovered or explicitly opted out
     const name = containerName(c);
-    if (name === null || excludeNames.includes(name)) continue;
-    if (excludeIdPrefix && typeof c.Id === 'string' && c.Id.startsWith(excludeIdPrefix)) continue; // Server Hub's own container
+    if (name === null || seen.has(name)) continue;
+    if (isSelfOrProxy(c, excludeIdPrefix)) continue; // Server Hub's own container or the socket proxy
+    seen.add(name);
     const ports = publishedPorts(c);
     const best = webPort(ports);
     if (!best) continue;
