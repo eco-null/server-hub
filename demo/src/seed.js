@@ -77,6 +77,66 @@ export const BESZEL_HUBS = [
 ];
 
 /**
+ * Docker auto-discovery: the simulated Docker host. The socket proxy is
+ * reached as `docker-proxy`; suggestions point at the host's public address.
+ * Everything under home.arpa, like the rest of the seed.
+ */
+export const DOCKER_PROXY_HOST = 'docker-proxy';
+export const DOCKER_PUBLIC_HOST = 'docker.home.arpa';
+/** Server Hub's own container (a hostname-style short id): never suggested. */
+export const DOCKER_SELF_ID_PREFIX = '5c1f0a9e2b4d';
+
+/**
+ * What `GET /containers/json?all=true` would list, before the clock is applied
+ * (see `dockerContainers()` in sim.js). Times are seconds: `upS` is the uptime
+ * when the demo starts, `agoS` how long ago a stopped container exited, and
+ * `healthyAfterS` the uptime at which a "starting" health check turns healthy.
+ * Ports are `[private, public]` (published on all addresses) or
+ * `[private, public, 'tcp' | 'udp', ip]`.
+ * @typedef {{
+ *   name: string, image: string, state: 'running' | 'exited', upS?: number, agoS?: number, exitCode?: number,
+ *   health?: 'healthy' | 'unhealthy' | 'starting', healthyAfterS?: number, idPrefix?: string,
+ *   ports?: Array<[number, number] | [number, number, string, string]>, labels?: Record<string, string>,
+ * }} DockerFixture
+ */
+
+/** @param {Record<string, string>} l @returns {Record<string, string>} */
+const sh = (l) => Object.fromEntries(Object.entries(l).map(([k, v]) => ['serverhub.' + k, v]));
+
+const DAY = 86400;
+const HOUR = 3600;
+
+/** @type {DockerFixture[]} */
+export const DOCKER_CONTAINERS = [
+  { name: 'dozzle', image: 'amir20/dozzle:v8.13.4', state: 'running', upS: 12 * DAY, health: 'healthy', ports: [[8080, 8888]], labels: sh({ enable: 'true', name: 'Dozzle', url: 'https://logs.home.arpa', description: 'Live logs for every container on this host', icon: 'terminal', category: 'Dev' }) },
+  // Starts "starting" and turns healthy 90 seconds after it came up (so about a minute after the demo opens).
+  { name: 'mealie', image: 'ghcr.io/mealie-recipes/mealie:v2.4.2', state: 'running', upS: 20, health: 'starting', healthyAfterS: 90, ports: [[9000, 9925]], labels: sh({ enable: 'true', name: 'Mealie', url: 'https://recipes.home.arpa', description: 'Recipes and the weekly meal plan', icon: 'book', category: 'Home' }) },
+  // Same address as the user's own "Portainer" card, which wins.
+  { name: 'portainer', image: 'portainer/portainer-ce:2.21.4', state: 'running', upS: 12 * DAY, ports: [[9443, 9443], [8000, 8000]], labels: sh({ enable: 'true', name: 'Portainer', url: 'https://portainer.home.arpa:9443', description: 'Manage the containers on this host' }) },
+  { name: 'qbittorrent', image: 'lscr.io/linuxserver/qbittorrent:5.0.2', state: 'running', upS: 3 * DAY, ports: [[8080, 8085]], labels: sh({ enable: 'true', name: 'qBittorrent', url: 'https://downloads.home.arpa', description: 'Torrent client behind the VPN container', icon: 'download', category: 'Media', check: 'false' }) },
+  { name: 'radarr', image: 'lscr.io/linuxserver/radarr:5.14.0', state: 'running', upS: 3 * DAY, ports: [[7878, 7878]], labels: sh({ enable: 'true', name: 'Radarr', url: 'https://radarr.home.arpa', description: 'Movie library automation', icon: 'film', category: 'Media' }) },
+  { name: 'searxng', image: 'searxng/searxng:2025.1.12', state: 'running', upS: 6 * HOUR, health: 'unhealthy', ports: [[8080, 8890]], labels: sh({ enable: 'true', name: 'SearXNG', url: 'https://search.home.arpa', description: 'Private metasearch for the whole house', icon: 'globe', category: 'Search' }) },
+  { name: 'sonarr', image: 'lscr.io/linuxserver/sonarr:4.0.11', state: 'running', upS: 3 * DAY, ports: [[8989, 8989]], labels: sh({ enable: 'true', name: 'Sonarr', url: 'https://sonarr.home.arpa', description: 'TV show library automation', icon: 'film', category: 'Media' }) },
+  { name: 'syncthing', image: 'syncthing/syncthing:1.29.2', state: 'exited', agoS: 2 * DAY, exitCode: 137, labels: sh({ enable: 'true', name: 'Syncthing', url: 'https://sync.home.arpa', description: 'File sync between the laptops and the NAS', icon: 'refresh', category: 'Files' }) },
+  // The icon label is not a known icon id: a warning, and the card falls back to the guessed icon.
+  { name: 'vikunja', image: 'vikunja/vikunja:0.24.6', state: 'running', upS: 4 * DAY, health: 'healthy', ports: [[3456, 3456]], labels: sh({ enable: 'true', name: 'Vikunja', url: 'https://tasks.home.arpa', description: 'Shared to-do lists', icon: 'tasks', category: 'Productivity' }) },
+  // Labelled, but the address has no scheme: skipped.
+  { name: 'whoami', image: 'traefik/whoami:v1.10.3', state: 'running', upS: 12 * DAY, ports: [[80, 8089]], labels: sh({ enable: 'true', name: 'Whoami', url: 'whoami.home.arpa' }) },
+  // Opted out explicitly: neither discovered nor suggested.
+  { name: 'adminer', image: 'adminer:4.8.1', state: 'running', upS: 12 * DAY, ports: [[8080, 8081]], labels: sh({ enable: 'false' }) },
+  // Plumbing that is never suggested.
+  { name: DOCKER_PROXY_HOST, image: 'tecnativa/docker-socket-proxy:0.3.0', state: 'running', upS: 12 * DAY },
+  { name: 'server-hub', image: 'ghcr.io/eco-null/server-hub:2.0.0', state: 'running', upS: 12 * DAY, health: 'healthy', idPrefix: DOCKER_SELF_ID_PREFIX, ports: [[8080, 8080]] },
+  { name: 'postgres', image: 'postgres:16-alpine', state: 'running', upS: 12 * DAY, health: 'healthy', ports: [[5432, 5432, 'tcp', '127.0.0.1']] },
+  { name: 'old-registry', image: 'registry:2', state: 'exited', agoS: 19 * DAY, exitCode: 0, ports: [[5000, 5000]] },
+  // Unlabelled and publishing a web port: suggestions for the admin.
+  { name: 'bookstack', image: 'lscr.io/linuxserver/bookstack:24.12.1', state: 'running', upS: 5 * DAY, ports: [[80, 6875]] },
+  { name: 'filebrowser', image: 'filebrowser/filebrowser:v2.31.2', state: 'running', upS: 9 * DAY, health: 'healthy', ports: [[80, 8082]] },
+  { name: 'node-red', image: 'nodered/node-red:4.0.8', state: 'running', upS: 9 * DAY, ports: [[1880, 1880]] },
+  { name: 'prometheus', image: 'prom/prometheus:v3.1.0', state: 'running', upS: 12 * DAY, ports: [[9090, 9090]] },
+];
+
+/**
  * A fresh demo state. `uuid` is injected so tests are deterministic.
  * @param {() => string} uuid
  */
@@ -130,5 +190,7 @@ export function seedState(uuid) {
     data,
     health,
     beszelSystems,
+    // Docker discovery. `t0` (ms) is when the simulated containers' clocks started; set on first load.
+    docker: { t0: null, visible_to_users: false },
   };
 }

@@ -62,6 +62,82 @@ export function serviceStatus(service, health, nowMs) {
 }
 
 /**
+ * Docker's own wording for a duration ("5 minutes", "About an hour", "3 days").
+ * @param {number} seconds
+ */
+export function humanDuration(seconds) {
+  const s = Math.floor(seconds);
+  if (s < 1) return 'Less than a second';
+  if (s === 1) return '1 second';
+  if (s < 60) return `${s} seconds`;
+  const minutes = Math.floor(s / 60);
+  if (minutes === 1) return 'About a minute';
+  if (minutes < 60) return `${minutes} minutes`;
+  const hours = Math.round(s / 3600);
+  if (hours === 1) return 'About an hour';
+  if (hours < 48) return `${hours} hours`;
+  if (hours < 24 * 7 * 2) return `${Math.floor(hours / 24)} days`;
+  if (hours < 24 * 30 * 2) return `${Math.floor(hours / 24 / 7)} weeks`;
+  if (hours < 24 * 365 * 2) return `${Math.floor(hours / 24 / 30)} months`;
+  return `${Math.floor(hours / 24 / 365)} years`;
+}
+
+/** A 64-digit hex container id derived from the name. @param {string} name */
+function containerId(name) {
+  let out = '';
+  for (let i = 0; i < 8; i++) out += hash(`${name}:${i}`).toString(16).padStart(8, '0');
+  return out;
+}
+
+/**
+ * What the Docker Engine API (`GET /containers/json?all=true`) would answer
+ * `nowMs` after the simulated host started (`t0`). Uptimes grow with the
+ * clock, and a container whose health check is still "starting" turns healthy
+ * once it has been up long enough.
+ * @param {Array<import('./seed.js').DockerFixture>} fixtures
+ * @param {number} t0 ms since epoch
+ * @param {number} nowMs
+ * @returns {Array<Record<string, any>>}
+ */
+export function dockerContainers(fixtures, t0, nowMs) {
+  const elapsed = Math.max(0, Math.floor((nowMs - t0) / 1000));
+  return fixtures.map((f) => {
+    const running = f.state === 'running';
+    const t = (running ? f.upS || 0 : f.agoS || 0) + elapsed;
+    /** @type {string | null} */
+    let health = running ? f.health || null : null;
+    if (running && f.healthyAfterS !== undefined && t >= f.healthyAfterS) health = 'healthy';
+    const status = running
+      ? `Up ${humanDuration(t)}` + (health ? ` (${health === 'starting' ? 'health: starting' : health})` : '')
+      : `Exited (${f.exitCode ?? 0}) ${humanDuration(t)} ago`;
+    const ports = [];
+    for (const [priv, pub, type = 'tcp', ip] of running ? f.ports || [] : []) {
+      for (const addr of ip ? [ip] : ['0.0.0.0', '::']) ports.push({ IP: addr, PrivatePort: priv, PublicPort: pub, Type: type });
+    }
+    return {
+      Id: ((f.idPrefix || '') + containerId(f.name)).slice(0, 64),
+      Names: [`/${f.name}`],
+      Image: f.image,
+      State: f.state,
+      Status: status,
+      Labels: f.labels || {},
+      Ports: ports,
+      ...(health ? { Health: { Status: health, FailingStreak: health === 'unhealthy' ? 3 : 0 } } : {}),
+    };
+  });
+}
+
+/**
+ * What a status check of a discovered service would find: only a running
+ * container that is not unhealthy or still starting answers.
+ * @param {{ state: string, health: string | null }} container
+ * @returns {'up' | 'down'}
+ */
+export function dockerServiceHealth(container) {
+  return container.state === 'running' && (container.health === null || container.health === 'healthy') ? 'up' : 'down';
+}
+
+/**
  * @typedef {{ name: string, host: string, cpu: number, memory: number, disk: number, uptimeDays: number }} SystemBase
  */
 

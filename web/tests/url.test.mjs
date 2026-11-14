@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { safeUrl, hostOf, splitScheme, buildServiceUrl, withScheme, cssUrl } from '../static/js/lib/url.js';
+import { safeUrl, hostOf, splitScheme, buildServiceUrl, withScheme, cssUrl, hasCredentials } from '../static/js/lib/url.js';
 
 test('safeUrl accepts only http(s)', () => {
   assert.equal(safeUrl('https://example.com/a?b=1'), 'https://example.com/a?b=1');
@@ -71,4 +71,14 @@ test('cssUrl escapes characters that could end the url() token', () => {
   assert.equal(cssUrl('http://img.example.com/a.jpg'), null, 'CSP only allows https images');
   assert.equal(cssUrl('javascript:alert(1)'), null);
   assert.equal(cssUrl(''), null);
+});
+
+test('hasCredentials: user info in a service address', () => {
+  assert.equal(hasCredentials('https://user:pass@nas.lan/app'), true);
+  assert.equal(hasCredentials('http://user@nas.lan'), true);
+  assert.equal(hasCredentials(buildServiceUrl('https://', 'admin:secret@grafana.example.com:3000')), true);
+  assert.equal(hasCredentials('https://nas.lan/a@b'), false);
+  assert.equal(hasCredentials('https://nas.lan:8080/?u=a:b@c'), false);
+  assert.equal(hasCredentials('not a url'), false);
+  assert.equal(hasCredentials(''), false);
 });

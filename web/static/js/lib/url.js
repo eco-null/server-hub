@@ -27,6 +27,18 @@ export function safeUrl(value, opts = {}) {
 }
 
 /**
+ * True when the address carries user info (`user:password@host`). The server
+ * rejects such service URLs, so the forms say so before sending.
+ * @param {unknown} value
+ */
+export function hasCredentials(value) {
+  const href = safeUrl(value);
+  if (!href) return false;
+  const u = new URL(href);
+  return u.username !== '' || u.password !== '';
+}
+
+/**
  * Host (with port) of a URL; also accepts scheme-less input.
  * @param {unknown} url
  * @returns {string}

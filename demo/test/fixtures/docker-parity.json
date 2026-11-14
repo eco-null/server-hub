@@ -1,0 +1,5919 @@
+{
+ "t0": 1794657600000,
+ "demo": [
+  {
+   "Id": "036d0db1026d0c1e016d0a8b006d08f8076d13fd066d126a056d10d7046d0f44",
+   "Names": [
+    "/dozzle"
+   ],
+   "Image": "amir20/dozzle:v8.13.4",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Dozzle",
+    "serverhub.url": "https://logs.home.arpa",
+    "serverhub.description": "Live logs for every container on this host",
+    "serverhub.icon": "terminal",
+    "serverhub.category": "Dev"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "f0ff4dfef1ff4f91eeff4ad8efff4c6bf4ff544af5ff55ddf2ff5124f3ff52b7",
+   "Names": [
+    "/mealie"
+   ],
+   "Image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+   "State": "running",
+   "Status": "Up 20 seconds (health: starting)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Mealie",
+    "serverhub.url": "https://recipes.home.arpa",
+    "serverhub.description": "Recipes and the weekly meal plan",
+    "serverhub.icon": "book",
+    "serverhub.category": "Home"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "starting",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "5af9bb9b59f9ba085cf9bec15bf9bd2e5ef9c1e75df9c05460f9c50d5ff9c37a",
+   "Names": [
+    "/portainer"
+   ],
+   "Image": "portainer/portainer-ce:2.21.4",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Portainer",
+    "serverhub.url": "https://portainer.home.arpa:9443",
+    "serverhub.description": "Manage the containers on this host"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "2178df112078dd7e1f78dbeb1e78da582578e55d2478e3ca2378e2372278e0a4",
+   "Names": [
+    "/qbittorrent"
+   ],
+   "Image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "qBittorrent",
+    "serverhub.url": "https://downloads.home.arpa",
+    "serverhub.description": "Torrent client behind the VPN container",
+    "serverhub.icon": "download",
+    "serverhub.category": "Media",
+    "serverhub.check": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "89a9432988a9419687a9400386a93e708da949758ca947e28ba9464f8aa944bc",
+   "Names": [
+    "/radarr"
+   ],
+   "Image": "lscr.io/linuxserver/radarr:5.14.0",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Radarr",
+    "serverhub.url": "https://radarr.home.arpa",
+    "serverhub.description": "Movie library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "7f915bbf7e915a2c81915ee580915d527b9155737a9153e07d9158997c915706",
+   "Names": [
+    "/searxng"
+   ],
+   "Image": "searxng/searxng:2025.1.12",
+   "State": "running",
+   "Status": "Up 6 hours (unhealthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "SearXNG",
+    "serverhub.url": "https://search.home.arpa",
+    "serverhub.description": "Private metasearch for the whole house",
+    "serverhub.icon": "globe",
+    "serverhub.category": "Search"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "unhealthy",
+    "FailingStreak": 3
+   }
+  },
+  {
+   "Id": "6250ebd86350ed6b6450eefe6550f0916650f2246750f3b76850f54a6950f6dd",
+   "Names": [
+    "/sonarr"
+   ],
+   "Image": "lscr.io/linuxserver/sonarr:4.0.11",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Sonarr",
+    "serverhub.url": "https://sonarr.home.arpa",
+    "serverhub.description": "TV show library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "290074802a0076132b0077a62c0079392d007acc2e007c5f2f007df230007f85",
+   "Names": [
+    "/syncthing"
+   ],
+   "Image": "syncthing/syncthing:1.29.2",
+   "State": "exited",
+   "Status": "Exited (137) 2 days ago",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Syncthing",
+    "serverhub.url": "https://sync.home.arpa",
+    "serverhub.description": "File sync between the laptops and the NAS",
+    "serverhub.icon": "refresh",
+    "serverhub.category": "Files"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "00ff475dffff45cafeff4437fdff42a4fcff4111fbff3f7efaff3debf9ff3c58",
+   "Names": [
+    "/vikunja"
+   ],
+   "Image": "vikunja/vikunja:0.24.6",
+   "State": "running",
+   "Status": "Up 4 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Vikunja",
+    "serverhub.url": "https://tasks.home.arpa",
+    "serverhub.description": "Shared to-do lists",
+    "serverhub.icon": "tasks",
+    "serverhub.category": "Productivity"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22322cde23322e71203229b821322b4b2632332a273234bd2432300425323197",
+   "Names": [
+    "/whoami"
+   ],
+   "Image": "traefik/whoami:v1.10.3",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Whoami",
+    "serverhub.url": "whoami.home.arpa"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "20bd85111fbd837e1ebd81eb1dbd805824bd8b5d23bd89ca22bd883721bd86a4",
+   "Names": [
+    "/adminer"
+   ],
+   "Image": "adminer:4.8.1",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "a42c718aa52c731da22c6e64a32c6ff7a02c6b3ea12c6cd19e2c68189f2c69ab",
+   "Names": [
+    "/docker-proxy"
+   ],
+   "Image": "tecnativa/docker-socket-proxy:0.3.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "5c1f0a9e2b4d083e15ce093e1761063e12a8073e143b0c3e1c1a0d3e1dad0a3e",
+   "Names": [
+    "/server-hub"
+   ],
+   "Image": "ghcr.io/eco-null/server-hub:2.0.0",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "096c6fc40a6c71570b6c72ea0c6c747d056c6978066c6b0b076c6c9e086c6e31",
+   "Names": [
+    "/postgres"
+   ],
+   "Image": "postgres:16-alpine",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "127.0.0.1",
+     "PrivatePort": 5432,
+     "PublicPort": 5432,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22b8cf1823b8d0ab24b8d23e25b8d3d126b8d56427b8d6f728b8d88a29b8da1d",
+   "Names": [
+    "/old-registry"
+   ],
+   "Image": "registry:2",
+   "State": "exited",
+   "Status": "Exited (0) 2 weeks ago",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "e0466b2ae1466cbdde466804df466997dc4664dedd466671da4661b8db46634b",
+   "Names": [
+    "/bookstack"
+   ],
+   "Image": "lscr.io/linuxserver/bookstack:24.12.1",
+   "State": "running",
+   "Status": "Up 5 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "d9075c3bd8075aa8db075f61da075dcedd076287dc0760f4df0765adde07641a",
+   "Names": [
+    "/filebrowser"
+   ],
+   "Image": "filebrowser/filebrowser:v2.31.2",
+   "State": "running",
+   "Status": "Up 9 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "cdfc6265ccfc60d2cbfc5f3fcafc5dacc9fc5c19c8fc5a86c7fc58f3c6fc5760",
+   "Names": [
+    "/node-red"
+   ],
+   "Image": "nodered/node-red:4.0.8",
+   "State": "running",
+   "Status": "Up 9 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "4e6f714b4d6f6fb8506f74714f6f72de526f7797516f7604546f7abd536f792a",
+   "Names": [
+    "/prometheus"
+   ],
+   "Image": "prom/prometheus:v3.1.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    }
+   ]
+  }
+ ],
+ "demoLater": [
+  {
+   "Id": "036d0db1026d0c1e016d0a8b006d08f8076d13fd066d126a056d10d7046d0f44",
+   "Names": [
+    "/dozzle"
+   ],
+   "Image": "amir20/dozzle:v8.13.4",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Dozzle",
+    "serverhub.url": "https://logs.home.arpa",
+    "serverhub.description": "Live logs for every container on this host",
+    "serverhub.icon": "terminal",
+    "serverhub.category": "Dev"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "f0ff4dfef1ff4f91eeff4ad8efff4c6bf4ff544af5ff55ddf2ff5124f3ff52b7",
+   "Names": [
+    "/mealie"
+   ],
+   "Image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+   "State": "running",
+   "Status": "Up 3 hours (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Mealie",
+    "serverhub.url": "https://recipes.home.arpa",
+    "serverhub.description": "Recipes and the weekly meal plan",
+    "serverhub.icon": "book",
+    "serverhub.category": "Home"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "5af9bb9b59f9ba085cf9bec15bf9bd2e5ef9c1e75df9c05460f9c50d5ff9c37a",
+   "Names": [
+    "/portainer"
+   ],
+   "Image": "portainer/portainer-ce:2.21.4",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Portainer",
+    "serverhub.url": "https://portainer.home.arpa:9443",
+    "serverhub.description": "Manage the containers on this host"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "2178df112078dd7e1f78dbeb1e78da582578e55d2478e3ca2378e2372278e0a4",
+   "Names": [
+    "/qbittorrent"
+   ],
+   "Image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "qBittorrent",
+    "serverhub.url": "https://downloads.home.arpa",
+    "serverhub.description": "Torrent client behind the VPN container",
+    "serverhub.icon": "download",
+    "serverhub.category": "Media",
+    "serverhub.check": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "89a9432988a9419687a9400386a93e708da949758ca947e28ba9464f8aa944bc",
+   "Names": [
+    "/radarr"
+   ],
+   "Image": "lscr.io/linuxserver/radarr:5.14.0",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Radarr",
+    "serverhub.url": "https://radarr.home.arpa",
+    "serverhub.description": "Movie library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "7f915bbf7e915a2c81915ee580915d527b9155737a9153e07d9158997c915706",
+   "Names": [
+    "/searxng"
+   ],
+   "Image": "searxng/searxng:2025.1.12",
+   "State": "running",
+   "Status": "Up 9 hours (unhealthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "SearXNG",
+    "serverhub.url": "https://search.home.arpa",
+    "serverhub.description": "Private metasearch for the whole house",
+    "serverhub.icon": "globe",
+    "serverhub.category": "Search"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "unhealthy",
+    "FailingStreak": 3
+   }
+  },
+  {
+   "Id": "6250ebd86350ed6b6450eefe6550f0916650f2246750f3b76850f54a6950f6dd",
+   "Names": [
+    "/sonarr"
+   ],
+   "Image": "lscr.io/linuxserver/sonarr:4.0.11",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Sonarr",
+    "serverhub.url": "https://sonarr.home.arpa",
+    "serverhub.description": "TV show library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "290074802a0076132b0077a62c0079392d007acc2e007c5f2f007df230007f85",
+   "Names": [
+    "/syncthing"
+   ],
+   "Image": "syncthing/syncthing:1.29.2",
+   "State": "exited",
+   "Status": "Exited (137) 2 days ago",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Syncthing",
+    "serverhub.url": "https://sync.home.arpa",
+    "serverhub.description": "File sync between the laptops and the NAS",
+    "serverhub.icon": "refresh",
+    "serverhub.category": "Files"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "00ff475dffff45cafeff4437fdff42a4fcff4111fbff3f7efaff3debf9ff3c58",
+   "Names": [
+    "/vikunja"
+   ],
+   "Image": "vikunja/vikunja:0.24.6",
+   "State": "running",
+   "Status": "Up 4 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Vikunja",
+    "serverhub.url": "https://tasks.home.arpa",
+    "serverhub.description": "Shared to-do lists",
+    "serverhub.icon": "tasks",
+    "serverhub.category": "Productivity"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22322cde23322e71203229b821322b4b2632332a273234bd2432300425323197",
+   "Names": [
+    "/whoami"
+   ],
+   "Image": "traefik/whoami:v1.10.3",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Whoami",
+    "serverhub.url": "whoami.home.arpa"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "20bd85111fbd837e1ebd81eb1dbd805824bd8b5d23bd89ca22bd883721bd86a4",
+   "Names": [
+    "/adminer"
+   ],
+   "Image": "adminer:4.8.1",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "a42c718aa52c731da22c6e64a32c6ff7a02c6b3ea12c6cd19e2c68189f2c69ab",
+   "Names": [
+    "/docker-proxy"
+   ],
+   "Image": "tecnativa/docker-socket-proxy:0.3.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "5c1f0a9e2b4d083e15ce093e1761063e12a8073e143b0c3e1c1a0d3e1dad0a3e",
+   "Names": [
+    "/server-hub"
+   ],
+   "Image": "ghcr.io/eco-null/server-hub:2.0.0",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "096c6fc40a6c71570b6c72ea0c6c747d056c6978066c6b0b076c6c9e086c6e31",
+   "Names": [
+    "/postgres"
+   ],
+   "Image": "postgres:16-alpine",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "127.0.0.1",
+     "PrivatePort": 5432,
+     "PublicPort": 5432,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22b8cf1823b8d0ab24b8d23e25b8d3d126b8d56427b8d6f728b8d88a29b8da1d",
+   "Names": [
+    "/old-registry"
+   ],
+   "Image": "registry:2",
+   "State": "exited",
+   "Status": "Exited (0) 2 weeks ago",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "e0466b2ae1466cbdde466804df466997dc4664dedd466671da4661b8db46634b",
+   "Names": [
+    "/bookstack"
+   ],
+   "Image": "lscr.io/linuxserver/bookstack:24.12.1",
+   "State": "running",
+   "Status": "Up 5 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "d9075c3bd8075aa8db075f61da075dcedd076287dc0760f4df0765adde07641a",
+   "Names": [
+    "/filebrowser"
+   ],
+   "Image": "filebrowser/filebrowser:v2.31.2",
+   "State": "running",
+   "Status": "Up 9 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "cdfc6265ccfc60d2cbfc5f3fcafc5dacc9fc5c19c8fc5a86c7fc58f3c6fc5760",
+   "Names": [
+    "/node-red"
+   ],
+   "Image": "nodered/node-red:4.0.8",
+   "State": "running",
+   "Status": "Up 9 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "4e6f714b4d6f6fb8506f74714f6f72de526f7797516f7604546f7abd536f792a",
+   "Names": [
+    "/prometheus"
+   ],
+   "Image": "prom/prometheus:v3.1.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    }
+   ]
+  }
+ ],
+ "tricky": [
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/my_app-1"
+   ],
+   "Image": "example/my_app-1:1",
+   "State": "running",
+   "Status": "Up 3 hours (health: starting)",
+   "Labels": {
+    "serverhub.enable": " TRUE ",
+    "serverhub.url": "https://app.home.arpa/path/",
+    "serverhub.name": "My\u0007 App\n  line",
+    "serverhub.description": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "serverhub.icon": "Chart",
+    "serverhub.category": "monitoring",
+    "serverhub.check": "maybe"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/no-url"
+   ],
+   "Image": "example/no-url:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/bad-scheme"
+   ],
+   "Image": "example/bad-scheme:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "yes",
+    "serverhub.url": "ftp://files.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/long-url"
+   ],
+   "Image": "example/long-url:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "1",
+    "serverhub.url": "https://a.home.arpa/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/empty-name"
+   ],
+   "Image": "example/empty-name:1",
+   "State": "running",
+   "Status": "Up 2 minutes (unhealthy)",
+   "Labels": {
+    "serverhub.enable": "on",
+    "serverhub.url": "https://e.home.arpa",
+    "serverhub.name": "   ",
+    "serverhub.category": "nonsense",
+    "serverhub.icon": "nope"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/weird-state"
+   ],
+   "Image": "example/weird-state:1",
+   "State": "weird",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://w.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/paused-one"
+   ],
+   "Image": "example/paused-one:1",
+   "State": "paused",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "http://p.home.arpa:8080",
+    "serverhub.check": "OFF",
+    "serverhub.category": "Files"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+   "Names": [
+    "/a/b",
+    "nope"
+   ],
+   "Image": "x",
+   "State": "running",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://z.home.arpa"
+   }
+  },
+  "not a dict",
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/opted-out"
+   ],
+   "Image": "example/opted-out:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/https-default"
+   ],
+   "Image": "example/https-default:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 443,
+     "PublicPort": 443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 443,
+     "PublicPort": 443,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/https-8443"
+   ],
+   "Image": "example/https-8443:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8443,
+     "PublicPort": 9500,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 53,
+     "PublicPort": 53,
+     "Type": "udp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/udp-only"
+   ],
+   "Image": "example/udp-only:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 5353,
+     "PublicPort": 5353,
+     "Type": "udp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/loopback-only"
+   ],
+   "Image": "example/loopback-only:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "127.0.0.1",
+     "PrivatePort": 80,
+     "PublicPort": 8099,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::1",
+     "PrivatePort": 80,
+     "PublicPort": 8098,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/lowest-port"
+   ],
+   "Image": "example/lowest-port:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9100,
+     "PublicPort": 9100,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7000,
+     "PublicPort": 7001,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7000,
+     "PublicPort": 7000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/stopped"
+   ],
+   "Image": "example/stopped:1",
+   "State": "exited",
+   "Status": "Exited (0) 1 hour ago",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8097,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/web-and-other"
+   ],
+   "Image": "example/web-and-other:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 22,
+     "PublicPort": 2222,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 18080,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 3000,
+     "PublicPort": 13000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/creds"
+   ],
+   "Image": "example/creds:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://admin:hunter2@c.home.arpa/"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/creds-user-only"
+   ],
+   "Image": "example/creds-user-only:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "http://admin@c2.home.arpa:8080"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/numeric-url"
+   ],
+   "Image": "example/numeric-url:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": 123
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/url-2001"
+   ],
+   "Image": "example/url-2001:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://u.home.arpa/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/dupe"
+   ],
+   "Image": "example/dupe:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://dupe1.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/dupe"
+   ],
+   "Image": "example/dupe:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://dupe2.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/stack-docker-proxy-1"
+   ],
+   "Image": "example/stack-docker-proxy-1:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "com.docker.compose.service": "docker-proxy"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 2375,
+     "PublicPort": 2375,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/stack-hub-1"
+   ],
+   "Image": "example/stack-hub-1:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "com.docker.compose.service": "server-hub"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/hub-by-image"
+   ],
+   "Image": "ghcr.io/eco-null/Server-Hub:2.1@sha256:abc",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/proxy-by-image"
+   ],
+   "Image": "wollomatic/socket-proxy:1.5",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 2375,
+     "PublicPort": 2376,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/lsio-proxy"
+   ],
+   "Image": "lscr.io/linuxserver/socket-proxy:latest",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 2375,
+     "PublicPort": 2377,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/docker-proxy"
+   ],
+   "Image": "example/docker-proxy:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 2375,
+     "PublicPort": 2378,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/twin"
+   ],
+   "Image": "example/twin:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 18081,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/twin"
+   ],
+   "Image": "example/twin:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 18082,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/opted-out-bad-value"
+   ],
+   "Image": "example/opted-out-bad-value:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "banana"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8200,
+     "Type": "tcp"
+    }
+   ]
+  }
+ ],
+ "many": [
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-000"
+   ],
+   "Image": "example/svc-000:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc0.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-001"
+   ],
+   "Image": "example/svc-001:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc1.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-002"
+   ],
+   "Image": "example/svc-002:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc2.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-003"
+   ],
+   "Image": "example/svc-003:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc3.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-004"
+   ],
+   "Image": "example/svc-004:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc4.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-005"
+   ],
+   "Image": "example/svc-005:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc5.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-006"
+   ],
+   "Image": "example/svc-006:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc6.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-007"
+   ],
+   "Image": "example/svc-007:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc7.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-008"
+   ],
+   "Image": "example/svc-008:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc8.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-009"
+   ],
+   "Image": "example/svc-009:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc9.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-010"
+   ],
+   "Image": "example/svc-010:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc10.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-011"
+   ],
+   "Image": "example/svc-011:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc11.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-012"
+   ],
+   "Image": "example/svc-012:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc12.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-013"
+   ],
+   "Image": "example/svc-013:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc13.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-014"
+   ],
+   "Image": "example/svc-014:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc14.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-015"
+   ],
+   "Image": "example/svc-015:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc15.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-016"
+   ],
+   "Image": "example/svc-016:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc16.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-017"
+   ],
+   "Image": "example/svc-017:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc17.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-018"
+   ],
+   "Image": "example/svc-018:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc18.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-019"
+   ],
+   "Image": "example/svc-019:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc19.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-020"
+   ],
+   "Image": "example/svc-020:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc20.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-021"
+   ],
+   "Image": "example/svc-021:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc21.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-022"
+   ],
+   "Image": "example/svc-022:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc22.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-023"
+   ],
+   "Image": "example/svc-023:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc23.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-024"
+   ],
+   "Image": "example/svc-024:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc24.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-025"
+   ],
+   "Image": "example/svc-025:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc25.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-026"
+   ],
+   "Image": "example/svc-026:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc26.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-027"
+   ],
+   "Image": "example/svc-027:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc27.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-028"
+   ],
+   "Image": "example/svc-028:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc28.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-029"
+   ],
+   "Image": "example/svc-029:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc29.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-030"
+   ],
+   "Image": "example/svc-030:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc30.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-031"
+   ],
+   "Image": "example/svc-031:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc31.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-032"
+   ],
+   "Image": "example/svc-032:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc32.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-033"
+   ],
+   "Image": "example/svc-033:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc33.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-034"
+   ],
+   "Image": "example/svc-034:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc34.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-035"
+   ],
+   "Image": "example/svc-035:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc35.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-036"
+   ],
+   "Image": "example/svc-036:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc36.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-037"
+   ],
+   "Image": "example/svc-037:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc37.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-038"
+   ],
+   "Image": "example/svc-038:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc38.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-039"
+   ],
+   "Image": "example/svc-039:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc39.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-040"
+   ],
+   "Image": "example/svc-040:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc40.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-041"
+   ],
+   "Image": "example/svc-041:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc41.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-042"
+   ],
+   "Image": "example/svc-042:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc42.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-043"
+   ],
+   "Image": "example/svc-043:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc43.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-044"
+   ],
+   "Image": "example/svc-044:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc44.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-045"
+   ],
+   "Image": "example/svc-045:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc45.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-046"
+   ],
+   "Image": "example/svc-046:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc46.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-047"
+   ],
+   "Image": "example/svc-047:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc47.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-048"
+   ],
+   "Image": "example/svc-048:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc48.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-049"
+   ],
+   "Image": "example/svc-049:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc49.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-050"
+   ],
+   "Image": "example/svc-050:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc50.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-051"
+   ],
+   "Image": "example/svc-051:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc51.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-052"
+   ],
+   "Image": "example/svc-052:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc52.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-053"
+   ],
+   "Image": "example/svc-053:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc53.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-054"
+   ],
+   "Image": "example/svc-054:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc54.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-055"
+   ],
+   "Image": "example/svc-055:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc55.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-056"
+   ],
+   "Image": "example/svc-056:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc56.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-057"
+   ],
+   "Image": "example/svc-057:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc57.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-058"
+   ],
+   "Image": "example/svc-058:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc58.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-059"
+   ],
+   "Image": "example/svc-059:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc59.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-060"
+   ],
+   "Image": "example/svc-060:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc60.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-061"
+   ],
+   "Image": "example/svc-061:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc61.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-062"
+   ],
+   "Image": "example/svc-062:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc62.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-063"
+   ],
+   "Image": "example/svc-063:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc63.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-064"
+   ],
+   "Image": "example/svc-064:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc64.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-065"
+   ],
+   "Image": "example/svc-065:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc65.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-066"
+   ],
+   "Image": "example/svc-066:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc66.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-067"
+   ],
+   "Image": "example/svc-067:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc67.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-068"
+   ],
+   "Image": "example/svc-068:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc68.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-069"
+   ],
+   "Image": "example/svc-069:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc69.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-070"
+   ],
+   "Image": "example/svc-070:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc70.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-071"
+   ],
+   "Image": "example/svc-071:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc71.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-072"
+   ],
+   "Image": "example/svc-072:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc72.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-073"
+   ],
+   "Image": "example/svc-073:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc73.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-074"
+   ],
+   "Image": "example/svc-074:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc74.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-075"
+   ],
+   "Image": "example/svc-075:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc75.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-076"
+   ],
+   "Image": "example/svc-076:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc76.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-077"
+   ],
+   "Image": "example/svc-077:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc77.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-078"
+   ],
+   "Image": "example/svc-078:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc78.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-079"
+   ],
+   "Image": "example/svc-079:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc79.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-080"
+   ],
+   "Image": "example/svc-080:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc80.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-081"
+   ],
+   "Image": "example/svc-081:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc81.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-082"
+   ],
+   "Image": "example/svc-082:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc82.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-083"
+   ],
+   "Image": "example/svc-083:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc83.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-084"
+   ],
+   "Image": "example/svc-084:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc84.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-085"
+   ],
+   "Image": "example/svc-085:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc85.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-086"
+   ],
+   "Image": "example/svc-086:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc86.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-087"
+   ],
+   "Image": "example/svc-087:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc87.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-088"
+   ],
+   "Image": "example/svc-088:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc88.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-089"
+   ],
+   "Image": "example/svc-089:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc89.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-090"
+   ],
+   "Image": "example/svc-090:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc90.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-091"
+   ],
+   "Image": "example/svc-091:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc91.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-092"
+   ],
+   "Image": "example/svc-092:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc92.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-093"
+   ],
+   "Image": "example/svc-093:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc93.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-094"
+   ],
+   "Image": "example/svc-094:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc94.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-095"
+   ],
+   "Image": "example/svc-095:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc95.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-096"
+   ],
+   "Image": "example/svc-096:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc96.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-097"
+   ],
+   "Image": "example/svc-097:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc97.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-098"
+   ],
+   "Image": "example/svc-098:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc98.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-099"
+   ],
+   "Image": "example/svc-099:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc99.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-100"
+   ],
+   "Image": "example/svc-100:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc100.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-101"
+   ],
+   "Image": "example/svc-101:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc101.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-102"
+   ],
+   "Image": "example/svc-102:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc102.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-103"
+   ],
+   "Image": "example/svc-103:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc103.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-104"
+   ],
+   "Image": "example/svc-104:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://svc104.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-stopped"
+   ],
+   "Image": "example/svc-stopped:1",
+   "State": "exited",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://stopped.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/svc-nocheck"
+   ],
+   "Image": "example/svc-nocheck:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://nocheck.home.arpa",
+    "serverhub.check": "no"
+   },
+   "Ports": []
+  }
+ ],
+ "expected": {
+  "demo": {
+   "discover": {
+    "services": [
+     {
+      "id": "docker:dozzle",
+      "name": "Dozzle",
+      "url": "https://logs.home.arpa",
+      "description": "Live logs for every container on this host",
+      "icon": "terminal",
+      "category": "Dev",
+      "check": true,
+      "container": {
+       "name": "dozzle",
+       "image": "amir20/dozzle:v8.13.4",
+       "state": "running",
+       "status": "Up 12 days (healthy)",
+       "health": "healthy"
+      }
+     },
+     {
+      "id": "docker:mealie",
+      "name": "Mealie",
+      "url": "https://recipes.home.arpa",
+      "description": "Recipes and the weekly meal plan",
+      "icon": "book",
+      "category": "Home",
+      "check": true,
+      "container": {
+       "name": "mealie",
+       "image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+       "state": "running",
+       "status": "Up 20 seconds (health: starting)",
+       "health": "starting"
+      }
+     },
+     {
+      "id": "docker:portainer",
+      "name": "Portainer",
+      "url": "https://portainer.home.arpa:9443",
+      "description": "Manage the containers on this host",
+      "icon": "layers",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "portainer",
+       "image": "portainer/portainer-ce:2.21.4",
+       "state": "running",
+       "status": "Up 12 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:qbittorrent",
+      "name": "qBittorrent",
+      "url": "https://downloads.home.arpa",
+      "description": "Torrent client behind the VPN container",
+      "icon": "download",
+      "category": "Media",
+      "check": false,
+      "container": {
+       "name": "qbittorrent",
+       "image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:radarr",
+      "name": "Radarr",
+      "url": "https://radarr.home.arpa",
+      "description": "Movie library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "radarr",
+       "image": "lscr.io/linuxserver/radarr:5.14.0",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:searxng",
+      "name": "SearXNG",
+      "url": "https://search.home.arpa",
+      "description": "Private metasearch for the whole house",
+      "icon": "globe",
+      "category": "Search",
+      "check": true,
+      "container": {
+       "name": "searxng",
+       "image": "searxng/searxng:2025.1.12",
+       "state": "running",
+       "status": "Up 6 hours (unhealthy)",
+       "health": "unhealthy"
+      }
+     },
+     {
+      "id": "docker:sonarr",
+      "name": "Sonarr",
+      "url": "https://sonarr.home.arpa",
+      "description": "TV show library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "sonarr",
+       "image": "lscr.io/linuxserver/sonarr:4.0.11",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:syncthing",
+      "name": "Syncthing",
+      "url": "https://sync.home.arpa",
+      "description": "File sync between the laptops and the NAS",
+      "icon": "refresh",
+      "category": "Files",
+      "check": true,
+      "container": {
+       "name": "syncthing",
+       "image": "syncthing/syncthing:1.29.2",
+       "state": "exited",
+       "status": "Exited (137) 2 days ago",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:vikunja",
+      "name": "Vikunja",
+      "url": "https://tasks.home.arpa",
+      "description": "Shared to-do lists",
+      "icon": "calendar",
+      "category": "Productivity",
+      "check": true,
+      "container": {
+       "name": "vikunja",
+       "image": "vikunja/vikunja:0.24.6",
+       "state": "running",
+       "status": "Up 4 days (healthy)",
+       "health": "healthy"
+      }
+     }
+    ],
+    "skipped": [
+     {
+      "container": "whoami",
+      "reason": "serverhub.url is not a valid http(s) URL"
+     }
+    ],
+    "warnings": [
+     {
+      "container": "vikunja",
+      "reason": "serverhub.icon is not a known icon id; using a default"
+     }
+    ]
+   },
+   "suggest": [
+    {
+     "container": {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.12.1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 6875,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Bookstack",
+      "url": "http://docker.home.arpa:6875",
+      "icon": "book",
+      "category": "Productivity"
+     }
+    },
+    {
+     "container": {
+      "name": "filebrowser",
+      "image": "filebrowser/filebrowser:v2.31.2",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 8082,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Filebrowser",
+      "url": "http://docker.home.arpa:8082",
+      "icon": "folder",
+      "category": "Files"
+     }
+    },
+    {
+     "container": {
+      "name": "node-red",
+      "image": "nodered/node-red:4.0.8",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 1880,
+       "public": 1880,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Node Red",
+      "url": "http://docker.home.arpa:1880",
+      "icon": "zap",
+      "category": "Home"
+     }
+    },
+    {
+     "container": {
+      "name": "prometheus",
+      "image": "prom/prometheus:v3.1.0",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 9090,
+       "public": 9090,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Prometheus",
+      "url": "http://docker.home.arpa:9090",
+      "icon": "pulse",
+      "category": "Monitoring"
+     }
+    }
+   ],
+   "suggestExisting": [
+    {
+     "container": {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.12.1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 6875,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Bookstack",
+      "url": "http://docker.home.arpa:6875",
+      "icon": "book",
+      "category": "Productivity"
+     }
+    },
+    {
+     "container": {
+      "name": "filebrowser",
+      "image": "filebrowser/filebrowser:v2.31.2",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 8082,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Filebrowser",
+      "url": "http://docker.home.arpa:8082",
+      "icon": "folder",
+      "category": "Files"
+     }
+    },
+    {
+     "container": {
+      "name": "node-red",
+      "image": "nodered/node-red:4.0.8",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 1880,
+       "public": 1880,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Node Red",
+      "url": "http://docker.home.arpa:1880",
+      "icon": "zap",
+      "category": "Home"
+     }
+    }
+   ],
+   "existing": [
+    "http://docker.home.arpa:9090/",
+    "https://Docker.home.arpa:6875"
+   ]
+  },
+  "demoLater": {
+   "discover": {
+    "services": [
+     {
+      "id": "docker:dozzle",
+      "name": "Dozzle",
+      "url": "https://logs.home.arpa",
+      "description": "Live logs for every container on this host",
+      "icon": "terminal",
+      "category": "Dev",
+      "check": true,
+      "container": {
+       "name": "dozzle",
+       "image": "amir20/dozzle:v8.13.4",
+       "state": "running",
+       "status": "Up 12 days (healthy)",
+       "health": "healthy"
+      }
+     },
+     {
+      "id": "docker:mealie",
+      "name": "Mealie",
+      "url": "https://recipes.home.arpa",
+      "description": "Recipes and the weekly meal plan",
+      "icon": "book",
+      "category": "Home",
+      "check": true,
+      "container": {
+       "name": "mealie",
+       "image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+       "state": "running",
+       "status": "Up 3 hours (healthy)",
+       "health": "healthy"
+      }
+     },
+     {
+      "id": "docker:portainer",
+      "name": "Portainer",
+      "url": "https://portainer.home.arpa:9443",
+      "description": "Manage the containers on this host",
+      "icon": "layers",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "portainer",
+       "image": "portainer/portainer-ce:2.21.4",
+       "state": "running",
+       "status": "Up 12 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:qbittorrent",
+      "name": "qBittorrent",
+      "url": "https://downloads.home.arpa",
+      "description": "Torrent client behind the VPN container",
+      "icon": "download",
+      "category": "Media",
+      "check": false,
+      "container": {
+       "name": "qbittorrent",
+       "image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:radarr",
+      "name": "Radarr",
+      "url": "https://radarr.home.arpa",
+      "description": "Movie library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "radarr",
+       "image": "lscr.io/linuxserver/radarr:5.14.0",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:searxng",
+      "name": "SearXNG",
+      "url": "https://search.home.arpa",
+      "description": "Private metasearch for the whole house",
+      "icon": "globe",
+      "category": "Search",
+      "check": true,
+      "container": {
+       "name": "searxng",
+       "image": "searxng/searxng:2025.1.12",
+       "state": "running",
+       "status": "Up 9 hours (unhealthy)",
+       "health": "unhealthy"
+      }
+     },
+     {
+      "id": "docker:sonarr",
+      "name": "Sonarr",
+      "url": "https://sonarr.home.arpa",
+      "description": "TV show library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "sonarr",
+       "image": "lscr.io/linuxserver/sonarr:4.0.11",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:syncthing",
+      "name": "Syncthing",
+      "url": "https://sync.home.arpa",
+      "description": "File sync between the laptops and the NAS",
+      "icon": "refresh",
+      "category": "Files",
+      "check": true,
+      "container": {
+       "name": "syncthing",
+       "image": "syncthing/syncthing:1.29.2",
+       "state": "exited",
+       "status": "Exited (137) 2 days ago",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:vikunja",
+      "name": "Vikunja",
+      "url": "https://tasks.home.arpa",
+      "description": "Shared to-do lists",
+      "icon": "calendar",
+      "category": "Productivity",
+      "check": true,
+      "container": {
+       "name": "vikunja",
+       "image": "vikunja/vikunja:0.24.6",
+       "state": "running",
+       "status": "Up 4 days (healthy)",
+       "health": "healthy"
+      }
+     }
+    ],
+    "skipped": [
+     {
+      "container": "whoami",
+      "reason": "serverhub.url is not a valid http(s) URL"
+     }
+    ],
+    "warnings": [
+     {
+      "container": "vikunja",
+      "reason": "serverhub.icon is not a known icon id; using a default"
+     }
+    ]
+   }
+  },
+  "tricky": {
+   "discover": {
+    "services": [
+     {
+      "id": "docker:dupe",
+      "name": "Dupe",
+      "url": "https://dupe1.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "dupe",
+       "image": "example/dupe:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:empty-name",
+      "name": "Empty Name",
+      "url": "https://e.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "empty-name",
+       "image": "example/empty-name:1",
+       "state": "running",
+       "status": "Up 2 minutes (unhealthy)",
+       "health": "unhealthy"
+      }
+     },
+     {
+      "id": "docker:my_app-1",
+      "name": "My App   line",
+      "url": "https://app.home.arpa/path/",
+      "description": "",
+      "icon": "chart",
+      "category": "Monitoring",
+      "check": true,
+      "container": {
+       "name": "my_app-1",
+       "image": "example/my_app-1:1",
+       "state": "running",
+       "status": "Up 3 hours (health: starting)",
+       "health": "starting"
+      }
+     },
+     {
+      "id": "docker:paused-one",
+      "name": "Paused One",
+      "url": "http://p.home.arpa:8080",
+      "description": "",
+      "icon": "box",
+      "category": "Files",
+      "check": false,
+      "container": {
+       "name": "paused-one",
+       "image": "example/paused-one:1",
+       "state": "paused",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     }
+    ],
+    "skipped": [
+     {
+      "container": "no-url",
+      "reason": "serverhub.url is missing"
+     },
+     {
+      "container": "bad-scheme",
+      "reason": "serverhub.url is not a valid http(s) URL"
+     },
+     {
+      "container": "long-url",
+      "reason": "serverhub.url is longer than 2000 characters"
+     },
+     {
+      "container": "weird-state",
+      "reason": "unknown container state"
+     },
+     {
+      "container": "?",
+      "reason": "container has no usable name"
+     },
+     {
+      "container": "creds",
+      "reason": "serverhub.url must not contain credentials (user:password@)"
+     },
+     {
+      "container": "creds-user-only",
+      "reason": "serverhub.url must not contain credentials (user:password@)"
+     },
+     {
+      "container": "numeric-url",
+      "reason": "serverhub.url is invalid"
+     },
+     {
+      "container": "url-2001",
+      "reason": "serverhub.url is longer than 2000 characters"
+     },
+     {
+      "container": "dupe",
+      "reason": "duplicate container name; only the first one is listed"
+     }
+    ],
+    "warnings": [
+     {
+      "container": "my_app-1",
+      "reason": "serverhub.check must be true or false; using true"
+     },
+     {
+      "container": "my_app-1",
+      "reason": "serverhub.description is invalid; using a default"
+     },
+     {
+      "container": "empty-name",
+      "reason": "serverhub.name is empty or invalid; using the container name"
+     },
+     {
+      "container": "empty-name",
+      "reason": "serverhub.icon is not a known icon id; using a default"
+     },
+     {
+      "container": "empty-name",
+      "reason": "serverhub.category is not a known category id; using auto"
+     }
+    ]
+   },
+   "suggest": [
+    {
+     "container": {
+      "name": "docker-proxy",
+      "image": "example/docker-proxy:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 2375,
+       "public": 2378,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Docker Proxy",
+      "url": "http://docker.home.arpa:2378",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "https-8443",
+      "image": "example/https-8443:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 8443,
+       "public": 9500,
+       "protocol": "tcp"
+      },
+      {
+       "private": 53,
+       "public": 53,
+       "protocol": "udp"
+      }
+     ],
+     "suggested": {
+      "name": "Https",
+      "url": "https://docker.home.arpa:9500",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "https-default",
+      "image": "example/https-default:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 443,
+       "public": 443,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Https Default",
+      "url": "https://docker.home.arpa",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "lowest-port",
+      "image": "example/lowest-port:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 7000,
+       "public": 7000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 7000,
+       "public": 7001,
+       "protocol": "tcp"
+      },
+      {
+       "private": 9100,
+       "public": 9100,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Lowest Port",
+      "url": "http://docker.home.arpa:7000",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "twin",
+      "image": "example/twin:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 8080,
+       "public": 18081,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Twin",
+      "url": "http://docker.home.arpa:18081",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "web-and-other",
+      "image": "example/web-and-other:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 22,
+       "public": 2222,
+       "protocol": "tcp"
+      },
+      {
+       "private": 3000,
+       "public": 13000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 8080,
+       "public": 18080,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Web And Other",
+      "url": "http://docker.home.arpa:18080",
+      "icon": "box",
+      "category": null
+     }
+    }
+   ]
+  },
+  "many": {
+   "discover": {
+    "services": [
+     {
+      "id": "docker:svc-000",
+      "name": "Svc",
+      "url": "https://svc0.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-000",
+       "image": "example/svc-000:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-001",
+      "name": "Svc",
+      "url": "https://svc1.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-001",
+       "image": "example/svc-001:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-002",
+      "name": "Svc",
+      "url": "https://svc2.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-002",
+       "image": "example/svc-002:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-003",
+      "name": "Svc",
+      "url": "https://svc3.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-003",
+       "image": "example/svc-003:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-004",
+      "name": "Svc",
+      "url": "https://svc4.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-004",
+       "image": "example/svc-004:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-005",
+      "name": "Svc",
+      "url": "https://svc5.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-005",
+       "image": "example/svc-005:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-006",
+      "name": "Svc",
+      "url": "https://svc6.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-006",
+       "image": "example/svc-006:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-007",
+      "name": "Svc",
+      "url": "https://svc7.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-007",
+       "image": "example/svc-007:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-008",
+      "name": "Svc",
+      "url": "https://svc8.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-008",
+       "image": "example/svc-008:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-009",
+      "name": "Svc",
+      "url": "https://svc9.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-009",
+       "image": "example/svc-009:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-010",
+      "name": "Svc",
+      "url": "https://svc10.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-010",
+       "image": "example/svc-010:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-011",
+      "name": "Svc",
+      "url": "https://svc11.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-011",
+       "image": "example/svc-011:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-012",
+      "name": "Svc",
+      "url": "https://svc12.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-012",
+       "image": "example/svc-012:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-013",
+      "name": "Svc",
+      "url": "https://svc13.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-013",
+       "image": "example/svc-013:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-014",
+      "name": "Svc",
+      "url": "https://svc14.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-014",
+       "image": "example/svc-014:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-015",
+      "name": "Svc",
+      "url": "https://svc15.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-015",
+       "image": "example/svc-015:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-016",
+      "name": "Svc",
+      "url": "https://svc16.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-016",
+       "image": "example/svc-016:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-017",
+      "name": "Svc",
+      "url": "https://svc17.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-017",
+       "image": "example/svc-017:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-018",
+      "name": "Svc",
+      "url": "https://svc18.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-018",
+       "image": "example/svc-018:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-019",
+      "name": "Svc",
+      "url": "https://svc19.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-019",
+       "image": "example/svc-019:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-020",
+      "name": "Svc",
+      "url": "https://svc20.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-020",
+       "image": "example/svc-020:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-021",
+      "name": "Svc",
+      "url": "https://svc21.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-021",
+       "image": "example/svc-021:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-022",
+      "name": "Svc",
+      "url": "https://svc22.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-022",
+       "image": "example/svc-022:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-023",
+      "name": "Svc",
+      "url": "https://svc23.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-023",
+       "image": "example/svc-023:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-024",
+      "name": "Svc",
+      "url": "https://svc24.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-024",
+       "image": "example/svc-024:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-025",
+      "name": "Svc",
+      "url": "https://svc25.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-025",
+       "image": "example/svc-025:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-026",
+      "name": "Svc",
+      "url": "https://svc26.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-026",
+       "image": "example/svc-026:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-027",
+      "name": "Svc",
+      "url": "https://svc27.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-027",
+       "image": "example/svc-027:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-028",
+      "name": "Svc",
+      "url": "https://svc28.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-028",
+       "image": "example/svc-028:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-029",
+      "name": "Svc",
+      "url": "https://svc29.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-029",
+       "image": "example/svc-029:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-030",
+      "name": "Svc",
+      "url": "https://svc30.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-030",
+       "image": "example/svc-030:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-031",
+      "name": "Svc",
+      "url": "https://svc31.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-031",
+       "image": "example/svc-031:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-032",
+      "name": "Svc",
+      "url": "https://svc32.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-032",
+       "image": "example/svc-032:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-033",
+      "name": "Svc",
+      "url": "https://svc33.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-033",
+       "image": "example/svc-033:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-034",
+      "name": "Svc",
+      "url": "https://svc34.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-034",
+       "image": "example/svc-034:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-035",
+      "name": "Svc",
+      "url": "https://svc35.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-035",
+       "image": "example/svc-035:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-036",
+      "name": "Svc",
+      "url": "https://svc36.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-036",
+       "image": "example/svc-036:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-037",
+      "name": "Svc",
+      "url": "https://svc37.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-037",
+       "image": "example/svc-037:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-038",
+      "name": "Svc",
+      "url": "https://svc38.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-038",
+       "image": "example/svc-038:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-039",
+      "name": "Svc",
+      "url": "https://svc39.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-039",
+       "image": "example/svc-039:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-040",
+      "name": "Svc",
+      "url": "https://svc40.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-040",
+       "image": "example/svc-040:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-041",
+      "name": "Svc",
+      "url": "https://svc41.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-041",
+       "image": "example/svc-041:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-042",
+      "name": "Svc",
+      "url": "https://svc42.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-042",
+       "image": "example/svc-042:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-043",
+      "name": "Svc",
+      "url": "https://svc43.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-043",
+       "image": "example/svc-043:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-044",
+      "name": "Svc",
+      "url": "https://svc44.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-044",
+       "image": "example/svc-044:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-045",
+      "name": "Svc",
+      "url": "https://svc45.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-045",
+       "image": "example/svc-045:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-046",
+      "name": "Svc",
+      "url": "https://svc46.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-046",
+       "image": "example/svc-046:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-047",
+      "name": "Svc",
+      "url": "https://svc47.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-047",
+       "image": "example/svc-047:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-048",
+      "name": "Svc",
+      "url": "https://svc48.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-048",
+       "image": "example/svc-048:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-049",
+      "name": "Svc",
+      "url": "https://svc49.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-049",
+       "image": "example/svc-049:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-050",
+      "name": "Svc",
+      "url": "https://svc50.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-050",
+       "image": "example/svc-050:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-051",
+      "name": "Svc",
+      "url": "https://svc51.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-051",
+       "image": "example/svc-051:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-052",
+      "name": "Svc",
+      "url": "https://svc52.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-052",
+       "image": "example/svc-052:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-053",
+      "name": "Svc",
+      "url": "https://svc53.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-053",
+       "image": "example/svc-053:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-054",
+      "name": "Svc",
+      "url": "https://svc54.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-054",
+       "image": "example/svc-054:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-055",
+      "name": "Svc",
+      "url": "https://svc55.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-055",
+       "image": "example/svc-055:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-056",
+      "name": "Svc",
+      "url": "https://svc56.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-056",
+       "image": "example/svc-056:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-057",
+      "name": "Svc",
+      "url": "https://svc57.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-057",
+       "image": "example/svc-057:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-058",
+      "name": "Svc",
+      "url": "https://svc58.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-058",
+       "image": "example/svc-058:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-059",
+      "name": "Svc",
+      "url": "https://svc59.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-059",
+       "image": "example/svc-059:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-060",
+      "name": "Svc",
+      "url": "https://svc60.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-060",
+       "image": "example/svc-060:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-061",
+      "name": "Svc",
+      "url": "https://svc61.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-061",
+       "image": "example/svc-061:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-062",
+      "name": "Svc",
+      "url": "https://svc62.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-062",
+       "image": "example/svc-062:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-063",
+      "name": "Svc",
+      "url": "https://svc63.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-063",
+       "image": "example/svc-063:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-064",
+      "name": "Svc",
+      "url": "https://svc64.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-064",
+       "image": "example/svc-064:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-065",
+      "name": "Svc",
+      "url": "https://svc65.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-065",
+       "image": "example/svc-065:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-066",
+      "name": "Svc",
+      "url": "https://svc66.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-066",
+       "image": "example/svc-066:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-067",
+      "name": "Svc",
+      "url": "https://svc67.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-067",
+       "image": "example/svc-067:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-068",
+      "name": "Svc",
+      "url": "https://svc68.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-068",
+       "image": "example/svc-068:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-069",
+      "name": "Svc",
+      "url": "https://svc69.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-069",
+       "image": "example/svc-069:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-070",
+      "name": "Svc",
+      "url": "https://svc70.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-070",
+       "image": "example/svc-070:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-071",
+      "name": "Svc",
+      "url": "https://svc71.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-071",
+       "image": "example/svc-071:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-072",
+      "name": "Svc",
+      "url": "https://svc72.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-072",
+       "image": "example/svc-072:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-073",
+      "name": "Svc",
+      "url": "https://svc73.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-073",
+       "image": "example/svc-073:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-074",
+      "name": "Svc",
+      "url": "https://svc74.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-074",
+       "image": "example/svc-074:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-075",
+      "name": "Svc",
+      "url": "https://svc75.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-075",
+       "image": "example/svc-075:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-076",
+      "name": "Svc",
+      "url": "https://svc76.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-076",
+       "image": "example/svc-076:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-077",
+      "name": "Svc",
+      "url": "https://svc77.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-077",
+       "image": "example/svc-077:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-078",
+      "name": "Svc",
+      "url": "https://svc78.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-078",
+       "image": "example/svc-078:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-079",
+      "name": "Svc",
+      "url": "https://svc79.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-079",
+       "image": "example/svc-079:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-080",
+      "name": "Svc",
+      "url": "https://svc80.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-080",
+       "image": "example/svc-080:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-081",
+      "name": "Svc",
+      "url": "https://svc81.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-081",
+       "image": "example/svc-081:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-082",
+      "name": "Svc",
+      "url": "https://svc82.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-082",
+       "image": "example/svc-082:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-083",
+      "name": "Svc",
+      "url": "https://svc83.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-083",
+       "image": "example/svc-083:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-084",
+      "name": "Svc",
+      "url": "https://svc84.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-084",
+       "image": "example/svc-084:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-085",
+      "name": "Svc",
+      "url": "https://svc85.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-085",
+       "image": "example/svc-085:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-086",
+      "name": "Svc",
+      "url": "https://svc86.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-086",
+       "image": "example/svc-086:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-087",
+      "name": "Svc",
+      "url": "https://svc87.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-087",
+       "image": "example/svc-087:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-088",
+      "name": "Svc",
+      "url": "https://svc88.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-088",
+       "image": "example/svc-088:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-089",
+      "name": "Svc",
+      "url": "https://svc89.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-089",
+       "image": "example/svc-089:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-090",
+      "name": "Svc",
+      "url": "https://svc90.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-090",
+       "image": "example/svc-090:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-091",
+      "name": "Svc",
+      "url": "https://svc91.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-091",
+       "image": "example/svc-091:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-092",
+      "name": "Svc",
+      "url": "https://svc92.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-092",
+       "image": "example/svc-092:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-093",
+      "name": "Svc",
+      "url": "https://svc93.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-093",
+       "image": "example/svc-093:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-094",
+      "name": "Svc",
+      "url": "https://svc94.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-094",
+       "image": "example/svc-094:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-095",
+      "name": "Svc",
+      "url": "https://svc95.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-095",
+       "image": "example/svc-095:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-096",
+      "name": "Svc",
+      "url": "https://svc96.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-096",
+       "image": "example/svc-096:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-097",
+      "name": "Svc",
+      "url": "https://svc97.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-097",
+       "image": "example/svc-097:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-098",
+      "name": "Svc",
+      "url": "https://svc98.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-098",
+       "image": "example/svc-098:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-099",
+      "name": "Svc",
+      "url": "https://svc99.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-099",
+       "image": "example/svc-099:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-100",
+      "name": "Svc",
+      "url": "https://svc100.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-100",
+       "image": "example/svc-100:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-101",
+      "name": "Svc",
+      "url": "https://svc101.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-101",
+       "image": "example/svc-101:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-102",
+      "name": "Svc",
+      "url": "https://svc102.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-102",
+       "image": "example/svc-102:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-103",
+      "name": "Svc",
+      "url": "https://svc103.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-103",
+       "image": "example/svc-103:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-104",
+      "name": "Svc",
+      "url": "https://svc104.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-104",
+       "image": "example/svc-104:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-nocheck",
+      "name": "Svc Nocheck",
+      "url": "https://nocheck.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": false,
+      "container": {
+       "name": "svc-nocheck",
+       "image": "example/svc-nocheck:1",
+       "state": "running",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:svc-stopped",
+      "name": "Svc Stopped",
+      "url": "https://stopped.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "svc-stopped",
+       "image": "example/svc-stopped:1",
+       "state": "exited",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     }
+    ],
+    "skipped": [],
+    "warnings": [
+     {
+      "container": "*",
+      "reason": "only the first 100 running discovered services (by name) are status-checked; the other 5 report unknown"
+     }
+    ]
+   },
+   "plan": {
+    "targets": [
+     "docker:svc-000",
+     "docker:svc-001",
+     "docker:svc-002",
+     "docker:svc-003",
+     "docker:svc-004",
+     "docker:svc-005",
+     "docker:svc-006",
+     "docker:svc-007",
+     "docker:svc-008",
+     "docker:svc-009",
+     "docker:svc-010",
+     "docker:svc-011",
+     "docker:svc-012",
+     "docker:svc-013",
+     "docker:svc-014",
+     "docker:svc-015",
+     "docker:svc-016",
+     "docker:svc-017",
+     "docker:svc-018",
+     "docker:svc-019",
+     "docker:svc-020",
+     "docker:svc-021",
+     "docker:svc-022",
+     "docker:svc-023",
+     "docker:svc-024",
+     "docker:svc-025",
+     "docker:svc-026",
+     "docker:svc-027",
+     "docker:svc-028",
+     "docker:svc-029",
+     "docker:svc-030",
+     "docker:svc-031",
+     "docker:svc-032",
+     "docker:svc-033",
+     "docker:svc-034",
+     "docker:svc-035",
+     "docker:svc-036",
+     "docker:svc-037",
+     "docker:svc-038",
+     "docker:svc-039",
+     "docker:svc-040",
+     "docker:svc-041",
+     "docker:svc-042",
+     "docker:svc-043",
+     "docker:svc-044",
+     "docker:svc-045",
+     "docker:svc-046",
+     "docker:svc-047",
+     "docker:svc-048",
+     "docker:svc-049",
+     "docker:svc-050",
+     "docker:svc-051",
+     "docker:svc-052",
+     "docker:svc-053",
+     "docker:svc-054",
+     "docker:svc-055",
+     "docker:svc-056",
+     "docker:svc-057",
+     "docker:svc-058",
+     "docker:svc-059",
+     "docker:svc-060",
+     "docker:svc-061",
+     "docker:svc-062",
+     "docker:svc-063",
+     "docker:svc-064",
+     "docker:svc-065",
+     "docker:svc-066",
+     "docker:svc-067",
+     "docker:svc-068",
+     "docker:svc-069",
+     "docker:svc-070",
+     "docker:svc-071",
+     "docker:svc-072",
+     "docker:svc-073",
+     "docker:svc-074",
+     "docker:svc-075",
+     "docker:svc-076",
+     "docker:svc-077",
+     "docker:svc-078",
+     "docker:svc-079",
+     "docker:svc-080",
+     "docker:svc-081",
+     "docker:svc-082",
+     "docker:svc-083",
+     "docker:svc-084",
+     "docker:svc-085",
+     "docker:svc-086",
+     "docker:svc-087",
+     "docker:svc-088",
+     "docker:svc-089",
+     "docker:svc-090",
+     "docker:svc-091",
+     "docker:svc-092",
+     "docker:svc-093",
+     "docker:svc-094",
+     "docker:svc-095",
+     "docker:svc-096",
+     "docker:svc-097",
+     "docker:svc-098",
+     "docker:svc-099"
+    ],
+    "fixed": {
+     "docker:svc-100": "unknown",
+     "docker:svc-101": "unknown",
+     "docker:svc-102": "unknown",
+     "docker:svc-103": "unknown",
+     "docker:svc-104": "unknown",
+     "docker:svc-stopped": "down"
+    }
+   }
+  },
+  "normalize": {
+   "existing": [
+    "HTTP://Docker.home.arpa:80/",
+    "https://me:pw@Docker.home.arpa:6875///#frag",
+    "http://docker.home.arpa:9090/?"
+   ],
+   "suggest": [
+    {
+     "container": {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.12.1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 6875,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Bookstack",
+      "url": "http://docker.home.arpa:6875",
+      "icon": "book",
+      "category": "Productivity"
+     }
+    },
+    {
+     "container": {
+      "name": "filebrowser",
+      "image": "filebrowser/filebrowser:v2.31.2",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 8082,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Filebrowser",
+      "url": "http://docker.home.arpa:8082",
+      "icon": "folder",
+      "category": "Files"
+     }
+    },
+    {
+     "container": {
+      "name": "node-red",
+      "image": "nodered/node-red:4.0.8",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 1880,
+       "public": 1880,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Node Red",
+      "url": "http://docker.home.arpa:1880",
+      "icon": "zap",
+      "category": "Home"
+     }
+    }
+   ]
+  },
+  "trickyNoHost": {
+   "suggest": [
+    {
+     "container": {
+      "name": "docker-proxy",
+      "image": "example/docker-proxy:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 2375,
+       "public": 2378,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Docker Proxy",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "https-8443",
+      "image": "example/https-8443:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 8443,
+       "public": 9500,
+       "protocol": "tcp"
+      },
+      {
+       "private": 53,
+       "public": 53,
+       "protocol": "udp"
+      }
+     ],
+     "suggested": {
+      "name": "Https",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "https-default",
+      "image": "example/https-default:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 443,
+       "public": 443,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Https Default",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "lowest-port",
+      "image": "example/lowest-port:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 7000,
+       "public": 7000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 7000,
+       "public": 7001,
+       "protocol": "tcp"
+      },
+      {
+       "private": 9100,
+       "public": 9100,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Lowest Port",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "twin",
+      "image": "example/twin:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 8080,
+       "public": 18081,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Twin",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "web-and-other",
+      "image": "example/web-and-other:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 22,
+       "public": 2222,
+       "protocol": "tcp"
+      },
+      {
+       "private": 3000,
+       "public": 13000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 8080,
+       "public": 18080,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Web And Other",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    }
+   ]
+  }
+ }
+}

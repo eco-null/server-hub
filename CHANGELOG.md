@@ -6,6 +6,9 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Added
 
+- Docker auto-discovery (optional, off by default). Containers labeled `serverhub.enable=true` with a `serverhub.url` appear as read-only service cards, with optional `serverhub.name`, `serverhub.description`, `serverhub.icon`, `serverhub.category` and `serverhub.check` labels; admins get suggestions for running containers that publish a port, and a Settings page section with the connection status, label reference, skipped containers and warnings. An admin switch, "Show discovered services to all users", controls who sees them (default: admins only). Discovered services get status checks too: stopped containers show `down`, and running ones are requested at their `serverhub.url`.
+- Server Hub reads the container list through a socket proxy (`docker-proxy` in `compose.yaml`, profile `docker`) that allows exactly `GET /containers/json` and only from the `server-hub` container; Server Hub never mounts the Docker socket. New settings: `SERVERHUB_DOCKER_HOST`, `SERVERHUB_DOCKER_PUBLIC_HOST`, and the Compose variables `COMPOSE_PROFILES` and `DOCKER_GID`. API: `GET /api/docker`, `GET /api/admin/docker/suggestions`, `docker_visible_to_users` in `GET`/`PUT /api/admin/config`, and `docker` in `GET /api/bootstrap`. Setup, labels, security considerations and troubleshooting are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#docker-discovery).
+- CI starts the proxy on a real Docker engine and checks that it answers the container list and refuses inspect, logs, stats, attach, exec and write requests, and clients other than Server Hub.
 - Live demo: a static build of the real web interface with an in-browser mock of the HTTP API, published to GitHub Pages from `demo/` by `.github/workflows/pages.yml`. Data stays in the visitor's browser. See [demo/README.md](demo/README.md) for what is simulated.
 - Favicon set (`favicon.ico`, 32 px PNG, Apple touch icon) and a `theme-color` that follows the chosen theme.
 - Open dashboards refresh when the same browser changes data in another tab (for example in the settings page).
@@ -14,6 +17,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- Service URLs must not contain credentials (`user:password@`): creating or editing a service with one answers `400 validation`. The status checker never sends credentials, so such a service could only ever show `unknown`. Services already stored with credentials keep working and can still be edited, and backups that contain them still restore.
+- `PUT /api/admin/config` accepts a partial body: `registration_open` and `docker_visible_to_users` are both optional, with at least one required.
 - Dashboard layout: Settings is a chip in the header and "Add service" is a button next to the search field, replacing the floating buttons. The sign-out button reads "Sign out", and the greeting no longer repeats the date, which the clock shows. Groups and cards are laid out in balanced columns, and long names show their full text as a tooltip.
 - Search ranking is stricter: every query word must match, matches in the name rank above host and description, and only the service-specific part of a host is matched (not a shared suffix such as `home.arpa`). There is no fuzzy matching, and categories match only by prefix from four letters.
 - Image wallpapers get a veil in the theme's color so text stays readable on any photo.

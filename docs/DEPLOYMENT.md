@@ -2,11 +2,11 @@
 
 This guide is for the person who runs Server Hub. The short version is in the [README](../README.md); this page explains the choices behind it. Every variable is listed in the [configuration table](../README.md#configuration) and in [`.env.example`](../.env.example).
 
-Contents: [Compose file](#the-compose-file) · [Data volume](#data-volume-and-bind-mounts) · [Port](#changing-the-port) · [TLS](#tls) · [Tunnel or proxy](#running-behind-a-tunnel-or-proxy) · [First run and users](#first-run-and-users) · [Backups](#backups) · [Upgrades](#upgrades-and-rollback) · [Secret key](#secret-key) · [Outbound requests](#outbound-request-policy) · [Connection limits](#connection-limits) · [Health check and logs](#health-check-and-logs) · [Troubleshooting](#troubleshooting)
+Contents: [Compose file](#the-compose-file) · [Data volume](#data-volume-and-bind-mounts) · [Port](#changing-the-port) · [TLS](#tls) · [Tunnel or proxy](#running-behind-a-tunnel-or-proxy) · [First run and users](#first-run-and-users) · [Backups](#backups) · [Upgrades](#upgrades-and-rollback) · [Secret key](#secret-key) · [Outbound requests](#outbound-request-policy) · [Docker discovery](#docker-discovery) · [Connection limits](#connection-limits) · [Health check and logs](#health-check-and-logs) · [Troubleshooting](#troubleshooting)
 
 ## The compose file
 
-`compose.yaml` defines one service, `server-hub`, built from the `Dockerfile` in this repository. There is no reverse proxy, database server or other container.
+`compose.yaml` defines one service, `server-hub`, built from the `Dockerfile` in this repository. There is no reverse proxy, database server or other container. The one optional exception is `docker-proxy`, a socket proxy that only starts when you enable the `docker` profile for [Docker discovery](#docker-discovery).
 
 | Setting | What it does |
 |---|---|
@@ -272,7 +272,170 @@ Status checks and Beszel requests are made by the server, so they are restricted
 - Private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, `fc00::/7`) are allowed while `SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS=true` (the default, because a homelab dashboard points at LAN services). Set it to `false` on an internet-facing instance with open registration; status checks of LAN services then show `unknown`.
 - Limits: 4 s connect, 6 s read, 10 s total per request, 2 MiB response cap, at most 8 concurrent and 240 requests per minute per user, 32 concurrent overall.
 
+Docker discovery adds one more rule: the endpoint in `SERVERHUB_DOCKER_HOST` is never contacted by status checks or Beszel, whatever the settings (see [Docker discovery](#docker-discovery)).
+
 Because loopback is always blocked, a service on the same machine cannot be checked through `localhost`. Use the machine's LAN address. Inside the container, the host is reachable only through its network address, never `127.0.0.1`.
+
+## Docker discovery
+
+Docker discovery shows the containers you label as service cards on the dashboard, and gives admins one-click suggestions for other running containers that publish a port. Nothing is stored: Server Hub reads the container list from Docker every few seconds, and a card disappears with its container.
+
+It is off by default. Until you set `SERVERHUB_DOCKER_HOST`, Server Hub makes no Docker request, and the proxy container described below is not started.
+
+### How access works
+
+Server Hub never mounts the Docker socket and never talks to it. It asks a separate container, `docker-proxy` (the image `wollomatic/socket-proxy`, pinned to a release tag in `compose.yaml`), which has the socket mounted. The two containers share an internal Compose network (`docker-proxy`) that has no route to the outside, and the proxy's port is not published on the host.
+
+The proxy allows exactly one request: `GET /containers/json`, optionally with an API version prefix such as `/v1.47/`. Server Hub sends `GET /containers/json?all=true`. Everything else is refused: inspecting a container (which includes its environment variables and mounts), stats, logs, attach, exec, creating, starting, stopping or deleting containers, images, volumes, networks, events, `/version`, `/info`, and every method other than `GET`. Only the container named `server-hub` may connect (`-allowfrom=server-hub`). The proxy runs as uid `65534` (not root) with the group that owns the socket, with a read-only root filesystem, no capabilities, and process and memory limits.
+
+Mounting the socket with `:ro` would not give you this. `:ro` only stops file operations on the socket file; the Docker API spoken over it still accepts writes, `exec` and attach. Anything that can reach the socket can control the host. The proxy's allow-list is the protection, which is why Server Hub does not get the socket at all.
+
+### Turn it on
+
+1. Find the numeric group that owns the Docker socket. On a Linux host:
+
+   ```bash
+   stat -c %g /var/run/docker.sock
+   ```
+
+   If `stat` is not available there, this prints the same number through Docker:
+
+   ```bash
+   docker run --rm -v /var/run/docker.sock:/s:ro busybox:1.37 stat -c %g /s
+   ```
+
+2. Add these lines to `.env` (`.env.example` has them as a commented block). Replace `998` with the number from step 1:
+
+   ```bash
+   COMPOSE_PROFILES=docker
+   SERVERHUB_DOCKER_HOST=tcp://docker-proxy:2375
+   DOCKER_GID=998
+   ```
+
+   - `COMPOSE_PROFILES=docker` makes Compose start the `docker-proxy` service, which belongs to the `docker` profile.
+   - `SERVERHUB_DOCKER_HOST` is where Server Hub reaches the proxy: `tcp://host:port` or `http://host:port`. `unix://` sockets are refused.
+   - `DOCKER_GID` is read by Docker Compose only, not by Server Hub. If it is unset or wrong, the proxy cannot open the socket and exits at start (see [Troubleshooting](#docker-discovery-troubleshooting)). It never falls back to root.
+
+3. Optional: set the host name or IP address your browser uses for this machine. Suggestions use it to build their URL (see [Suggestions](#suggestions)):
+
+   ```bash
+   SERVERHUB_DOCKER_PUBLIC_HOST=nas.lan
+   ```
+
+   Give a host name or IP address only, without a scheme, port or path.
+
+4. Start the proxy and restart Server Hub:
+
+   ```bash
+   docker compose up -d
+   docker compose ps
+   ```
+
+   `docker-proxy` should be listed and become healthy.
+
+5. Sign in as an admin and open Settings, then Docker. A **Connected** tag means Server Hub can read the container list. The same page shows the label reference, the containers that were skipped and why, and the suggestions.
+
+### Label a container
+
+A container becomes a card when it has **both** `serverhub.enable` (a true value) and `serverhub.url`. Add the labels, then recreate the container so Docker applies them (`docker compose up -d` does that for a changed Compose file).
+
+| Label | Required | Default | Notes |
+|---|---|---|---|
+| `serverhub.enable` | yes | none | `true`, `1`, `yes` or `on`, in any letter case. Any other value, including `false`, means the container is not discovered, and no note is shown for it. |
+| `serverhub.url` | yes | none | An `http` or `https` address, at most 2000 characters, without `user:password@`. If it is missing or invalid, the container is skipped and admins see the reason. The card opens this address, and the server requests it for status checks. |
+| `serverhub.name` | no | the container name, prettified (`my_app-1` becomes `My App`) | At most 200 characters. |
+| `serverhub.description` | no | empty | At most 500 characters. |
+| `serverhub.icon` | no | guessed from the image and name, otherwise `box` | An icon id that Server Hub knows, for example `chart` or `database`. |
+| `serverhub.category` | no | automatic | A known category, for example `Monitoring`; letter case is ignored. |
+| `serverhub.check` | no | `true` | `true`/`1`/`yes`/`on` or `false`/`0`/`no`/`off`. `false` turns status checks off for this card. |
+
+A label value longer than 2048 characters counts as invalid. An invalid `name`, `description`, `icon`, `category` or `check` does not skip the container: Server Hub uses the default and admins see a warning in Settings, Docker. At most 500 containers are examined.
+
+A complete example for another app, in that app's own Compose file:
+
+```yaml
+services:
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    labels:
+      serverhub.enable: "true"
+      serverhub.url: "http://nas.lan:3000"
+      serverhub.name: "Grafana"
+      serverhub.description: "Dashboards and alerts"
+      serverhub.icon: "chart"
+      serverhub.category: "Monitoring"
+      serverhub.check: "true"
+```
+
+Quote the values so YAML passes them as text. Use an address that Server Hub's own container can reach (see [Status checks](#status-checks-for-discovered-services)). Discovered cards are read-only: change the labels and recreate the container to change a card. They are not part of backups or the JSON export.
+
+### Suggestions
+
+Admins see suggestions in Settings, Docker. A container is suggested when it:
+
+- is running;
+- has no `serverhub.enable` label at all (a label with any value, including `false`, hides it);
+- publishes at least one TCP port that is not bound only to the host's loopback address.
+
+Server Hub itself and the socket proxy are never suggested (`compose.yaml` labels both `serverhub.enable=false`, and they are also recognized by Compose service name and image), and neither is a container whose suggested address is already one of your services.
+
+The suggested URL is `http://<SERVERHUB_DOCKER_PUBLIC_HOST>:<published port>`. Server Hub picks the most likely web port of the container (it prefers well-known ones such as 80, 443, 8080, 3000 and 8000, otherwise the lowest) and uses `https` for container ports 443, 8443 and 9443. If `SERVERHUB_DOCKER_PUBLIC_HOST` is empty, the suggestion has no URL and you type it in when you add it.
+
+Add opens the usual add-service dialog with the suggestion filled in. The result is an ordinary service owned by that admin: you can edit or delete it, and it is part of backups. It is not linked to the container afterwards.
+
+### Who sees discovered services
+
+Admins always. Other users only after an admin turns on **Show discovered services to all users** in Settings, Docker (off by default; stored in the database, not in `.env`). The switch has no effect while discovery is not configured. Suggestions, the skipped list and the warnings are visible to admins only.
+
+### Status checks for discovered services
+
+Discovered cards show a status like any other service, with these differences:
+
+- A container that is not running (exited, paused, restarting, created, dead or removing) shows as `down`. No request is made.
+- For a running container, the server requests `serverhub.url` itself, under the [outbound request policy](#outbound-request-policy). All viewers see the same result, cached for about 20 seconds, and discovered services do not use any user's own request budget.
+- `serverhub.check: "false"` turns the check off for that card.
+- Only the first 100 running discovered services, in order of name, are checked. The rest show `unknown`, and admins get a warning that says so.
+- Status checks never contact the endpoint in `SERVERHUB_DOCKER_HOST`, on any port.
+
+### When Docker or the proxy is unavailable
+
+Server Hub refreshes the container list in the background at most every 10 seconds. If a refresh fails, it keeps serving the last good list for up to 120 seconds, and admins see a note that the list is that many seconds old. After 120 seconds without a good list, discovered cards disappear and Settings, Docker shows **Unavailable** with a reason. Server Hub keeps retrying, and the cards return when the proxy answers again. Your own services and the rest of the dashboard are not affected. The proxy exits, and Docker restarts it, when the socket goes away (for example after a Docker engine restart), so a short gap is normal then.
+
+### Security considerations
+
+- **Labels are trusted input.** Anyone who can start a container on the Docker host can attach labels to it. They choose the URL the card opens, which every user who can see discovered services may click, and the URL your Server Hub server requests for status checks. The outbound policy still applies: loopback, link-local and cloud-metadata addresses are never contacted, and private ranges only while `SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS` is `true`. Within that policy a label can make the server send a `GET` request to any address on your LAN, and viewers see whether it answered (admins also see its HTTP status and latency). If you do not trust everyone who can start containers on the host, keep the visibility switch off or do not use discovery there.
+- **What the proxy exposes.** The list of all containers on the host, labeled or not: name, image, labels, published ports and state. It does not expose environment variables, mounts, logs or anything else. Do not put secrets in labels, because they are part of that list.
+- **What a compromised Server Hub could do.** Read that same container list. It could not inspect containers, read their environment variables, start, stop, create or delete anything, run commands in a container, or reach the socket, because the only request the proxy lets through is `GET /containers/json` and the socket is mounted into the proxy only.
+- **What a compromised proxy could do.** It holds the socket, so everything depends on its allow-list. What limits the damage is a pinned upstream image (`wollomatic/socket-proxy`), a non-root user, no capabilities, a read-only filesystem and no published port. You are trusting that project's code to enforce the allow-list.
+- **What CI checks.** CI starts the stack with the profile enabled on a real Docker engine. It checks the rendered Compose configuration (the socket is mounted into the proxy only, no published proxy port, an internal network, exactly one allow rule) and sends requests to the running proxy: the container list is answered; container inspect, stats, logs, the attach WebSocket, a path-traversal variant, images, `/version`, `/info`, `HEAD`, create, stop and delete are refused (`403` or `405`); and so is `GET /containers/json` from any other container on the network. It does not audit the proxy image's own code.
+
+### Docker discovery troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `docker-proxy` exits at start, and `docker compose logs docker-proxy` shows `socket not available ... permission denied` | `DOCKER_GID` is unset or is not the group that owns the socket | Print the group (step 1 above), put it in `.env` as `DOCKER_GID`, then `docker compose up -d`. |
+| Settings, Docker says "The socket proxy refused to list containers" | The proxy answered `401` or `403`: its allow rule was changed, or the request does not come from the `server-hub` container | Restore the `-allowGET` and `-allowfrom=server-hub` lines of `docker-proxy` in `compose.yaml`, and do not rename the `server-hub` container. Server Hub must reach the proxy over the `docker-proxy` network. |
+| "Could not connect to the Docker API" | The proxy is not running, or `SERVERHUB_DOCKER_HOST` does not match it | Check `docker compose ps` and that `COMPOSE_PROFILES=docker` is set. With the shipped `compose.yaml` the host is `tcp://docker-proxy:2375`. |
+| Settings, Docker says Docker discovery is not set up | `SERVERHUB_DOCKER_HOST` is empty, or Server Hub was not restarted after you set it | Set it, then `docker compose up -d`. |
+| A container has labels but no card | It is listed under **Skipped containers**, or `serverhub.enable` is not a true value (then it is not listed at all) | Open Settings, Docker. Reasons include `serverhub.url is missing`, `serverhub.url is not a valid http(s) URL`, `serverhub.url must not contain credentials (user:password@)`, `serverhub.url is longer than 2000 characters` and `duplicate container name; only the first one is listed`. Fix the label and recreate the container. |
+| The card shows `down` although the app works | The server requests `serverhub.url` from inside the Server Hub container, and the address is not reachable from there | Use the host's LAN address and published port, not `localhost` or `127.0.0.1`. Or set `serverhub.check: "false"`. A stopped container is `down` by design. |
+| The card shows `unknown` | The address is refused by the outbound policy (loopback, link-local, or a private address while `SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS=false`), or the service is beyond the first 100 checked | See [Outbound request policy](#outbound-request-policy). |
+| Suggestions have no URL | `SERVERHUB_DOCKER_PUBLIC_HOST` is empty | Set it in `.env` and restart Server Hub, or type the URL when you add the service. |
+| Settings, Docker stays "Unavailable" after a Docker restart | The proxy exits when the socket goes away and Docker restarts it; it may not have come back | `docker compose ps`, then `docker compose restart docker-proxy`. |
+
+### Turn it off
+
+Remove (or comment out) `COMPOSE_PROFILES=docker`, `SERVERHUB_DOCKER_HOST` and `DOCKER_GID` in `.env`, restart Server Hub, and remove the proxy container:
+
+```bash
+docker compose up -d
+docker compose --profile docker stop docker-proxy
+docker compose --profile docker rm -f docker-proxy
+```
+
+Discovered cards disappear. Services you added from suggestions stay, because they are ordinary services.
 
 ## Connection limits
 

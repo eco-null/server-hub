@@ -51,6 +51,16 @@ def _http_url(v: str) -> str:
     return v
 
 
+def _service_url(v: str) -> str:
+    """Service URL: an http(s) URL without user info. The server fetches it for
+    status checks and refuses credentials in the URL there anyway, so a URL with
+    ``user:password@`` could never be checked; Docker labels follow the same rule."""
+    v = _http_url(v)
+    if "@" in urlsplit(v).netloc:
+        raise ValueError("must not contain credentials (user:password@)")
+    return v
+
+
 def _beszel_url(v: str) -> str:
     """Beszel base URL: scheme, host, optional port and path prefix only."""
     v = _http_url(v)
@@ -97,6 +107,7 @@ def _category(v: str | None) -> str | None:
 
 
 HttpUrl = Annotated[str, StringConstraints(max_length=2000), AfterValidator(_http_url)]
+ServiceUrl = Annotated[str, StringConstraints(max_length=2000), AfterValidator(_service_url)]
 BeszelUrl = Annotated[str, StringConstraints(max_length=2000), AfterValidator(_beszel_url)]
 OptHttpUrl = Annotated[str, StringConstraints(max_length=2000), AfterValidator(_optional_http_url)]
 Color = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
@@ -174,7 +185,7 @@ def deep_merge(base: dict, patch: dict) -> dict:
 
 class ServiceCreate(Strict):
     name: Name
-    url: HttpUrl
+    url: ServiceUrl
     description: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] = ""
     icon: Icon = "box"
     category: Category = None
@@ -183,7 +194,7 @@ class ServiceCreate(Strict):
 
 class ServicePatch(Strict):
     name: Name | None = None
-    url: HttpUrl | None = None
+    url: ServiceUrl | None = None
     description: Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)] | None = (
         None
     )
@@ -283,8 +294,11 @@ class AdminUserPatch(Strict):
     disable_twofa: Literal[True] | None = None
 
 
-class RegistrationConfig(Strict):
-    registration_open: bool
+class AdminConfigPatch(Strict):
+    """Partial update: clients that only know ``registration_open`` keep working."""
+
+    registration_open: bool | None = None
+    docker_visible_to_users: bool | None = None
 
 
 # ---- backup -----------------------------------------------------------------------------
@@ -292,6 +306,9 @@ class RegistrationConfig(Strict):
 
 class BackupService(ServiceCreate):
     model_config = ConfigDict(extra="ignore", strict=True)
+
+    # Backups made before service URLs refused user info must still restore.
+    url: HttpUrl
 
 
 class BackupBookmark(BookmarkCreate):

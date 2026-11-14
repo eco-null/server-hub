@@ -59,12 +59,14 @@ async def running(
     fetcher_options: dict | None = None,
     client_ip: str = "127.0.0.1",
     base_url: str = "http://testserver",
+    docker_options: dict | None = None,
     **cfg,
 ) -> AsyncIterator[httpx.AsyncClient]:
     app = create_app(
         make_config(tmp_path, **cfg),
         fetcher_options=fetcher_options,
         password_options=FAST_HASH,
+        docker_options=docker_options,
     )
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app, client=(client_ip, 50000))
@@ -128,7 +130,7 @@ Handler = Callable[[BaseHTTPRequestHandler, bytes], tuple[int, dict, bytes]]
 class Stub:
     """A tiny threaded HTTP server with per-path handlers and a request log."""
 
-    def __init__(self) -> None:
+    def __init__(self, host: str = "127.0.0.1") -> None:
         self.routes: dict[tuple[str, str], Handler] = {}
         self.log: list[dict] = []
         stub = self
@@ -166,10 +168,10 @@ class Stub:
             def log_message(self, *args) -> None:
                 pass
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), H)
+        self.server = ThreadingHTTPServer((host, 0), H)
         self.server.daemon_threads = True
         self.port = self.server.server_address[1]
-        self.url = f"http://127.0.0.1:{self.port}"
+        self.url = f"http://{host}:{self.port}"
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
 
@@ -195,5 +197,18 @@ def stub() -> AsyncIterator[Stub]:
 @pytest.fixture
 def stub2() -> AsyncIterator[Stub]:
     s = Stub()
+    yield s
+    s.close()
+
+
+# A stand-in Docker API on another loopback address: the fetcher refuses the
+# configured Docker host on every port, so status-check targets (127.0.0.1
+# stubs) must not share its address.
+DOCKER_STUB_HOST = "127.0.0.2"
+
+
+@pytest.fixture
+def docker_stub() -> AsyncIterator[Stub]:
+    s = Stub(DOCKER_STUB_HOST)
     yield s
     s.close()

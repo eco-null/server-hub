@@ -9,6 +9,7 @@ import { icon, serviceIcon } from '../icons.js';
 import { resolveCategory } from '../categorize.js';
 import { hostOf, safeUrl } from '../lib/url.js';
 import { balancedColumns, columnsFor } from '../lib/layout.js';
+import { isDiscovered, containerBadge, containerTitle } from '../lib/docker.js';
 
 /** Groups with at least this many services span the full row. */
 export const BIG_GROUP = 4;
@@ -52,10 +53,11 @@ export function groupServices(services) {
  *   root: HTMLElement,
  *   onEdit: (s: import('../types.js').Service) => void,
  *   onDelete: (s: import('../types.js').Service) => void,
+ *   onDetails: (s: import('../types.js').DiscoveredService) => void,
  * }} o
  */
-export function createServicesView({ root, onEdit, onDelete }) {
-  /** @type {Map<string, { el: HTMLElement, text: HTMLElement }>} service id -> status elements */
+export function createServicesView({ root, onEdit, onDelete, onDetails }) {
+  /** @type {Map<string, { el: HTMLElement, text: HTMLElement, forceDown: boolean }>} service id -> status elements */
   let statusEls = new Map();
   /** @type {Map<string, HTMLElement>} */
   let cardLinks = new Map();
@@ -82,50 +84,64 @@ export function createServicesView({ root, onEdit, onDelete }) {
   if (typeof ResizeObserver === 'function') new ResizeObserver(layout).observe(root);
 
   /**
-   * @param {import('../types.js').Service} s
-   * @param {boolean} showStatus
+   * @param {import('../types.js').Service | import('../types.js').DiscoveredService} s
+   * @param {{ showStatus: boolean, stale: boolean }} o
    */
-  function card(s, showStatus) {
+  function card(s, { showStatus, stale }) {
+    const found = isDiscovered(s) && 'container' in s ? s : null;
     const href = safeUrl(s.url);
     const label = h('span', null, s.name);
     const link = href
-      ? h('a', { class: 'card-link', href, title: s.name, target: '_blank', rel: 'noopener noreferrer' }, label, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
+      ? h('a', { class: 'card-link', href, title: found ? containerTitle(found, { stale }) : s.name, target: '_blank', rel: 'noopener noreferrer' }, label, h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
       : h('span', { class: 'card-link card-link-invalid', title: 'This address is not a valid web URL.' }, label);
     if (href) cardLinks.set(s.id, link);
 
     /** @type {HTMLElement | null} */
     let status = null;
-    if (showStatus && s.check) {
+    // A container that is not running reads as down whatever the server's check says; the dot follows
+    // the server's status otherwise (including while the discovered list is stale).
+    const forceDown = !!found && found.container.state !== 'running';
+    if (showStatus && (s.check || forceDown)) {
       const text = h('span', { class: 'sr-only' }, STATUS_TEXT.checking);
       status = h('span', { class: 'status status-checking', title: STATUS_TEXT.checking }, h('span', { class: 'status-dot', 'aria-hidden': 'true' }), text);
-      statusEls.set(s.id, { el: status, text });
+      statusEls.set(s.id, { el: status, text, forceDown });
     }
+
+    // Discovered cards say what state the container is in (text and tone, never colour alone).
+    const badge = found ? (stale ? { label: 'Last known', tone: 'neutral' } : containerBadge(found.container)) : null;
+    const host = hostOf(s.url);
+    const actions = found
+      ? h('button', { type: 'button', class: 'card-action', 'aria-label': `Details for ${s.name}`, title: 'Details', onclick: () => onDetails(found) }, icon('ui-info'))
+      : [
+          h('button', { type: 'button', class: 'card-action', 'aria-label': `Edit ${s.name}`, title: 'Edit', onclick: () => onEdit(/** @type {import('../types.js').Service} */ (s)) }, icon('ui-edit')),
+          h('button', { type: 'button', class: 'card-action card-action-danger', 'aria-label': `Delete ${s.name}`, title: 'Delete', onclick: () => onDelete(/** @type {import('../types.js').Service} */ (s)) }, icon('ui-trash')),
+        ];
 
     return h(
       'article',
-      { class: 'card glass', dataset: { id: s.id } },
+      { class: 'card glass' + (found ? ' card-docker' + (badge ? ' card-' + badge.tone : '') : ''), dataset: { id: s.id } },
       h('span', { class: 'accent-bar', 'aria-hidden': 'true' }),
       h('span', { class: 'card-icon' }, serviceIcon(s.icon)),
       h(
         'div',
         { class: 'card-body' },
-        h('div', { class: 'card-title' }, link, status),
+        h('div', { class: 'card-title' }, link, badge ? h('span', { class: 'tag tag-' + badge.tone }, badge.label) : null, status),
         s.description ? h('p', { class: 'card-desc', title: s.description }, s.description) : null,
-        h('p', { class: 'card-host mono', title: hostOf(s.url) }, hostOf(s.url)),
+        h(
+          'p',
+          { class: 'card-host mono', title: host },
+          found ? h('span', { class: 'docker-mark', title: 'Discovered from Docker' }, icon('ui-docker'), h('span', { class: 'sr-only' }, 'Discovered from Docker: ')) : null,
+          host,
+        ),
       ),
-      h(
-        'div',
-        { class: 'card-actions' },
-        h('button', { type: 'button', class: 'card-action', 'aria-label': `Edit ${s.name}`, title: 'Edit', onclick: () => onEdit(s) }, icon('ui-edit')),
-        h('button', { type: 'button', class: 'card-action card-action-danger', 'aria-label': `Delete ${s.name}`, title: 'Delete', onclick: () => onDelete(s) }, icon('ui-trash')),
-      ),
+      h('div', { class: 'card-actions' }, actions),
     );
   }
 
   return {
     /**
-     * @param {import('../types.js').Service[]} services
-     * @param {{ showStatus: boolean }} opts
+     * @param {Array<import('../types.js').Service | import('../types.js').DiscoveredService>} services
+     * @param {{ showStatus: boolean, stale?: boolean }} opts `stale`: discovered cards show the last known state
      */
     render(services, opts) {
       statusEls = new Map();
@@ -139,7 +155,7 @@ export function createServicesView({ root, onEdit, onDelete }) {
             'section',
             { class: 'group ' + (big ? 'group-big' : 'group-small'), 'aria-labelledby': headingId, dataset: { category } },
             h('h3', { class: 'eyebrow', id: headingId }, category, h('span', { class: 'group-count' }, ` · ${items.length}`)),
-            h('div', { class: 'group-grid' }, items.map((s) => card(s, opts.showStatus))),
+            h('div', { class: 'group-grid' }, items.map((s) => card(s, { showStatus: opts.showStatus, stale: !!opts.stale }))),
           );
         }),
       );
@@ -152,8 +168,10 @@ export function createServicesView({ root, onEdit, onDelete }) {
      * @param {Record<string, { state: string }>} statuses
      */
     applyStatuses(statuses) {
-      for (const [id, { el, text }] of statusEls) {
-        const known = Object.hasOwn(statuses, id) ? statuses[id].state : null;
+      for (const [id, { el, text, forceDown }] of statusEls) {
+        // A discovered id can be missing from a loaded map (no listing yet, or too old): that is unknown, not "checking".
+        const missing = id.startsWith('docker:') && Object.keys(statuses).length > 0 ? 'unknown' : null;
+        const known = forceDown ? 'down' : Object.hasOwn(statuses, id) ? statuses[id].state : missing;
         const state = known === 'up' || known === 'down' ? known : known === 'unknown' ? 'unknown' : 'checking';
         el.className = 'status status-' + (state === 'unknown' ? 'unknown' : state);
         const msg = STATUS_TEXT[/** @type {keyof typeof STATUS_TEXT} */ (state)];

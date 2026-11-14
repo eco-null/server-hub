@@ -9,10 +9,10 @@ from starlette.routing import Route
 
 from serverhub.api import schemas as s
 from serverhub.api.data import path_id, reject_nulls
-from serverhub.api.serialize import user_out
+from serverhub.api.serialize import DOCKER_VISIBLE_KEY, user_out
 from serverhub.auth.sessions import require_admin
 from serverhub.db import repo, transaction
-from serverhub.errors import not_found
+from serverhub.errors import not_found, validation
 from serverhub.http import hub, json_response, no_content, parse
 from serverhub.system import stats
 
@@ -66,17 +66,34 @@ async def delete_user(request: Request) -> Response:
     return no_content()
 
 
+CONFIG_DEFAULTS = {"registration_open": False, DOCKER_VISIBLE_KEY: False}
+
+
+def _read_config(conn) -> dict:
+    return {k: bool(repo.get_config(conn, k, d)) for k, d in CONFIG_DEFAULTS.items()}
+
+
 async def get_config(request: Request) -> Response:
     await require_admin(request)
-    value = await hub(request).db.run(repo.get_config, "registration_open", False)
-    return json_response({"registration_open": bool(value)})
+    return json_response(await hub(request).db.run(_read_config))
 
 
 async def put_config(request: Request) -> Response:
+    """Partial update; every key is optional, but the body must set at least one."""
     await require_admin(request)
-    body = await parse(request, s.RegistrationConfig)
-    await hub(request).db.run(repo.set_config, "registration_open", body.registration_open)
-    return json_response({"registration_open": body.registration_open})
+    body = await parse(request, s.AdminConfigPatch)
+    reject_nulls(body)
+    changes = body.model_dump(exclude_unset=True)
+    if not changes:
+        raise validation({"body": "must set at least one of: " + ", ".join(CONFIG_DEFAULTS)})
+
+    def _write(conn):
+        with transaction(conn):
+            for key, value in changes.items():
+                repo.set_config(conn, key, value)
+        return _read_config(conn)
+
+    return json_response(await hub(request).db.run(_write))
 
 
 async def host_stats(request: Request) -> Response:

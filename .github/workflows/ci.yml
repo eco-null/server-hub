@@ -206,10 +206,222 @@ jobs:
             exit 1
           fi
 
+      # ---- Phase 2: Docker auto-discovery through the read-only socket proxy ----
+
+      - name: "Discovery: enable the profile"
+        run: |
+          set -euo pipefail
+          gid="$(stat -c %g /var/run/docker.sock)"
+          test -n "$gid"
+          {
+            echo "COMPOSE_PROFILES=docker"
+            echo "SERVERHUB_DOCKER_HOST=tcp://docker-proxy:2375"
+            echo "SERVERHUB_DOCKER_PUBLIC_HOST=localhost"
+            echo "DOCKER_GID=${gid}"
+          } >> .env
+
+      - name: "Discovery: validate the profile's compose configuration"
+        run: |
+          set -euo pipefail
+          cfg="$(docker compose config --format json)"
+          echo "$cfg" | jq '.services["docker-proxy"]'
+          # The Docker socket is mounted into the proxy and into no other service.
+          jq -e '[.services | to_entries[]
+                  | select(any(.value.volumes[]?; .source == "/var/run/docker.sock"
+                                                  or .target == "/var/run/docker.sock"))
+                  | .key] == ["docker-proxy"]' <<<"$cfg"
+          # No proxy port is published (not even via expose / host networking).
+          jq -e '.services["docker-proxy"] | (.ports // []) == [] and (.expose // []) == []
+                 and (.network_mode // "") == ""' <<<"$cfg"
+          jq -e '.services["docker-proxy"].networks | keys == ["docker-proxy"]' <<<"$cfg"
+          jq -e '.networks["docker-proxy"].internal == true' <<<"$cfg"
+          # Only server-hub and the proxy join the internal network.
+          jq -e '[.services | to_entries[] | select(.value.networks // {} | has("docker-proxy"))
+                  | .key] | sort == ["docker-proxy", "server-hub"]' <<<"$cfg"
+          # Exactly one allow rule: GET /containers/json; only server-hub may connect.
+          jq -e '[.services["docker-proxy"].command[] | select(test("^-allow[A-Z]+="))]
+                 == ["-allowGET=/(v[0-9.]+/)?containers/json"]' <<<"$cfg"
+          jq -e 'any(.services["docker-proxy"].command[]; . == "-allowfrom=server-hub")' <<<"$cfg"
+          # Not root, no capabilities, read-only root filesystem, pinned image.
+          jq -e --arg gid "$(stat -c %g /var/run/docker.sock)" \
+            '.services["docker-proxy"].user == "65534:\($gid)"' <<<"$cfg"
+          jq -e '.services["docker-proxy"] | .read_only == true and .cap_drop == ["ALL"]
+                 and (.cap_add // []) == [] and (.privileged // false) == false' <<<"$cfg"
+          jq -e '.services["docker-proxy"].image | test("^wollomatic/socket-proxy:[0-9]+\\.[0-9]+\\.[0-9]+$")' <<<"$cfg"
+          # server-hub does not wait for the proxy.
+          jq -e '.services["server-hub"].depends_on == null' <<<"$cfg"
+
+      - name: "Discovery: start the proxy and restart Server Hub"
+        run: |
+          set -euo pipefail
+          # --wait: returns once every service is running/healthy (the proxy has a healthcheck).
+          docker compose up -d --wait --wait-timeout 120
+          test "$(docker inspect --format '{{.Config.User}}' "$(docker compose ps -q docker-proxy)")" != ""
+          for _ in $(seq 1 45); do
+            if curl -fsS http://localhost:8642/healthz; then echo; exit 0; fi
+            sleep 2
+          done
+          echo "Timed out waiting for /healthz after enabling discovery" >&2
+          exit 1
+
+      - name: "Discovery: start test containers"
+        run: |
+          set -euo pipefail
+          docker run -d --name sh-ci-labelled \
+            --label serverhub.enable=true \
+            --label "serverhub.name=CI Labelled" \
+            --label serverhub.url=http://example.com \
+            busybox:1.37 sleep 600
+          # Exits at once: a stopped labelled container reports "down" without a request.
+          docker run -d --name sh-ci-stopped \
+            --label serverhub.enable=true \
+            --label serverhub.url=http://sh-ci-stopped.invalid \
+            busybox:1.37 true
+          docker run -d --name sh-ci-web -p 18080:80 busybox:1.37 httpd -f -p 80
+          # A container with an open stdin: the target of the attach probe below.
+          docker run -d -i --name sh-ci-stdin busybox:1.37 cat
+          docker pull -q curlimages/curl:8.11.1
+
+      - name: "Discovery: API assertions"
+        run: |
+          set -euo pipefail
+          base="http://localhost:8642"
+          jar="$RUNNER_TEMP/cookies-discovery.txt"
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -c "$jar" -b "$jar" \
+            -H 'Content-Type: application/json' -H 'X-ServerHub-Client: ci' \
+            -d '{"identifier":"admin","password":"ci-Test-Passw0rd-2026"}' "$base/api/auth/login")"
+          test "$code" = 200
+
+          boot="$(curl -fsS -b "$jar" "$base/api/bootstrap")"
+          jq -e '.docker.enabled == true' <<<"$boot"
+
+          # The container list is cached for a few seconds; poll until it shows up.
+          # A failed request inside a loop is retried, not fatal: set -e does not
+          # apply to commands in an "if" condition.
+          ok=""
+          docker_json=""
+          for _ in $(seq 1 30); do
+            if docker_json="$(curl -fsS -m 10 -b "$jar" "$base/api/docker")" \
+                && jq -e '.enabled == true and .available == true
+                   and any(.services[]; .id == "docker:sh-ci-labelled" and .name == "CI Labelled"
+                     and .url == "http://example.com" and .container.state == "running")
+                   and any(.services[]; .id == "docker:sh-ci-stopped"
+                     and .container.state == "exited")' <<<"$docker_json" >/dev/null; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+          echo "$docker_json" | jq . || echo "$docker_json"
+          test -n "$ok"
+
+          # The stopped container is "down" (no outbound request is made for it).
+          ok=""
+          status_json=""
+          for _ in $(seq 1 15); do
+            if status_json="$(curl -fsS -m 30 -b "$jar" "$base/api/status")" \
+                && jq -e '.statuses["docker:sh-ci-stopped"].state == "down"' \
+                   <<<"$status_json" >/dev/null; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+          echo "$status_json" | jq . || echo "$status_json"
+          test -n "$ok"
+
+          ok=""
+          sugg=""
+          for _ in $(seq 1 10); do
+            if sugg="$(curl -fsS -m 10 -b "$jar" "$base/api/admin/docker/suggestions")" \
+                && jq -e '.available == true' <<<"$sugg" >/dev/null; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+          echo "$sugg" | jq . || echo "$sugg"
+          test -n "$ok"
+          jq -e 'any(.suggestions[]; .container.name == "sh-ci-web"
+                 and .suggested.url == "http://localhost:18080")' <<<"$sugg"
+          # Neither Server Hub, nor the socket proxy, nor a labelled container is suggested.
+          jq -e 'all(.suggestions[]; .container.name
+                 | test("server-hub|docker-proxy|^sh-ci-labelled$|^sh-ci-stopped$") | not)' <<<"$sugg"
+
+      - name: "Discovery: the proxy allows exactly GET /containers/json"
+        run: |
+          set -euo pipefail
+          project="$(docker compose config --format json | jq -r .name)"
+          test -n "$project"
+          # Requests are sent from inside server-hub's network namespace, so the
+          # proxy sees server-hub's address (the only client in -allowfrom).
+          probe() {  # prints the HTTP status; 000 when no HTTP answer came back
+            docker run --rm --network container:server-hub curlimages/curl:8.11.1 \
+              -sS -m 10 -o /dev/null -w '%{http_code}' "$@" || true
+          }
+          expect() {  # expect <label> <status the proxy documents> <actual>
+            echo "$1 -> $3 (expected $2)"
+            case "$3" in
+              2??|101) echo "REFUSAL FAILED: $1 was allowed" >&2; exit 1 ;;
+            esac
+            test "$3" = "$2"
+          }
+          p=http://docker-proxy:2375
+          code="$(probe "$p/containers/json?all=true")"
+          echo "GET /containers/json -> $code"; test "$code" = 200
+
+          # wollomatic/socket-proxy: a path that matches no rule is 403, a method
+          # without any rule is 405 (cmd/socket-proxy/handlehttprequest.go).
+          expect "GET /containers/{id}/json (inspect)" 403 "$(probe "$p/containers/sh-ci-web/json")"
+          expect "GET /v1.43/containers/{id}/json" 403 \
+            "$(probe "$p/v1.43/containers/sh-ci-web/json")"
+          expect "GET /containers/{id}/stats" 403 \
+            "$(probe "$p/containers/sh-ci-web/stats?stream=false")"
+          expect "GET /containers/{id}/logs" 403 "$(probe "$p/containers/sh-ci-web/logs?stdout=1")"
+          expect "GET /containers/{id}/attach/ws (WebSocket)" 403 "$(probe \
+            -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
+            -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' \
+            "$p/containers/sh-ci-stdin/attach/ws?stream=1&stdin=1&stdout=1")"
+          expect "GET /containers/json/../{id}/json" 403 \
+            "$(probe --path-as-is "$p/containers/json/../sh-ci-web/json")"
+          expect "GET /images/json" 403 "$(probe "$p/images/json")"
+          expect "GET /version" 403 "$(probe "$p/version")"
+          expect "GET /info" 403 "$(probe "$p/info")"
+          expect "HEAD /containers/json" 405 "$(probe -I "$p/containers/json")"
+          expect "POST /containers/create" 405 "$(probe -X POST \
+            -H 'Content-Type: application/json' -d '{"Image":"busybox:1.37"}' "$p/containers/create")"
+          expect "POST /containers/{id}/stop" 405 "$(probe -X POST "$p/containers/sh-ci-web/stop")"
+          expect "DELETE /containers/{id}" 405 "$(probe -X DELETE "$p/containers/sh-ci-web")"
+
+          # Any other client on the internal network is refused, even for the allowed path.
+          # The network is looked up by Compose project AND network label, so another
+          # project's "docker-proxy" network cannot be picked by mistake.
+          net="$(docker network ls -q \
+            --filter "label=com.docker.compose.project=${project}" \
+            --filter label=com.docker.compose.network=docker-proxy)"
+          test -n "$net"
+          test "$(wc -l <<<"$net")" -eq 1
+          code="$(docker run --rm --network "$net" curlimages/curl:8.11.1 \
+            -sS -m 10 -o /dev/null -w '%{http_code}' "$p/containers/json" || true)"
+          expect "GET /containers/json from another container" 403 "$code"
+          # The internal network has no route out.
+          if docker run --rm --network "$net" curlimages/curl:8.11.1 -sS -m 5 -o /dev/null \
+              http://example.com; then
+            echo "internal network reached the internet" >&2
+            exit 1
+          fi
+          # Nothing was changed by the refused writes.
+          test "$(docker ps -q -f name=^sh-ci-web$ | wc -l)" -eq 1
+          test "$(docker ps -q -f name=^sh-ci-stdin$ | wc -l)" -eq 1
+          docker compose logs --no-color docker-proxy | tail -n 40
+
       - name: Print compose logs on failure
         if: failure()
-        run: docker compose logs --no-color
+        run: |
+          docker compose logs --no-color || true
+          for c in sh-ci-labelled sh-ci-stopped sh-ci-web sh-ci-stdin; do
+            docker logs "$c" || true
+          done
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: |
+          docker rm -f sh-ci-labelled sh-ci-stopped sh-ci-web sh-ci-stdin || true
+          docker compose down -v || true

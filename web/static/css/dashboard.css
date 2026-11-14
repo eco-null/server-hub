@@ -525,6 +525,74 @@ a.bookmark:hover {
   color: var(--red-text);
 }
 
+/* Discovered from Docker: the state label may drop under the name when the card is narrow. */
+.card-docker .card-title {
+  flex-wrap: wrap;
+  row-gap: 0.125rem;
+}
+
+.docker-mark {
+  display: inline-flex;
+  margin-right: 0.3125rem;
+  vertical-align: -0.125em;
+}
+
+.docker-mark svg.icon {
+  width: 0.8125rem;
+  height: 0.8125rem;
+}
+
+/* Containers that are not fine read as such on the accent bar too (the tag carries the text). */
+.card-bad .accent-bar {
+  background: linear-gradient(180deg, var(--red), transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--red) 40%, transparent);
+}
+
+.card-warn .accent-bar {
+  background: linear-gradient(180deg, var(--amber), transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--amber) 40%, transparent);
+}
+
+.card-neutral .accent-bar {
+  background: linear-gradient(180deg, var(--fg-muted), transparent);
+  box-shadow: none;
+}
+
+/* Admin-only line above the grid when Docker cannot be read. */
+.docker-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin: 0 0 1rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg-muted);
+  font-size: 0.8125rem;
+}
+
+.docker-notice svg.icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.docker-notice a {
+  margin-left: auto;
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (pointer: coarse), (max-width: 768px) {
+  .docker-notice a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}
+
 /* Touch and small screens: compact two-column cards whose actions are always
    visible in a full-width row of 44px targets. */
 @media (hover: none), (pointer: coarse), (max-width: 768px) {

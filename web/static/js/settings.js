@@ -12,6 +12,7 @@ import { mountLinks } from './settings/links.js';
 import { mountBookmarks } from './settings/bookmarks.js';
 import { mountAccount } from './settings/account.js';
 import { mountAdmin } from './settings/admin.js';
+import { mountDocker } from './settings/docker.js';
 import { mountBackup, mountReset } from './settings/backup.js';
 import { toastError } from './toast.js';
 
@@ -48,6 +49,7 @@ mountLinks(section('links'), env);
 mountBookmarks(section('bookmarks'), env);
 mountAccount(section('account'), env);
 const admin = mountAdmin(section('admin'), env);
+const docker = mountDocker(section('docker'), env);
 mountBackup(section('backup'), env);
 mountReset(section('reset'), env);
 
@@ -77,12 +79,16 @@ store.onSaveState((info) => {
 // ---------- data ----------
 const adminSection = byId('sec-admin');
 const adminNav = byId('nav-admin');
+const dockerSection = byId('sec-docker');
+const dockerNav = byId('nav-docker');
 
 state.subscribe((s, prev) => {
   if (s.user !== prev.user) {
     const isAdmin = s.user?.role === 'admin';
     adminSection.hidden = !isAdmin;
     adminNav.hidden = !isAdmin;
+    dockerSection.hidden = !isAdmin;
+    dockerNav.hidden = !isAdmin;
     if (isAdmin) admin.start();
   }
   if (s.user && (s.services !== prev.services || s.bookmarks !== prev.bookmarks || s.user !== prev.user)) {
@@ -95,7 +101,11 @@ try {
   const data = await ctx.fetchFresh();
   state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, loaded: true });
   byId('load-error').hidden = true;
+  if (data.user.role === 'admin') docker.start(!!(data.docker && data.docker.enabled === true));
+  // The admin sections were hidden when the browser first resolved the #hash.
+  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 } catch (err) {
+  if (state.get().user?.role === 'admin') docker.start(null);
   if (!state.get().loaded) {
     byId('load-error-text').textContent = err instanceof Error ? err.message : "Couldn't load your settings.";
     byId('load-error').hidden = false;

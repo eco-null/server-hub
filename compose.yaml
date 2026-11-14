@@ -14,6 +14,12 @@
 # next to it. Compose merges that file automatically, and Git ignores it, so
 # `git pull` never conflicts. A complete TLS example is in docs/DEPLOYMENT.md
 # ("TLS"); without an override file this file works as it is.
+#
+# Docker auto-discovery (optional, off by default): set COMPOSE_PROFILES=docker,
+# SERVERHUB_DOCKER_HOST=tcp://docker-proxy:2375 and DOCKER_GID in .env (see
+# .env.example). That starts the socket proxy below, which lets exactly one
+# request through: listing containers. Server Hub itself never mounts the
+# Docker socket.
 services:
   server-hub:
     build: .
@@ -46,6 +52,99 @@ services:
       - no-new-privileges:true
     pids_limit: 256
     stop_grace_period: 20s
+    networks:
+      - default
+      - docker-proxy
+    labels:
+      # Never offered as a Docker discovery suggestion for itself.
+      serverhub.enable: "false"
+    # No depends_on on docker-proxy: it only exists with the "docker" profile,
+    # and Server Hub copes with it being absent or late (the dashboard shows
+    # discovery as unavailable and retries in the background).
+
+  # Docker API allow-list proxy for auto-discovery (profile "docker").
+  #
+  # Anything that can talk to the Docker socket controls the host, and mounting
+  # the socket ":ro" does NOT change that: read-only applies to file operations
+  # on the mount, not to the API spoken over the socket (connecting still works,
+  # and with it writes, exec and attach).
+  # The allow-list below is the ONLY thing that makes this API read-only.
+  #
+  # Image: wollomatic/socket-proxy (a static Go binary in a scratch image), which
+  # matches every request against per-method regular expressions on the URL
+  # path (anchored ^...$; the query string is not part of the match). Methods
+  # without an -allow<METHOD> rule are refused with 405, paths that do not match
+  # with 403, and clients not in -allowfrom with 403. Configured here:
+  #   - exactly one rule: GET /containers/json, optionally with an API version
+  #     prefix (/v1.47/containers/json). Server Hub sends
+  #     GET /containers/json?all=true. Everything else is refused: container
+  #     inspect (environment variables, mounts), stats, logs, attach (also the
+  #     WebSocket attach), exec, create/start/stop/delete, images, volumes,
+  #     networks, events, /version, /info, /_ping, HEAD;
+  #   - -allowfrom=server-hub: only the server-hub container's address (looked
+  #     up by name on every request) may connect;
+  #   - docs: https://github.com/wollomatic/socket-proxy (README "Allowing
+  #     access", "All parameters and environment variables").
+  # Pinned to a release tag; bump it deliberately.
+  docker-proxy:
+    image: wollomatic/socket-proxy:1.13.2
+    profiles: ["docker"]
+    restart: unless-stopped
+    # Not root: uid 65534 (nobody, the image's own default) plus the group that
+    # owns the Docker socket on this host, which is what grants socket access.
+    # Set DOCKER_GID in .env (see .env.example for the command that prints it).
+    # Unset, the group stays 65534: the proxy then cannot open the socket and
+    # exits at start-up with "socket not available ... permission denied"
+    # (Server Hub shows discovery as unavailable); it never falls back to root.
+    user: "65534:${DOCKER_GID:-65534}"
+    command:
+      - "-listenip=0.0.0.0" # inside the container; the port is not published
+      - "-proxyport=2375"
+      - "-allowfrom=server-hub"
+      - "-allowGET=/(v[0-9.]+/)?containers/json"
+      - "-allowhealthcheck" # health endpoint on 127.0.0.1:55555 inside the container only
+      - "-watchdoginterval=60" # exit (and get restarted) if the socket goes away,
+      - "-stoponwatchdog" # e.g. after a Docker engine restart
+      - "-shutdowngracetime=5"
+      - "-loglevel=WARN" # refused requests are logged at WARN
+    environment:
+      # At most 2 OS threads run Go code at once (see pids_limit).
+      GOMAXPROCS: "2"
+    healthcheck:
+      # The image's bundled checker: HEAD 127.0.0.1:55555/health, which dials the socket.
+      test: ["CMD", "/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      # The socket is mounted into the proxy only (":ro" is not a security
+      # boundary for an API socket; the allow-list above is).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-proxy
+    labels:
+      serverhub.enable: "false"
+    # Nothing is written at run time (static binary, scratch image): no tmpfs.
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Every Linux thread counts against pids_limit. A Go process uses about
+    # GOMAXPROCS threads running Go code plus a few runtime/idle threads
+    # (sysmon, template thread, threads parked in blocking syscalls); network
+    # and socket I/O goes through the netpoller and does not pin threads.
+    # With GOMAXPROCS=2 the proxy needs roughly 5-10 threads and the short-lived
+    # /healthcheck process (same runtime, same GOMAXPROCS) about as many, so 32
+    # leaves ample headroom while still stopping a runaway.
+    pids_limit: 32
+    mem_limit: 64m
+
+networks:
+  # internal: no route to the outside world. Only server-hub and the proxy join it.
+  docker-proxy:
+    internal: true
 
 volumes:
   server-hub-data:

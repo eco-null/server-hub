@@ -8,6 +8,7 @@ import logging
 import secrets
 from collections.abc import AsyncIterator
 from typing import Any
+from urllib.parse import urlsplit
 
 import anyio
 from pydantic import ValidationError
@@ -22,6 +23,7 @@ from serverhub.api import admin as admin_api
 from serverhub.api import auth as auth_api
 from serverhub.api import beszel as beszel_api
 from serverhub.api import data as data_api
+from serverhub.api import docker as docker_api
 from serverhub.auth.crypto import Keys, Passwords
 from serverhub.auth.ratelimit import LONGEST_WINDOW, RateLimiter
 from serverhub.config import Config, load_config
@@ -30,8 +32,9 @@ from serverhub.errors import ApiError
 from serverhub.http import validation_from
 from serverhub.hub import Hub
 from serverhub.integrations.beszel import BeszelClient
+from serverhub.integrations.docker import DockerClient
 from serverhub.integrations.fetcher import SafeFetcher
-from serverhub.integrations.status import StatusChecker
+from serverhub.integrations.status import DISCOVERY_IDENTITY, DISCOVERY_LIMITS, StatusChecker
 from serverhub.middleware import SecurityMiddleware
 from serverhub.web import routes as web_routes
 
@@ -130,8 +133,10 @@ def create_app(
     *,
     fetcher_options: dict[str, Any] | None = None,
     password_options: dict[str, int] | None = None,
+    docker_options: dict[str, Any] | None = None,
 ) -> Starlette:
-    """Build the ASGI app. Keyword options exist for tests (cheap hashing, stub DNS)."""
+    """Build the ASGI app. Keyword options exist for tests (cheap hashing, stub DNS,
+    short Docker timeouts)."""
     cfg = config or load_config()
 
     @contextlib.asynccontextmanager
@@ -139,7 +144,11 @@ def create_app(
         cfg.data_dir.mkdir(parents=True, exist_ok=True)
         db = Database(cfg.db_path)
         fetcher = SafeFetcher(
-            allow_private=cfg.allow_private_network_targets, **(fetcher_options or {})
+            allow_private=cfg.allow_private_network_targets,
+            identity_limits={DISCOVERY_IDENTITY: DISCOVERY_LIMITS},
+            # User- and label-supplied URLs may never reach the Docker API endpoint.
+            deny_hosts=[urlsplit(cfg.docker_host).hostname or ""] if cfg.docker_host else (),
+            **(fetcher_options or {}),
         )
         hub = Hub(
             config=cfg,
@@ -150,6 +159,9 @@ def create_app(
             fetcher=fetcher,
             status=StatusChecker(fetcher),
             beszel=BeszelClient(fetcher),
+            docker=(
+                DockerClient(cfg.docker_host, **(docker_options or {})) if cfg.docker_host else None
+            ),
         )
         app.state.hub = hub
         if await db.run(repo.count_users) == 0:
@@ -168,10 +180,14 @@ def create_app(
         try:
             async with anyio.create_task_group() as tg:
                 tg.start_soon(housekeeping)
+                if hub.docker is not None:
+                    hub.docker.attach(tg)  # background refreshes, never inside a request
                 yield
                 tg.cancel_scope.cancel()
         finally:
             await fetcher.aclose()
+            if hub.docker is not None:
+                await hub.docker.aclose()
             db.close()
 
     routes = [
@@ -179,6 +195,7 @@ def create_app(
         *auth_api.routes,
         *data_api.routes,
         *beszel_api.routes,
+        *docker_api.routes,
         *admin_api.routes,
         Route(
             "/api/{rest:path}",
