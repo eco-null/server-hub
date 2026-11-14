@@ -12,6 +12,7 @@ import {
   nextDockerView,
   unavailableNotice,
   formatPort,
+  hiddenDuplicates,
   suggestionToDraft,
 } from '../static/js/lib/docker.js';
 import { groupServices } from '../static/js/features/services.js';
@@ -181,4 +182,11 @@ test('suggestionToDraft: values pass through, a missing URL becomes empty and fl
   assert.equal(noUrl.category, null);
   assert.equal(noUrl.name, 'grafana');
   assert.equal(suggestionToDraft({ ...s, suggested: { ...s.suggested, url: 'javascript:alert(1)' } }).url, '');
+});
+
+test('hiddenDuplicates counts discovered services hidden behind an own service', () => {
+  const mine = [own('1', 'https://grafana.example.com/')];
+  assert.equal(hiddenDuplicates(mine, [disc('a', 'https://GRAFANA.example.com:443'), disc('b', 'http://h:1')]), 1);
+  assert.equal(hiddenDuplicates(mine, []), 0);
+  assert.equal(hiddenDuplicates([], [disc('a', 'http://h:1')]), 0);
 });

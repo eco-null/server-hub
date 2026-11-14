@@ -10,21 +10,21 @@ import { createSwitch } from '../ui.js';
 import { icon, serviceIcon } from '../icons.js';
 import { hostOf, safeUrl } from '../lib/url.js';
 import { copyText } from '../lib/clipboard.js';
-import { DEPLOYMENT_GUIDE_URL, formatPort, suggestionToDraft } from '../lib/docker.js';
+import { DEPLOYMENT_GUIDE_URL, formatPort, hiddenDuplicates, suggestionToDraft } from '../lib/docker.js';
 import { openAddService } from '../features/service-dialogs.js';
 import { toastSuccess, toastError } from '../toast.js';
 
 const PUBLIC_HOST_HINT = 'Set SERVERHUB_DOCKER_PUBLIC_HOST on the server to fill in the address automatically.';
 
-/** The seven labels, in the order they are documented. */
+/** The seven labels, in the order they are documented (docs/API.md, "Docker discovery"). */
 const LABELS = [
-  ['serverhub.enable', 'Set to "true" to show the container on the dashboard.'],
-  ['serverhub.name', 'The name on the card.'],
-  ['serverhub.url', 'The address the card opens, for example https://grafana.example.com.'],
-  ['serverhub.description', 'A short line under the name.'],
-  ['serverhub.icon', 'An icon id, for example chart, database or server.'],
-  ['serverhub.category', 'The group it appears in, for example Monitoring. Leave it out to detect it automatically.'],
-  ['serverhub.check', '"true" or "false": let the server check that the service answers.'],
+  ['serverhub.enable', 'Required. Set to true to show the container on the dashboard.'],
+  ['serverhub.url', 'Required. A valid http or https address, without a username or password in it. The card opens it, and the server requests the same address for status checks unless serverhub.check is false.'],
+  ['serverhub.name', 'The name on the card, up to 200 characters. Defaults to the container name.'],
+  ['serverhub.description', 'A short line under the name, up to 500 characters. Defaults to empty.'],
+  ['serverhub.icon', 'An icon id, for example chart, database or server. Guessed from the image and name when left out.'],
+  ['serverhub.category', 'The group it appears in, for example Monitoring. Detected automatically when left out.'],
+  ['serverhub.check', 'true or false: whether the server checks that the address answers. Defaults to true.'],
 ];
 
 const COMPOSE_EXAMPLE = `services:
@@ -34,8 +34,8 @@ const COMPOSE_EXAMPLE = `services:
       - "3000:3000"
     labels:
       serverhub.enable: "true"
-      serverhub.name: "Grafana"
       serverhub.url: "https://grafana.example.com"
+      serverhub.name: "Grafana"
       serverhub.description: "Dashboards and alerts"
       serverhub.icon: "chart"
       serverhub.category: "Monitoring"
@@ -62,7 +62,8 @@ export function mountDocker(root, env) {
         'div',
         { class: 'sub-card glass' },
         h('h3', { class: 'card-title-sm' }, 'Docker discovery is not set up'),
-        h('p', { class: 'muted' }, 'Server Hub can show your running containers as services automatically. It reads them through a read-only Docker socket proxy, which you turn on in the server configuration. Containers labeled serverhub.enable=true then appear on the dashboard, and you can add other containers with one click from the suggestions here.'),
+        h('p', { class: 'muted' }, 'Server Hub can show your running containers as services automatically. It reads them through a socket proxy that allows only the container list, so it never gets control of Docker. Containers labeled serverhub.enable=true then appear on the dashboard, and you can add other containers with one click from the suggestions here.'),
+        h('p', { class: 'muted' }, 'To turn it on, the operator sets ', h('code', { class: 'mono' }, 'COMPOSE_PROFILES=docker'), ' (this starts the proxy) and ', h('code', { class: 'mono' }, 'SERVERHUB_DOCKER_HOST'), ' (where Server Hub reaches it), then restarts Server Hub.'),
         guide
           ? h('div', null, h('a', { class: 'btn', href: guide, target: '_blank', rel: 'noopener noreferrer' }, h('span', null, 'Read the deployment guide'), icon('external-link'), h('span', { class: 'sr-only' }, ' (opens in a new tab)')))
           : null,
@@ -82,12 +83,20 @@ export function mountDocker(root, env) {
   function statusRow(dock) {
     const n = dock.services.length;
     const ok = dock.available;
+    const hidden = hiddenDuplicates(state.get().services, dock.services);
+    const skippedN = Array.isArray(dock.skipped) ? dock.skipped.length : 0;
+    const summary =
+      n === 0
+        ? skippedN > 0
+          ? `No cards yet: ${skippedN} labeled container${skippedN === 1 ? ' was' : 's were'} skipped. See Skipped containers below.`
+          : 'No containers carry the serverhub.enable label yet.'
+        : `${n} discovered container${n === 1 ? '' : 's'}` + (hidden > 0 ? `, ${hidden} hidden as ${hidden === 1 ? 'a duplicate' : 'duplicates'} of your own services` : ', all shown on the dashboard') + '.';
     return h(
       'div',
       { class: 'docker-status' },
       h('span', { class: 'tag ' + (ok ? 'tag-ok' : 'tag-bad') }, ok ? 'Connected' : 'Unavailable'),
       ok
-        ? h('p', { class: 'muted' }, n === 0 ? 'No containers carry the serverhub.enable label yet.' : `${n} discovered container${n === 1 ? '' : 's'} on the dashboard.`)
+        ? h('p', { class: 'muted' }, summary)
         : h('p', { class: 'muted' }, dock.error || "Server Hub can't read the Docker socket proxy right now."),
       h('button', { type: 'button', class: 'btn btn-sm', onclick: () => void load() }, 'Refresh'),
     );
@@ -142,26 +151,38 @@ export function mountDocker(root, env) {
       h(
         'div',
         { class: 'docker-ref-body' },
-        h('p', { class: 'muted' }, 'Add these labels to a container and recreate it. Only serverhub.enable is required.'),
+        h('p', { class: 'muted' }, 'Add these labels to a container and recreate it. serverhub.enable and serverhub.url are both required: a labeled container without a valid web address is skipped.'),
         h('dl', { class: 'docker-labels' }, LABELS.map(([k, v]) => [h('dt', null, k), h('dd', null, v)])),
+        h('p', { class: 'field-hint' }, 'True or false values also accept 1 or 0, yes or no, and on or off, in any letter case. An invalid serverhub.check counts as true. A name or description that is too long, or any other invalid value, falls back to its default and is listed under Warnings.'),
         h('pre', { class: 'docker-pre', tabindex: '0', 'aria-label': 'Docker Compose example' }, h('code', null, COMPOSE_EXAMPLE)),
         h('div', { class: 'docker-ref-actions' }, copy),
       ),
     );
   }
 
-  /** @param {Array<{ container: string, reason: string }>} skipped */
-  function skippedList(skipped) {
-    if (!skipped.length) return null;
+  /**
+   * @param {string} title
+   * @param {string} intro
+   * @param {Array<{ container: string, reason: string }>} items `"*"` marks a note about the whole listing
+   */
+  function diagnostics(title, intro, items) {
+    if (!items.length) return null;
     return h(
       'div',
       { class: 'docker-sub' },
-      h('h3', { class: 'card-title-sm' }, 'Skipped containers'),
-      h('p', { class: 'muted' }, 'These containers have the serverhub.enable label but were not added.'),
+      h('h3', { class: 'card-title-sm' }, title),
+      h('p', { class: 'muted' }, intro),
       h(
         'ul',
-        { class: 'list', 'aria-label': 'Skipped containers' },
-        skipped.map((s) => h('li', { class: 'list-row sug-row' }, h('span', { class: 'list-icon' }, icon('ui-info')), h('div', { class: 'list-main' }, h('p', { class: 'list-title mono' }, s.container), h('p', { class: 'list-sub' }, s.reason)))),
+        { class: 'list', 'aria-label': title },
+        items.map((s) =>
+          h(
+            'li',
+            { class: 'list-row sug-row' },
+            h('span', { class: 'list-icon' }, icon('ui-info')),
+            h('div', { class: 'list-main' }, s.container === '*' ? h('p', { class: 'list-title' }, 'General note') : h('p', { class: 'list-title mono' }, s.container), h('p', { class: 'list-sub' }, s.reason)),
+          ),
+        ),
       ),
     );
   }
@@ -169,7 +190,7 @@ export function mountDocker(root, env) {
   /** @param {import('../types.js').DockerSuggestions | null} sug @param {boolean} connected */
   function suggestionsBlock(sug, connected) {
     const heading = h('h3', { class: 'card-title-sm', id: 'docker-sug-h', tabindex: '-1' }, 'Suggestions');
-    const intro = h('p', { class: 'muted' }, 'Running containers that publish ports but have no serverhub labels. Adding one creates a normal service you can edit.');
+    const intro = h('p', { class: 'muted' }, 'Running containers without a serverhub.enable label (a container with the label set to any value is left out) that publish a TCP port reachable from outside the host, not only on the host itself. Adding one creates a normal service you can edit.');
     const list = h('ul', { class: 'list', 'aria-labelledby': 'docker-sug-h' });
     const empty = h('p', { class: 'muted', role: 'status' });
     /** @type {import('../types.js').DockerSuggestion[]} */
@@ -260,7 +281,14 @@ export function mountDocker(root, env) {
       const sug = value(sugR);
       const cfg = value(cfgR);
       const visible = cfg && typeof cfg.docker_visible_to_users === 'boolean' ? cfg.docker_visible_to_users : null;
-      show(statusRow(dock), visibilitySwitch(visible), labelReference(), skippedList(Array.isArray(dock.skipped) ? dock.skipped : []), suggestionsBlock(sug, dock.available));
+      show(
+        statusRow(dock),
+        visibilitySwitch(visible),
+        labelReference(),
+        diagnostics('Skipped containers', 'No card was created for these labeled containers. Fix the labels and recreate them.', Array.isArray(dock.skipped) ? dock.skipped : []),
+        diagnostics('Warnings', 'A card was created for these, but an invalid label value was replaced by its default.', Array.isArray(dock.warnings) ? dock.warnings : []),
+        suggestionsBlock(sug, dock.available),
+      );
     } catch (err) {
       loadFailed(err instanceof Error ? err.message : "Couldn't load the Docker status.");
     }

@@ -5,13 +5,14 @@ from __future__ import annotations
 import uuid
 from functools import partial
 
+import anyio
 from pydantic import BaseModel, ValidationError
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
 
 from serverhub.api import schemas as s
-from serverhub.api.docker import discovered_for
+from serverhub.api.docker import discovered_statuses
 from serverhub.api.serialize import bookmark_out, bootstrap, load_settings, service_out
 from serverhub.auth.sessions import require_user
 from serverhub.db import repo
@@ -176,9 +177,21 @@ async def get_status(request: Request) -> Response:
     h = hub(request)
     rows = await h.db.run(repo.list_owned, "services", user["id"])
     targets = [(r["id"], r["url"]) for r in rows if r["check_enabled"]]
-    # Discovered Docker services (keyed "docker:<name>"), for users who may see them.
-    targets += [(d["id"], d["url"]) for d in await discovered_for(h, user) if d["check"]]
-    statuses = await h.status.check_many(user["id"], targets)
+    statuses: dict[str, dict] = {}
+
+    async def own() -> None:
+        # The user's own services: their own fetcher budget and cache.
+        statuses.update(await h.status.check_many(user["id"], targets))
+
+    async def discovered() -> None:
+        # Discovered Docker services (keyed "docker:<name>"), for users who may see
+        # them: one shared identity/budget/cache, never the user's own budget.
+        found = await discovered_statuses(h, user)
+        statuses.update({k: v for k, v in found.items() if k.startswith("docker:")})
+
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(own)
+        tg.start_soon(discovered)
     if user["role"] != "admin":
         # State only: HTTP codes and timings of arbitrary targets would make
         # this an internal-network probe for non-admin accounts.

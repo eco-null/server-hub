@@ -161,7 +161,11 @@ Settings never contain secrets. 2FA and Beszel credentials live elsewhere.
 ```jsonc
 Service = { "id", "name", "url", "description", "icon", "category", "check", "created_at" }
 // url: http(s) only, ≤ 2000, no whitespace / control characters, a host the HTTP
-//   client can parse (valid IDNA), port 1-65535. name 1–200. description ≤ 500.
+//   client can parse (valid IDNA), port 1-65535, no user info ("user:password@" is
+//   400 validation, fields.url = "must not contain credentials (user:password@)").
+//   Rows stored before that rule keep working (listed, editable; their status is
+//   "unknown" because the checker never sends credentials), and backups containing
+//   them still restore. name 1–200. description ≤ 500.
 // icon: one of the known icon ids. category: a known category id, or null = auto-categorize.
 // check: whether the server runs status checks for it.
 ```
@@ -183,15 +187,38 @@ Same four routes as services under `/api/bookmarks`, with `{"bookmark": …}` / 
 `GET /api/status` →
 `{"statuses": {"<service_id>": {"state": "up" | "down" | "unknown", "http_status": 200 | null, "latency_ms": 42 | null, "checked_at": "…" | null}}}`
 
-When the caller may see discovered Docker services (see Docker discovery), the map also
-contains every discovered service with `check: true`, keyed by its `docker:<name>` id,
-with the same per-role detail rules.
-
-Checks run server-side with a concurrency cap, a timeout and a short per-user TTL cache.
+Checks run server-side with a concurrency cap, a timeout and a short (20 s) TTL cache.
 `up` means the target answered with a status below 500. `http_status` and `latency_ms`
 are always `null` for non-admin users (state only), and `null` whenever no response
-was received. A service whose check fails unexpectedly is reported `unknown`; it never
-fails the whole request.
+was received. A service whose check fails unexpectedly, or whose URL is not allowed
+(see below), is reported `unknown`; it never fails the whole request. A user's own
+services are checked under that user's own request budget and cache.
+
+**Discovered Docker services** (when the caller may see them, see Docker discovery) are
+in the same map, keyed by their `docker:<name>` id, with the same per-role detail rules:
+
+- `check: false` → not in the map (like an own service with `check: false`);
+- container `state` other than `running` → `"down"` with `http_status`/`latency_ms`
+  `null` and `checked_at` = now; no request is sent;
+- running: the server fetches `url` (`GET`, redirects not followed) under one internal
+  identity shared by all viewers, with its own request budget and one result cache
+  keyed by URL. Every viewer therefore sees the same result (`checked_at` may be up to
+  20 s old), and no number of labelled containers can use up a user's own budget;
+- at most 100 running discovered services are checked: the first 100 in the
+  `GET /api/docker` order (by name); the rest are `"unknown"` without a request (admins
+  get a warning in `GET /api/docker`);
+- `/api/status` never waits for the Docker API. It uses the container list the server
+  already has, also while that list is stale (see Docker discovery), so statuses keep
+  coming during a Docker outage. Discovered ids are missing from the map until the
+  list has been loaded once (the first `GET /api/docker` after start-up), and again
+  once it is too old to be served (`GET /api/docker` then says `available: false`).
+  Treat a missing id as `unknown`.
+
+Outbound targets: status checks (and Beszel) never contact loopback, link-local /
+metadata, multicast or reserved addresses, private ranges only while
+`SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS` is on, and never the Docker API endpoint of
+`SERVERHUB_DOCKER_HOST` (its host name and every address it resolves to, on any port),
+whatever that setting says.
 
 ## Beszel
 
@@ -220,11 +247,19 @@ and credentials"), so the endpoints cannot be used to probe the network.
 ## Docker discovery
 
 Optional, off unless `SERVERHUB_DOCKER_HOST` is set (`tcp://host:port` or
-`http://host:port` of a read-only socket proxy; see `.env.example`). Containers labelled
-`serverhub.enable=true` become read-only service cards; admins get suggestions for
-unlabelled containers that publish ports. Nothing is stored: results are rebuilt from the
-Docker API's container list (`GET /containers/json?all=true`, cached about 10 s, one
-upstream call at a time) on each request.
+`http://host:port` of a socket proxy whose allow-list permits only
+`GET /containers/json`; see `.env.example` and `compose.yaml`). Containers labelled
+`serverhub.enable=true` and `serverhub.url` become read-only service cards; admins get
+suggestions for unlabelled containers that publish ports. Nothing is stored: results are
+rebuilt on each request from the Docker API's container list
+(`GET /containers/json?all=true`, the only request the server ever sends there).
+
+The container list is cached (stale-while-revalidate). It is refreshed in the
+background at most every 10 s, one upstream call at a time (a failure is retried after
+5 s). While a refresh runs or fails, the last good list is served for up to 120 s
+(`"stale": true` once a refresh has failed); after that `available` is `false`. No request
+waits on the Docker API, except the very first `GET /api/docker` or suggestions call
+after start-up (up to about 9 s, when nothing is cached yet).
 
 ```jsonc
 DiscoveredService = {
@@ -239,39 +274,76 @@ DiscoveredService = {
 }
 ```
 
-Labels (values are untrusted input and validated like an ordinary Service):
+Labels (values are untrusted input and validated like an ordinary Service). A card needs
+**both** `serverhub.enable` (a true value) **and** `serverhub.url`:
 
 | Label | Default | Invalid value |
 |---|---|---|
-| `serverhub.enable` | – (required: `true`) | not discovered |
-| `serverhub.url` | – (required, http/https) | container skipped |
-| `serverhub.name` | container name, prettified (`my_app-1` → `My App`) | default |
-| `serverhub.description` | `""` (≤ 500) | default |
-| `serverhub.icon` | guessed from the image/name, else `box` | default |
-| `serverhub.category` | `null` (auto) | `null` |
-| `serverhub.check` | `true` (`true`/`false`) | `true` |
+| `serverhub.enable` | – (required, a true value) | not discovered (no diagnostics) |
+| `serverhub.url` | – (required) | container skipped (admins see the reason) |
+| `serverhub.name` | container name, prettified (`my_app-1` → `My App`) | default (warning) |
+| `serverhub.description` | `""` | default (warning) |
+| `serverhub.icon` | guessed from the image/name, else `box` | default (warning) |
+| `serverhub.category` | `null` (auto) | `null` (warning) |
+| `serverhub.check` | `true` | `true` (warning) |
 
-Control characters are stripped from names and descriptions; label values over 2048
-characters count as invalid; at most 500 containers are examined. Stopped containers
-are still returned (see `container.state`).
+- Booleans (`serverhub.enable`, `serverhub.check`): `true`, `1`, `yes`, `on` and `false`,
+  `0`, `no`, `off`, case-insensitive, surrounding whitespace ignored. Anything else is
+  invalid (for `serverhub.enable` that means the container is not discovered).
+- `serverhub.url`: an http(s) URL as for a Service: at most 2000 characters, no user info.
+  When `check` is on, the **server** fetches this URL for status checks.
+- `serverhub.name` ≤ 200 and `serverhub.description` ≤ 500 characters after control
+  characters are removed; longer values fall back to the default (with a warning).
+- Any label value over 2048 characters counts as invalid; at most 500 containers are
+  examined. `serverhub.category` matches a known category case-insensitively;
+  `serverhub.icon` a known icon id (lowercased).
+- Stopped containers are still returned (see `container.state`); their status is
+  `down` (see Status checks).
 
 | Method | Path | Access | Result |
 |---|---|---|---|
-| GET | `/api/docker` | session | `{"enabled": bool, "available": bool, "error": string \| null, "services": [DiscoveredService]}`; admins also get `"skipped"` and `"warnings"` |
+| GET | `/api/docker` | session | `{"enabled": bool, "available": bool, "error": string \| null, "stale": bool, "updated_at": string \| null, "services": [DiscoveredService]}`; admins also get `"skipped"` and `"warnings"` |
 | GET | `/api/admin/docker/suggestions` | admin | `{"available": bool, "error": string \| null, "suggestions": [Suggestion]}` |
 
 `GET /api/docker`:
 - feature off, or a non-admin while `docker_visible_to_users` is off:
-  `{"enabled": false, "available": false, "error": null, "services": []}`;
-- Docker API unreachable or misbehaving: `"available": false` and a short `error`.
-  Non-admins always get `"Docker discovery is unavailable right now"`; admins get a more
-  specific but safe text (e.g. "The Docker API did not answer in time", "The socket proxy
-  refused to list containers; enable CONTAINERS=1 on the proxy", "The Docker API answered
-  HTTP 500"). Remote output is never echoed;
+  `{"enabled": false, "available": false, "error": null, "stale": false, "updated_at": null, "services": []}`;
+- normal: `"available": true`, `"error": null`, `"updated_at"` = when the container list
+  was fetched (ISO-8601 UTC), `"stale": false`;
+- the latest refresh failed but the last good list is younger than 120 s: still
+  `"available": true` and `"error": null`, with `"stale": true` and the older
+  `updated_at`; admins get a first warning `{"container": "*", "reason": "<error text>;
+  showing the container list from <N> s ago"}`;
+- nothing usable (never loaded, or the last good list is older than 120 s):
+  `"available": false`, `"stale": false`, `"updated_at": null`, `"services": []` and a
+  short `error`. Non-admins always get `"Docker discovery is unavailable right now"`;
+  admins get a more specific but safe text: "Could not connect to the Docker API; check
+  SERVERHUB_DOCKER_HOST and that the socket proxy is running", "The Docker API did not
+  answer in time", "The Docker API response was too large", "The Docker API sent an
+  unexpected response", "The socket proxy refused to list containers; it must allow GET
+  /containers/json from Server Hub (see compose.yaml)" (HTTP 401/403), or "The Docker API
+  answered HTTP <code>". Remote output is never echoed;
 - admin-only diagnostics: `"skipped": [{"container", "reason"}]` (labelled containers that
-  produced no card, e.g. missing or invalid `serverhub.url`) and
-  `"warnings": [{"container", "reason"}]` (labels that fell back to a default;
-  `container` is `"*"` for listing-wide notes such as the 500-container cap).
+  produced no card) and `"warnings": [{"container", "reason"}]` (labels that fell back to
+  a default; `container` is `"*"` for listing-wide notes).
+
+`skipped` reasons (exact texts; `container` is `"?"` when the name is unusable):
+
+| Reason | When |
+|---|---|
+| `container has no usable name` | `Names` has no valid Docker name |
+| `duplicate container name; only the first one is listed` | a second container with the same name (ids must be unique) |
+| `unknown container state` | `State` is not a known Docker state |
+| `serverhub.url is missing` | no `serverhub.url` label |
+| `serverhub.url is invalid` | the label value is not a string |
+| `serverhub.url is longer than 2000 characters` | any over-long URL (also over 2048) |
+| `serverhub.url must not contain credentials (user:password@)` | user info in the URL |
+| `serverhub.url is not a valid http(s) URL` | anything else the Service URL rules reject |
+| `serverhub labels could not be validated` | defensive: a field without a default failed |
+
+Listing-wide `warnings` (`container: "*"`): `only the first 500 containers were
+examined`; `only the first 100 running discovered services (by name) are
+status-checked; the other <N> report unknown`; and the stale-list warning above.
 
 ```jsonc
 Suggestion = {
@@ -281,10 +353,31 @@ Suggestion = {
 }
 ```
 
-Suggestions are running containers without a `serverhub.enable` label (any value) that
-publish at least one TCP port (ports bound only to the Docker host's loopback are
-ignored), excluding Server Hub's own container, the socket proxy, and containers whose
-suggested URL is already one of the calling admin's services. `suggested.url` is
+Suggestions are containers that are `running`, have **no** `serverhub.enable` label (with
+any value, also `false` or an invalid one), and publish at least one TCP port that is not
+bound only to the Docker host's loopback (`127.0.0.0/8`, `::1`). Also excluded:
+
+- Server Hub itself and the socket proxy: a container whose Compose service label
+  (`com.docker.compose.service`) is `server-hub` or `docker-proxy`, whose image name
+  (last path segment, without tag/digest, case-insensitive) is `server-hub` or
+  `serverhub` or contains `socket-proxy` (wollomatic, LinuxServer, Tecnativa), or whose
+  id starts with Server Hub's own container id (from its host name). The shipped
+  `compose.yaml` additionally labels both `serverhub.enable=false`;
+- containers whose suggested URL is already one of the calling admin's services, by
+  the "same service" rule below;
+- a second container with an already-seen name.
+
+"Same service" URL rule (backend `normalize_url`; the frontend mirrors it): two URLs are
+the same when these keys are equal: scheme lowercased + `://` + host lowercased (IPv6 in
+brackets) + `:port` only when the port is not the scheme's default (http 80, https 443) +
+the path as written (case-sensitive, no percent-decoding) with all trailing `/` removed
+(so an empty path and `/` are equal) + `?` and the query as written when the query is
+non-empty. User info and the fragment are ignored. Input that cannot be parsed is
+compared as the trimmed, lowercased string. Examples: `HTTP://NAS.lan:80/` =
+`http://nas.lan`; `http://nas.lan/app/#x` = `http://nas.lan/app`; `http://nas.lan/?a=1`
+≠ `http://nas.lan/?a=2`; `http://nas.lan:443` ≠ `https://nas.lan`.
+
+`suggested.url` is
 `http(s)://<SERVERHUB_DOCKER_PUBLIC_HOST>[:<public port>]` for the most likely web port
 (preferring container ports 80, 443, 8080, 3000, 8000, 8443, …, else the lowest), `https`
 for 443/8443/9443, and `null` when `SERVERHUB_DOCKER_PUBLIC_HOST` is empty. To add one,

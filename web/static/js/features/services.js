@@ -57,7 +57,7 @@ export function groupServices(services) {
  * }} o
  */
 export function createServicesView({ root, onEdit, onDelete, onDetails }) {
-  /** @type {Map<string, { el: HTMLElement, text: HTMLElement }>} service id -> status elements */
+  /** @type {Map<string, { el: HTMLElement, text: HTMLElement, forceDown: boolean }>} service id -> status elements */
   let statusEls = new Map();
   /** @type {Map<string, HTMLElement>} */
   let cardLinks = new Map();
@@ -98,10 +98,13 @@ export function createServicesView({ root, onEdit, onDelete, onDetails }) {
 
     /** @type {HTMLElement | null} */
     let status = null;
-    if (showStatus && s.check) {
+    // A container that is not running reads as down whatever the server's check says; the dot follows
+    // the server's status otherwise (including while the discovered list is stale).
+    const forceDown = !!found && found.container.state !== 'running';
+    if (showStatus && (s.check || forceDown)) {
       const text = h('span', { class: 'sr-only' }, STATUS_TEXT.checking);
       status = h('span', { class: 'status status-checking', title: STATUS_TEXT.checking }, h('span', { class: 'status-dot', 'aria-hidden': 'true' }), text);
-      statusEls.set(s.id, { el: status, text });
+      statusEls.set(s.id, { el: status, text, forceDown });
     }
 
     // Discovered cards say what state the container is in (text and tone, never colour alone).
@@ -165,8 +168,8 @@ export function createServicesView({ root, onEdit, onDelete, onDetails }) {
      * @param {Record<string, { state: string }>} statuses
      */
     applyStatuses(statuses) {
-      for (const [id, { el, text }] of statusEls) {
-        const known = Object.hasOwn(statuses, id) ? statuses[id].state : null;
+      for (const [id, { el, text, forceDown }] of statusEls) {
+        const known = forceDown ? 'down' : Object.hasOwn(statuses, id) ? statuses[id].state : null;
         const state = known === 'up' || known === 'down' ? known : known === 'unknown' ? 'unknown' : 'checking';
         el.className = 'status status-' + (state === 'unknown' ? 'unknown' : state);
         const msg = STATUS_TEXT[/** @type {keyof typeof STATUS_TEXT} */ (state)];

@@ -22,7 +22,8 @@ test('starts signed in as the demo admin with the seeded homelab', async () => {
   assert.deepEqual(st.body, { setup_required: false, registration_open: false, authenticated: true });
   const boot = await call('GET', '/api/bootstrap');
   assert.equal(boot.status, 200);
-  assert.deepEqual(Object.keys(boot.body).sort(), ['bookmarks', 'services', 'settings', 'user']);
+  assert.deepEqual(Object.keys(boot.body).sort(), ['bookmarks', 'docker', 'services', 'settings', 'user']);
+  assert.deepEqual(boot.body.docker, { enabled: true });
   assert.equal(boot.body.user.username, 'demo');
   assert.equal(boot.body.user.role, 'admin');
   assert.equal(boot.body.services.length, 18);
@@ -174,7 +175,8 @@ test('2FA: setup, enable with a real TOTP, sign in with code and recovery code, 
 
 test('status: deterministic states, admin-only details, values drift over time', async () => {
   const { call } = setup();
-  const a = (await call('GET', '/api/status')).body.statuses;
+  // Own services only; discovered Docker services are covered in docker.test.js.
+  const a = Object.fromEntries(Object.entries((await call('GET', '/api/status')).body.statuses).filter(([k]) => !k.startsWith('docker:')));
   const states = Object.values(a).map((s) => s.state);
   assert.equal(states.length, 18);
   assert.equal(states.filter((s) => s === 'up').length, 16);

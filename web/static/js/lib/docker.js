@@ -15,7 +15,7 @@ import { safeUrl } from './url.js';
 export const DOCKER_ID_PREFIX = 'docker:';
 
 /** Where the deployment guide explains how to turn the feature on. */
-export const DEPLOYMENT_GUIDE_URL = 'https://github.com/eco-null/server-hub/blob/main/docs/DEPLOYMENT.md';
+export const DEPLOYMENT_GUIDE_URL = 'https://github.com/eco-null/server-hub/blob/main/docs/DEPLOYMENT.md#docker-discovery';
 
 /**
  * True for a service that came from Docker (read-only, never editable).
@@ -189,6 +189,16 @@ export function unavailableNotice(v) {
   if (!v.enabled || v.available) return null;
   const why = v.error ? ` ${v.error.replace(/[.\s]+$/, '')}.` : '';
   return v.stale ? `Docker discovery is unavailable.${why} Showing the last known containers.` : `Docker discovery is unavailable.${why}`;
+}
+
+/**
+ * How many discovered services the dashboard hides because their address
+ * equals one of the user's own services.
+ * @param {Array<{ url: string }>} own
+ * @param {DiscoveredService[]} discovered
+ */
+export function hiddenDuplicates(own, discovered) {
+  return discovered.length - (mergeServices(own, discovered).length - own.length);
 }
 
 /** @param {{ private: number, public: number, protocol: string }} p */

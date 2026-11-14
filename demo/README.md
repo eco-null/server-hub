@@ -17,8 +17,10 @@ visitor's changes live in `localStorage` under `serverhub-demo:v1`.
   own module that wraps `window.fetch` for this site's `api/` paths.
 - `src/backend.js` implements the API on top of `src/validate.js` (a port of
   `serverhub/api/schemas.py`), `src/totp.js` (RFC 6238 via WebCrypto),
-  `src/qr.js` (QR encoder for the 2FA setup) and `src/sim.js` (status checks,
-  Beszel metrics and host stats, deterministic and drifting over time).
+  `src/qr.js` (QR encoder for the 2FA setup), `src/sim.js` (status checks,
+  Beszel metrics, host stats and the Docker containers, deterministic and
+  drifting over time) and `src/docker.js` (a port of
+  `serverhub/integrations/docker.py`: discovery and suggestions).
 - `404.html` sends `…/settings` and `…/login` (with query and hash) to the real
   files and anything else to the dashboard.
 
@@ -55,6 +57,14 @@ deploys to GitHub Pages on pushes to `main` that touch `web/` or `demo/`.
   Administration is ignored for the same reason.
 - No rate limiting, sessions are not per device (one demo session per
   browser), and first-run setup is never shown.
+- Docker auto-discovery runs against a made-up Docker host: a fixed list of
+  containers (`src/seed.js`) goes through a port of the real label parsing
+  (`src/docker.js`), so cards, skipped and warning notes and the admin
+  suggestions look like the real thing. Container uptimes and health move with
+  the clock (the one that is "starting" turns healthy after about a minute), and
+  status checks of discovered services follow their container state. The
+  "Show discovered services to all users" switch works, so you can sign in as
+  another user to see both sides.
 - A Beszel hub you add always connects (use the password `wrong` to see a
   failed login) and reports one or two made-up systems.
 - Wallpaper images from other sites are blocked by the demo's CSP

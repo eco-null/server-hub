@@ -1,0 +1,743 @@
+{
+ "admin:bootstrap": {
+  "status": 200,
+  "keys": [
+   "user",
+   "settings",
+   "services",
+   "bookmarks",
+   "docker"
+  ],
+  "docker": {
+   "enabled": true
+  }
+ },
+ "admin:docker": {
+  "status": 200,
+  "body": {
+   "enabled": true,
+   "available": true,
+   "error": null,
+   "services": [
+    {
+     "id": "docker:dozzle",
+     "name": "Dozzle",
+     "url": "https://logs.home.arpa",
+     "description": "Live logs for every container on this host",
+     "icon": "terminal",
+     "category": "Dev",
+     "check": true,
+     "container": {
+      "name": "dozzle",
+      "image": "amir20/dozzle:v8.13.4",
+      "state": "running",
+      "status": "Up 12 days (healthy)",
+      "health": "healthy"
+     }
+    },
+    {
+     "id": "docker:mealie",
+     "name": "Mealie",
+     "url": "https://recipes.home.arpa",
+     "description": "Recipes and the weekly meal plan",
+     "icon": "book",
+     "category": "Home",
+     "check": true,
+     "container": {
+      "name": "mealie",
+      "image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+      "state": "running",
+      "status": "Up 20 seconds (health: starting)",
+      "health": "starting"
+     }
+    },
+    {
+     "id": "docker:portainer",
+     "name": "Portainer",
+     "url": "https://portainer.home.arpa:9443",
+     "description": "Manage the containers on this host",
+     "icon": "layers",
+     "category": null,
+     "check": true,
+     "container": {
+      "name": "portainer",
+      "image": "portainer/portainer-ce:2.21.4",
+      "state": "running",
+      "status": "Up 12 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:qbittorrent",
+     "name": "qBittorrent",
+     "url": "https://downloads.home.arpa",
+     "description": "Torrent client behind the VPN container",
+     "icon": "download",
+     "category": "Media",
+     "check": false,
+     "container": {
+      "name": "qbittorrent",
+      "image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+      "state": "running",
+      "status": "Up 3 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:radarr",
+     "name": "Radarr",
+     "url": "https://radarr.home.arpa",
+     "description": "Movie library automation",
+     "icon": "film",
+     "category": "Media",
+     "check": true,
+     "container": {
+      "name": "radarr",
+      "image": "lscr.io/linuxserver/radarr:5.14.0",
+      "state": "running",
+      "status": "Up 3 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:searxng",
+     "name": "SearXNG",
+     "url": "https://search.home.arpa",
+     "description": "Private metasearch for the whole house",
+     "icon": "globe",
+     "category": "Search",
+     "check": true,
+     "container": {
+      "name": "searxng",
+      "image": "searxng/searxng:2025.1.12",
+      "state": "running",
+      "status": "Up 6 hours (unhealthy)",
+      "health": "unhealthy"
+     }
+    },
+    {
+     "id": "docker:sonarr",
+     "name": "Sonarr",
+     "url": "https://sonarr.home.arpa",
+     "description": "TV show library automation",
+     "icon": "film",
+     "category": "Media",
+     "check": true,
+     "container": {
+      "name": "sonarr",
+      "image": "lscr.io/linuxserver/sonarr:4.0.11",
+      "state": "running",
+      "status": "Up 3 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:syncthing",
+     "name": "Syncthing",
+     "url": "https://sync.home.arpa",
+     "description": "File sync between the laptops and the NAS",
+     "icon": "refresh",
+     "category": "Files",
+     "check": true,
+     "container": {
+      "name": "syncthing",
+      "image": "syncthing/syncthing:1.29.2",
+      "state": "exited",
+      "status": "Exited (137) 2 days ago",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:vikunja",
+     "name": "Vikunja",
+     "url": "https://tasks.home.arpa",
+     "description": "Shared to-do lists",
+     "icon": "calendar",
+     "category": "Productivity",
+     "check": true,
+     "container": {
+      "name": "vikunja",
+      "image": "vikunja/vikunja:0.24.6",
+      "state": "running",
+      "status": "Up 4 days (healthy)",
+      "health": "healthy"
+     }
+    }
+   ],
+   "skipped": [
+    {
+     "container": "whoami",
+     "reason": "serverhub.url is not a valid http(s) URL"
+    }
+   ],
+   "warnings": [
+    {
+     "container": "vikunja",
+     "reason": "serverhub.icon is not a known icon id; using a default"
+    }
+   ]
+  }
+ },
+ "bob:bootstrap": {
+  "status": 200,
+  "keys": [
+   "user",
+   "settings",
+   "services",
+   "bookmarks",
+   "docker"
+  ],
+  "docker": {
+   "enabled": false
+  }
+ },
+ "bob:docker": {
+  "status": 200,
+  "body": {
+   "enabled": false,
+   "available": false,
+   "error": null,
+   "services": []
+  }
+ },
+ "admin:config": {
+  "status": 200,
+  "body": {
+   "registration_open": false,
+   "docker_visible_to_users": false
+  }
+ },
+ "admin:suggestions": {
+  "status": 200,
+  "body": {
+   "available": true,
+   "error": null,
+   "suggestions": [
+    {
+     "container": {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.12.1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 6875,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Bookstack",
+      "url": "http://docker.home.arpa:6875",
+      "icon": "book",
+      "category": "Productivity"
+     }
+    },
+    {
+     "container": {
+      "name": "filebrowser",
+      "image": "filebrowser/filebrowser:v2.31.2",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 8082,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Filebrowser",
+      "url": "http://docker.home.arpa:8082",
+      "icon": "folder",
+      "category": "Files"
+     }
+    },
+    {
+     "container": {
+      "name": "node-red",
+      "image": "nodered/node-red:4.0.8",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 1880,
+       "public": 1880,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Node Red",
+      "url": "http://docker.home.arpa:1880",
+      "icon": "zap",
+      "category": "Home"
+     }
+    },
+    {
+     "container": {
+      "name": "prometheus",
+      "image": "prom/prometheus:v3.1.0",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 9090,
+       "public": 9090,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Prometheus",
+      "url": "http://docker.home.arpa:9090",
+      "icon": "pulse",
+      "category": "Monitoring"
+     }
+    }
+   ]
+  }
+ },
+ "bob:suggestions": {
+  "status": 403,
+  "body": {
+   "error": {
+    "code": "forbidden",
+    "message": "Admin access required"
+   }
+  }
+ },
+ "bob:config": {
+  "status": 403,
+  "body": {
+   "error": {
+    "code": "forbidden",
+    "message": "Admin access required"
+   }
+  }
+ },
+ "anon:/api/docker": {
+  "status": 401,
+  "body": {
+   "error": {
+    "code": "unauthenticated",
+    "message": "Sign in required"
+   }
+  }
+ },
+ "anon:/api/admin/docker/suggestions": {
+  "status": 401,
+  "body": {
+   "error": {
+    "code": "unauthenticated",
+    "message": "Sign in required"
+   }
+  }
+ },
+ "anon:/api/admin/config": {
+  "status": 401,
+  "body": {
+   "error": {
+    "code": "unauthenticated",
+    "message": "Sign in required"
+   }
+  }
+ },
+ "put:docker_on": {
+  "status": 200,
+  "body": {
+   "registration_open": false,
+   "docker_visible_to_users": true
+  }
+ },
+ "admin:bootstrap:on": {
+  "status": 200,
+  "keys": [
+   "user",
+   "settings",
+   "services",
+   "bookmarks",
+   "docker"
+  ],
+  "docker": {
+   "enabled": true
+  }
+ },
+ "bob:bootstrap:on": {
+  "status": 200,
+  "keys": [
+   "user",
+   "settings",
+   "services",
+   "bookmarks",
+   "docker"
+  ],
+  "docker": {
+   "enabled": true
+  }
+ },
+ "bob:docker:on": {
+  "status": 200,
+  "body": {
+   "enabled": true,
+   "available": true,
+   "error": null,
+   "services": [
+    {
+     "id": "docker:dozzle",
+     "name": "Dozzle",
+     "url": "https://logs.home.arpa",
+     "description": "Live logs for every container on this host",
+     "icon": "terminal",
+     "category": "Dev",
+     "check": true,
+     "container": {
+      "name": "dozzle",
+      "image": "amir20/dozzle:v8.13.4",
+      "state": "running",
+      "status": "Up 12 days (healthy)",
+      "health": "healthy"
+     }
+    },
+    {
+     "id": "docker:mealie",
+     "name": "Mealie",
+     "url": "https://recipes.home.arpa",
+     "description": "Recipes and the weekly meal plan",
+     "icon": "book",
+     "category": "Home",
+     "check": true,
+     "container": {
+      "name": "mealie",
+      "image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+      "state": "running",
+      "status": "Up 20 seconds (health: starting)",
+      "health": "starting"
+     }
+    },
+    {
+     "id": "docker:portainer",
+     "name": "Portainer",
+     "url": "https://portainer.home.arpa:9443",
+     "description": "Manage the containers on this host",
+     "icon": "layers",
+     "category": null,
+     "check": true,
+     "container": {
+      "name": "portainer",
+      "image": "portainer/portainer-ce:2.21.4",
+      "state": "running",
+      "status": "Up 12 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:qbittorrent",
+     "name": "qBittorrent",
+     "url": "https://downloads.home.arpa",
+     "description": "Torrent client behind the VPN container",
+     "icon": "download",
+     "category": "Media",
+     "check": false,
+     "container": {
+      "name": "qbittorrent",
+      "image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+      "state": "running",
+      "status": "Up 3 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:radarr",
+     "name": "Radarr",
+     "url": "https://radarr.home.arpa",
+     "description": "Movie library automation",
+     "icon": "film",
+     "category": "Media",
+     "check": true,
+     "container": {
+      "name": "radarr",
+      "image": "lscr.io/linuxserver/radarr:5.14.0",
+      "state": "running",
+      "status": "Up 3 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:searxng",
+     "name": "SearXNG",
+     "url": "https://search.home.arpa",
+     "description": "Private metasearch for the whole house",
+     "icon": "globe",
+     "category": "Search",
+     "check": true,
+     "container": {
+      "name": "searxng",
+      "image": "searxng/searxng:2025.1.12",
+      "state": "running",
+      "status": "Up 6 hours (unhealthy)",
+      "health": "unhealthy"
+     }
+    },
+    {
+     "id": "docker:sonarr",
+     "name": "Sonarr",
+     "url": "https://sonarr.home.arpa",
+     "description": "TV show library automation",
+     "icon": "film",
+     "category": "Media",
+     "check": true,
+     "container": {
+      "name": "sonarr",
+      "image": "lscr.io/linuxserver/sonarr:4.0.11",
+      "state": "running",
+      "status": "Up 3 days",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:syncthing",
+     "name": "Syncthing",
+     "url": "https://sync.home.arpa",
+     "description": "File sync between the laptops and the NAS",
+     "icon": "refresh",
+     "category": "Files",
+     "check": true,
+     "container": {
+      "name": "syncthing",
+      "image": "syncthing/syncthing:1.29.2",
+      "state": "exited",
+      "status": "Exited (137) 2 days ago",
+      "health": null
+     }
+    },
+    {
+     "id": "docker:vikunja",
+     "name": "Vikunja",
+     "url": "https://tasks.home.arpa",
+     "description": "Shared to-do lists",
+     "icon": "calendar",
+     "category": "Productivity",
+     "check": true,
+     "container": {
+      "name": "vikunja",
+      "image": "vikunja/vikunja:0.24.6",
+      "state": "running",
+      "status": "Up 4 days (healthy)",
+      "health": "healthy"
+     }
+    }
+   ]
+  }
+ },
+ "put:reg_only": {
+  "status": 200,
+  "body": {
+   "registration_open": true,
+   "docker_visible_to_users": true
+  }
+ },
+ "put:empty": {
+  "status": 400,
+  "body": {
+   "error": {
+    "code": "validation",
+    "message": "Invalid input",
+    "fields": {
+     "body": "must set at least one of: registration_open, docker_visible_to_users"
+    }
+   }
+  }
+ },
+ "put:null": {
+  "status": 400,
+  "body": {
+   "error": {
+    "code": "validation",
+    "message": "Invalid input",
+    "fields": {
+     "docker_visible_to_users": "must not be null"
+    }
+   }
+  }
+ },
+ "put:null2": {
+  "status": 400,
+  "body": {
+   "error": {
+    "code": "validation",
+    "message": "Invalid input",
+    "fields": {
+     "registration_open": "must not be null"
+    }
+   }
+  }
+ },
+ "put:str": {
+  "status": 400,
+  "body": {
+   "error": {
+    "code": "validation",
+    "message": "Invalid input",
+    "fields": {
+     "docker_visible_to_users": "Input should be a valid boolean"
+    }
+   }
+  }
+ },
+ "put:unknown": {
+  "status": 400,
+  "body": {
+   "error": {
+    "code": "validation",
+    "message": "Invalid input",
+    "fields": {
+     "nope": "unknown field"
+    }
+   }
+  }
+ },
+ "put:array": {
+  "status": 400,
+  "body": {
+   "error": {
+    "code": "validation",
+    "message": "Invalid input",
+    "fields": {
+     "body": "must be a JSON object"
+    }
+   }
+  }
+ },
+ "put:bob": {
+  "status": 403,
+  "body": {
+   "error": {
+    "code": "forbidden",
+    "message": "Admin access required"
+   }
+  }
+ },
+ "put:anon": {
+  "status": 401,
+  "body": {
+   "error": {
+    "code": "unauthenticated",
+    "message": "Sign in required"
+   }
+  }
+ },
+ "patch:docker-svc": {
+  "status": 404,
+  "body": {
+   "error": {
+    "code": "not_found",
+    "message": "Not found"
+   }
+  }
+ },
+ "delete:docker-svc": {
+  "status": 404,
+  "body": {
+   "error": {
+    "code": "not_found",
+    "message": "Not found"
+   }
+  }
+ },
+ "backup:import": {
+  "status": 200,
+  "keys": [
+   "user",
+   "settings",
+   "services",
+   "bookmarks",
+   "docker"
+  ],
+  "docker": {
+   "enabled": true
+  }
+ },
+ "post:suggested": {
+  "status": 201,
+  "body": {
+   "service": {
+    "id": "7b96bba2-efe9-4e32-ac79-a731c6f360ee",
+    "name": "Prometheus",
+    "url": "http://docker.home.arpa:9090",
+    "description": "",
+    "icon": "pulse",
+    "category": "Monitoring",
+    "check": true,
+    "created_at": "2026-11-14T13:59:11Z"
+   }
+  }
+ },
+ "admin:suggestions:after": {
+  "status": 200,
+  "body": {
+   "available": true,
+   "error": null,
+   "suggestions": [
+    {
+     "container": {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.12.1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 6875,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Bookstack",
+      "url": "http://docker.home.arpa:6875",
+      "icon": "book",
+      "category": "Productivity"
+     }
+    },
+    {
+     "container": {
+      "name": "filebrowser",
+      "image": "filebrowser/filebrowser:v2.31.2",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 8082,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Filebrowser",
+      "url": "http://docker.home.arpa:8082",
+      "icon": "folder",
+      "category": "Files"
+     }
+    },
+    {
+     "container": {
+      "name": "node-red",
+      "image": "nodered/node-red:4.0.8",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 1880,
+       "public": 1880,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Node Red",
+      "url": "http://docker.home.arpa:1880",
+      "icon": "zap",
+      "category": "Home"
+     }
+    }
+   ]
+  }
+ }
+}

@@ -27,6 +27,9 @@ FAST = {
     "total_timeout": 1.0,
     "ttl": 0.0,
     "error_ttl": 0.0,
+    # Requests wait for the refresh they triggered, so a test sees the stub's
+    # current answer (production default: 0, never wait when anything is cached).
+    "refresh_wait": 2.0,
 }
 
 
@@ -331,7 +334,16 @@ def test_suggest_filters_and_heuristics():
         container("stopped", state="exited", ports=[tcp(80, 8090)]),
         container("labelled", labels={"serverhub.enable": "false"}, ports=[tcp(80, 8091)]),
         container("myself", cid="0123456789ab" + "0" * 52, ports=[tcp(8642, 8642)]),
-        container("docker-proxy", ports=[tcp(2375, 2375)]),
+        # Server Hub and the socket proxy, as Compose names them (N2).
+        container(
+            "proj-docker-proxy-1",
+            image="nginx:1.27",
+            labels={"com.docker.compose.service": "docker-proxy"},
+            ports=[tcp(2375, 2375)],
+        ),
+        container("my-proxy", image="wollomatic/socket-proxy:1.13.2", ports=[tcp(2375, 2376)]),
+        container("dsp", image="ghcr.io/tecnativa/docker-socket-proxy", ports=[tcp(2375, 2377)]),
+        container("hub-2", image="server-hub:latest", ports=[tcp(8642, 8643)]),
         container("taken", ports=[tcp(3000, 3000)]),
         "garbage",
         {"Names": ["/broken"], "State": "running", "Ports": [{"PrivatePort": "80"}, "x"]},
@@ -340,7 +352,6 @@ def test_suggest_filters_and_heuristics():
         containers,
         public_host="nas.lan",
         existing_urls={"HTTP://NAS.lan:3000/"},
-        exclude_names={"docker-proxy"},
         exclude_id_prefix="0123456789ab",
     )
     by = {s["container"]["name"]: s for s in out}
@@ -500,7 +511,14 @@ async def test_feature_off(tmp_path):
     async with running(tmp_path, fetcher_options=LOCAL_OK) as c:
         await setup_admin(c)
         await create_user(c, "bob")
-        off = {"enabled": False, "available": False, "error": None, "services": []}
+        off = {
+            "enabled": False,
+            "available": False,
+            "error": None,
+            "stale": False,
+            "updated_at": None,
+            "services": [],
+        }
         assert (await c.get("/api/docker")).json() == off
         assert (await c.get("/api/bootstrap")).json()["docker"] == {"enabled": False}
         r = await c.get("/api/admin/docker/suggestions")
@@ -539,7 +557,14 @@ async def test_visibility_matrix(tmp_path, stub):
             assert (await c.get("/api/admin/config")).json()["docker_visible_to_users"] is False
 
             # user, switch off
-            hidden = {"enabled": False, "available": False, "error": None, "services": []}
+            hidden = {
+                "enabled": False,
+                "available": False,
+                "error": None,
+                "stale": False,
+                "updated_at": None,
+                "services": [],
+            }
             assert (await bob.get("/api/docker")).json() == hidden
             assert (await bob.get("/api/bootstrap")).json()["docker"] == {"enabled": False}
             assert (await bob.get("/api/admin/docker/suggestions")).status_code == 403
@@ -580,6 +605,8 @@ async def test_docker_unavailable_messages(tmp_path):
             "enabled": True,
             "available": False,
             "error": "Docker discovery is unavailable right now",
+            "stale": False,
+            "updated_at": None,
             "services": [],
         }
         await bob.aclose()
@@ -660,20 +687,23 @@ async def test_suggestions_endpoint(tmp_path, stub):
         await other.aclose()
 
 
-async def test_status_includes_discovered(tmp_path, stub, stub2):
+async def test_status_includes_discovered(tmp_path, docker_stub, stub2):
     stub2.route("GET", "/", 200, b"ok")
     serve(
-        stub,
+        docker_stub,
         [
             labelled("up", url=stub2.url + "/"),
             labelled("nocheck", url=stub2.url + "/x", check="false"),
         ],
     )
     async with running(
-        tmp_path, fetcher_options=LOCAL_OK, docker_host=stub.url, docker_options=FAST
+        tmp_path, fetcher_options=LOCAL_OK, docker_host=docker_stub.url, docker_options=FAST
     ) as c:
         await setup_admin(c)
         await create_user(c, "bob")
+        # /api/status never waits for Docker: nothing is listed before the first load.
+        assert (await c.get("/api/status")).json()["statuses"] == {}
+        await c.get("/api/docker")
         statuses = (await c.get("/api/status")).json()["statuses"]
         assert set(statuses) == {"docker:up"}
         assert statuses["docker:up"]["state"] == "up"

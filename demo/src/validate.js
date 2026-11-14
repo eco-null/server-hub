@@ -421,7 +421,12 @@ export const AdminUserPatch = {
   },
 };
 /** @type {Model} */
-export const RegistrationConfig = { name: 'RegistrationConfig', fields: { registration_open: { t: 'bool', required: true } } };
+export const AdminConfigPatch = {
+  name: 'AdminConfigPatch',
+  fields: { registration_open: { t: 'bool', nullable: true }, docker_visible_to_users: { t: 'bool', nullable: true } },
+};
+/** The keys of the admin config, in the order the API reports them. */
+export const ADMIN_CONFIG_KEYS = ['registration_open', 'docker_visible_to_users'];
 
 /** @type {Model} */
 const BackupService = { name: 'BackupService', fields: SERVICE_FIELDS, extra: 'ignore' };

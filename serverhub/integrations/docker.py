@@ -1,21 +1,31 @@
-"""Docker auto-discovery: a read-only Docker Engine API client and label parsing.
+"""Docker auto-discovery: a Docker Engine API client and label parsing.
 
 The client talks to an operator-configured endpoint (SERVERHUB_DOCKER_HOST),
-normally a socket proxy that only allows ``GET /containers/json``. That target
-is never user-supplied, so it does not go through the SSRF fetcher, but:
+normally the socket proxy from compose.yaml, whose allow-list permits exactly
+one request: ``GET /containers/json`` (that proxy is the only thing that makes
+the Docker API read-only; this client cannot enforce it). That target is never
+user-supplied, so it does not go through the SSRF fetcher (which, conversely,
+refuses to contact it), but:
 
 - the only request ever made is ``GET /containers/json?all=true`` (a fixed path,
   no user input reaches the URL);
 - redirects are not followed, environment proxies are ignored;
 - strict connect/read timeouts plus a total deadline, and a response size cap;
-- a short TTL cache with single flight: concurrent callers share one upstream
-  call, and failures are cached briefly so a dead endpoint is not hammered;
+- stale-while-revalidate: a refresh runs in the background (single flight),
+  callers get the last good listing at once while it runs or while the API is
+  failing, for at most ``max_stale`` seconds; failures are remembered for
+  ``error_ttl`` so a dead endpoint is not hammered. No caller ever waits on
+  the upstream call except the very first one (nothing cached yet);
 - callers only see an error *kind*; the API layer maps it to a safe message.
 
 Everything returned by the Docker API is untrusted: label values come from
 whoever can start containers. The number of containers processed, label
 lengths and every string copied into a response are capped, and label values
 go through the same validators as an ordinary service.
+
+Status checks of discovered services: see ``status_plan`` (at most
+MAX_DISCOVERED_CHECKS, running containers only) and
+``serverhub.integrations.status`` (one shared identity, budget and cache).
 
 API reference: Docker Engine API v1.56 (``ContainerList`` /
 ``ContainerSummary``). The request uses the unversioned path, so the daemon
@@ -39,6 +49,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import anyio
+import anyio.abc
 import httpx
 from pydantic import ValidationError
 
@@ -46,11 +57,14 @@ from serverhub.api.schemas import KNOWN_CATEGORIES, KNOWN_ICONS, ServiceCreate
 
 log = logging.getLogger(__name__)
 
-CACHE_TTL = 10.0  # seconds a successful container list is reused
+CACHE_TTL = 10.0  # seconds a successful container list is used before a refresh
 ERROR_TTL = 5.0  # seconds a failure is reused (no hammering of a dead endpoint)
+MAX_STALE = 120.0  # seconds the last good listing may be served while refreshes fail
 MAX_BODY = 4 * 1024 * 1024
 MAX_CONTAINERS = 500  # containers processed per listing; the rest are ignored
+MAX_DISCOVERED_CHECKS = 100  # discovered services status-checked; the rest are "unknown"
 MAX_LABEL_VALUE = 2048  # longer serverhub.* label values are treated as invalid
+MAX_URL = 2000  # the same cap as an ordinary service URL
 MAX_PORTS = 64  # published ports looked at per container
 CONNECT_TIMEOUT = 3.0
 READ_TIMEOUT = 5.0
@@ -298,20 +312,49 @@ def suggested_url(public_host: str | None, port: dict | None) -> str | None:
     return f"{scheme}://{url_host(public_host)}{suffix}"
 
 
+DEFAULT_PORTS = {"http": 80, "https": 443}
+
+
 def normalize_url(url: str) -> str:
-    """Comparison key for "is this URL already one of my services?"."""
+    """Comparison key for "is this URL already one of my services?".
+
+    The rule (mirrored by the frontend, documented in docs/API.md): scheme and
+    host lowercased; user info dropped; the port dropped when it is the
+    scheme's default (http 80, https 443), else kept; path kept as is
+    (case-sensitive, no percent-decoding) minus all trailing slashes, so ``""``
+    and ``"/"`` are equal; query kept as is (``?`` with an empty query is
+    dropped); fragment dropped. Unparseable input: stripped and lowercased.
+    """
+    raw = url.strip()
     try:
-        parts = urlsplit(url.strip())
+        parts = urlsplit(raw)
         scheme = parts.scheme.lower()
         host = (parts.hostname or "").lower()
-        port = parts.port or (443 if scheme == "https" else 80)
+        port = parts.port
     except ValueError:
-        return url.strip().lower()
+        return raw.lower()
+    if ":" in host:
+        host = f"[{host}]"
+    if port is not None and port != DEFAULT_PORTS.get(scheme):
+        host = f"{host}:{port}"
     path = parts.path.rstrip("/")
-    return f"{scheme}://{host}:{port}{path}"
+    query = f"?{parts.query}" if parts.query else ""
+    return f"{scheme}://{host}{path}{query}"
 
 
 # ---- discovery -------------------------------------------------------------------
+
+
+# Skip reasons (admin diagnostics, documented in docs/API.md).
+SKIP_NO_NAME = "container has no usable name"
+SKIP_UNKNOWN_STATE = "unknown container state"
+SKIP_DUPLICATE = "duplicate container name; only the first one is listed"
+SKIP_URL_MISSING = "serverhub.url is missing"
+SKIP_URL_INVALID = "serverhub.url is invalid"
+SKIP_URL_TOO_LONG = f"serverhub.url is longer than {MAX_URL} characters"
+SKIP_URL_CREDENTIALS = "serverhub.url must not contain credentials (user:password@)"
+SKIP_URL_NOT_HTTP = "serverhub.url is not a valid http(s) URL"
+SKIP_LABELS_INVALID = "serverhub labels could not be validated"
 
 
 @dataclass
@@ -338,11 +381,26 @@ def _service_from_labels(c: dict, name: str, labels: dict, out: Discovery) -> di
     image = _image(c)
     default_icon, _ = guess_icon_category(_image_base(image), name)
 
-    url, present = _label(labels, "url")
-    if url is None:
-        reason = "serverhub.url is missing" if not present else "serverhub.url is invalid"
+    def skip(reason: str) -> None:
         out.skipped.append({"container": name, "reason": reason})
+
+    raw_url = labels.get(LABEL_PREFIX + "url")
+    if LABEL_PREFIX + "url" not in labels:
+        skip(SKIP_URL_MISSING)
         return None
+    if not isinstance(raw_url, str):
+        skip(SKIP_URL_INVALID)
+        return None
+    if len(raw_url) > MAX_URL:
+        skip(SKIP_URL_TOO_LONG)
+        return None
+    url = raw_url
+    try:
+        if "@" in urlsplit(url.strip()).netloc:
+            skip(SKIP_URL_CREDENTIALS)
+            return None
+    except ValueError:
+        pass  # rejected below as not a valid URL
 
     fields: dict[str, Any] = {"url": url, "name": prettify(name), "icon": default_icon}
 
@@ -394,10 +452,13 @@ def _service_from_labels(c: dict, name: str, labels: dict, out: Discovery) -> di
             break
         except ValidationError as exc:
             bad = {str(e["loc"][0]) for e in exc.errors() if e["loc"]}
-            if "url" in bad or not bad or not bad <= defaults.keys():
-                out.skipped.append(
-                    {"container": name, "reason": "serverhub.url is not a valid http(s) URL"}
-                )
+            if "url" in bad:
+                skip(SKIP_URL_NOT_HTTP)
+                return None
+            if not bad or not bad <= defaults.keys():
+                # A field without a default failed (not the URL): say so, do not
+                # blame serverhub.url.
+                skip(SKIP_LABELS_INVALID)
                 return None
             for f in sorted(bad):
                 warn(f"serverhub.{f} is invalid; using a default")
@@ -427,6 +488,7 @@ def _service_from_labels(c: dict, name: str, labels: dict, out: Discovery) -> di
 def discover(containers: list[Any]) -> Discovery:
     """Service cards for every container labelled ``serverhub.enable=true``."""
     out = Discovery()
+    seen: set[str] = set()
     for c in containers[:MAX_CONTAINERS]:
         if not isinstance(c, dict):
             continue
@@ -436,13 +498,18 @@ def discover(containers: list[Any]) -> Discovery:
             continue
         name = container_name(c)
         if name is None:
-            out.skipped.append({"container": "?", "reason": "container has no usable name"})
+            out.skipped.append({"container": "?", "reason": SKIP_NO_NAME})
+            continue
+        if name in seen:
+            # Docker names are unique; a second one means a misbehaving API.
+            out.skipped.append({"container": name, "reason": SKIP_DUPLICATE})
             continue
         if _state(c) is None:
-            out.skipped.append({"container": name, "reason": "unknown container state"})
+            out.skipped.append({"container": name, "reason": SKIP_UNKNOWN_STATE})
             continue
         svc = _service_from_labels(c, name, labels, out)
         if svc is not None:
+            seen.add(name)
             out.services.append(svc)
     if len(containers) > MAX_CONTAINERS:
         out.warnings.append(
@@ -452,31 +519,85 @@ def discover(containers: list[Any]) -> Discovery:
             }
         )
     out.services.sort(key=lambda s: (s["name"].lower(), s["id"]))
+    checked = sum(1 for s in out.services if s["check"] and s["container"]["state"] == "running")
+    if checked > MAX_DISCOVERED_CHECKS:
+        out.warnings.append(
+            {
+                "container": "*",
+                "reason": (
+                    f"only the first {MAX_DISCOVERED_CHECKS} running discovered services (by "
+                    f"name) are status-checked; the other {checked - MAX_DISCOVERED_CHECKS} "
+                    "report unknown"
+                ),
+            }
+        )
     return out
+
+
+def status_plan(services: list[dict]) -> tuple[list[tuple[str, str]], dict[str, str]]:
+    """Which discovered services get an outbound status check.
+
+    Returns ``(targets, fixed)``: ``targets`` = [(id, url)] to check (running
+    containers with ``check``, the first MAX_DISCOVERED_CHECKS in ``services``
+    order); ``fixed`` = {id: "down" | "unknown"} answered without any request
+    (not running: down; over the cap: unknown). ``check: false`` services are
+    in neither.
+    """
+    targets: list[tuple[str, str]] = []
+    fixed: dict[str, str] = {}
+    for s in services:
+        if not s["check"]:
+            continue
+        if s["container"]["state"] != "running":
+            fixed[s["id"]] = "down"
+        elif len(targets) < MAX_DISCOVERED_CHECKS:
+            targets.append((s["id"], s["url"]))
+        else:
+            fixed[s["id"]] = "unknown"
+    return targets, fixed
+
+
+# Never suggested: Server Hub itself and the socket proxy, recognised by the
+# Compose service name (compose.yaml) or the image name, whatever the container
+# is called (Compose generates names like "<project>-docker-proxy-1").
+SELF_COMPOSE_SERVICES = frozenset({"server-hub", "docker-proxy"})
+SELF_IMAGES = frozenset({"server-hub", "serverhub"})
+PROXY_IMAGE_MARKER = "socket-proxy"  # wollomatic/, linuxserver/, tecnativa/docker-
+
+
+def is_self_or_proxy(c: dict, own_id_prefix: str | None = None) -> bool:
+    labels = _labels(c)
+    if labels.get("com.docker.compose.service") in SELF_COMPOSE_SERVICES:
+        return True
+    base = _image_base(_image(c)).lower()
+    if base in SELF_IMAGES or PROXY_IMAGE_MARKER in base:
+        return True
+    cid = c.get("Id")
+    return bool(own_id_prefix and isinstance(cid, str) and cid.startswith(own_id_prefix))
 
 
 def suggest(
     containers: list[Any],
     *,
     public_host: str | None,
-    existing_urls: set[str],
-    exclude_names: Collection[str] = (),
+    existing_urls: Collection[str],
     exclude_id_prefix: str | None = None,
 ) -> list[dict]:
     """Running, unlabelled containers that publish at least one TCP port."""
     existing = {normalize_url(u) for u in existing_urls}
     out = []
+    seen: set[str] = set()
     for c in containers[:MAX_CONTAINERS]:
         if not isinstance(c, dict) or _state(c) != "running":
             continue
         if LABEL_PREFIX + "enable" in _labels(c):
             continue  # labelled (either way): discovered or explicitly opted out
         name = container_name(c)
-        if name is None or name in exclude_names:
+        if name is None or name in seen:
             continue
-        cid = c.get("Id")
-        if exclude_id_prefix and isinstance(cid, str) and cid.startswith(exclude_id_prefix):
-            continue  # Server Hub's own container
+        if is_self_or_proxy(c, exclude_id_prefix):
+            continue  # Server Hub's own container or the socket proxy
+        seen.add(name)
         ports = published_ports(c)
         best = web_port(ports)
         if best is None:
@@ -514,6 +635,23 @@ def own_container_id_prefix() -> str | None:
     return host if re.fullmatch(r"[0-9a-f]{12,64}", host) else None
 
 
+@dataclass(frozen=True)
+class Listing:
+    """What the client can answer right now, without waiting.
+
+    ``containers`` is None when there is nothing usable (never fetched, or the
+    last good listing is older than ``max_stale``); ``error`` is the most recent
+    refresh failure (None once a refresh succeeds); ``stale`` is True while a
+    listing is served although the latest refresh failed; ``fetched_at`` is the
+    wall-clock time of the listing (epoch seconds) or None.
+    """
+
+    containers: list | None
+    error: DockerError | None
+    fetched_at: float | None
+    stale: bool
+
+
 class DockerClient:
     def __init__(
         self,
@@ -525,6 +663,8 @@ class DockerClient:
         max_body: int = MAX_BODY,
         ttl: float = CACHE_TTL,
         error_ttl: float = ERROR_TTL,
+        max_stale: float = MAX_STALE,
+        refresh_wait: float = 0.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
@@ -533,8 +673,14 @@ class DockerClient:
         self._max_body = max_body
         self._ttl = ttl
         self._error_ttl = error_ttl
-        self._lock = anyio.Lock()
-        self._cache: tuple[float, list | DockerError] | None = None
+        self._max_stale = max_stale
+        # How long a waiting caller that already has a stale listing / an old
+        # error to show waits for the in-flight refresh (0 = not at all).
+        self._refresh_wait = refresh_wait
+        self._good: tuple[float, float, list] | None = None  # (monotonic, epoch, data)
+        self._error: tuple[float, DockerError] | None = None  # (monotonic, error)
+        self._inflight: anyio.Event | None = None
+        self._tg: anyio.abc.TaskGroup | None = None
         self.self_id_prefix = own_container_id_prefix()
         self._client = httpx.AsyncClient(
             base_url=self.base_url,
@@ -553,28 +699,72 @@ class DockerClient:
     async def aclose(self) -> None:
         await self._client.aclose()
 
-    def _cached(self) -> list | DockerError | None:
-        if self._cache is None:
-            return None
-        ts, value = self._cache
-        ttl = self._error_ttl if isinstance(value, DockerError) else self._ttl
-        return value if time.monotonic() - ts < ttl else None
+    def attach(self, tg: anyio.abc.TaskGroup) -> None:
+        """Run refreshes in ``tg`` (the app's lifespan task group), detached from
+        requests. Without it, a refresh runs inside the calling request."""
+        self._tg = tg
+
+    def _due(self, now: float) -> bool:
+        if self._inflight is not None:
+            return False
+        if self._error is not None and now - self._error[0] < self._error_ttl:
+            return False
+        return self._good is None or now - self._good[0] >= self._ttl or self._error is not None
+
+    def _result(self, now: float) -> Listing:
+        error = self._error[1] if self._error is not None else None
+        if self._good is not None:
+            mono, epoch, data = self._good
+            if now - mono <= self._max_stale:
+                return Listing(data, error, epoch, error is not None)
+            return Listing(None, error or DockerError("timeout"), epoch, True)
+        return Listing(None, error, None, False)
+
+    async def _refresh(self, done: anyio.Event) -> None:
+        try:
+            data = await self._fetch()
+        except DockerError as exc:
+            self._error = (time.monotonic(), exc)
+        except Exception:  # never let a refresh kill the task group
+            log.warning("Docker refresh failed unexpectedly", exc_info=True)
+            self._error = (time.monotonic(), DockerError("protocol"))
+        else:
+            self._good = (time.monotonic(), time.time(), data)
+            self._error = None
+        finally:
+            self._inflight = None
+            done.set()
+
+    async def listing(self, *, wait: bool = True) -> Listing:
+        """The current listing; starts a refresh when one is due (single flight).
+
+        ``wait=False`` never waits for the Docker API. ``wait=True`` waits only
+        when there is nothing at all to answer yet (first use), or up to
+        ``refresh_wait`` seconds otherwise.
+        """
+        now = time.monotonic()
+        if self._due(now) and (self._tg is not None or wait):
+            done = self._inflight = anyio.Event()
+            if self._tg is not None:
+                self._tg.start_soon(self._refresh, done)
+            else:
+                await self._refresh(done)
+        pending = self._inflight
+        if pending is not None and wait:
+            cold = self._good is None and self._error is None
+            limit = self._total + 1.0 if cold else self._refresh_wait
+            if limit > 0:
+                with anyio.move_on_after(limit):
+                    await pending.wait()
+        return self._result(time.monotonic())
 
     async def containers(self) -> list:
-        """All containers (``all=true``), cached; raises DockerError."""
-        hit = self._cached()
-        if hit is None:
-            async with self._lock:  # single flight
-                hit = self._cached()
-                if hit is None:
-                    try:
-                        hit = await self._fetch()
-                    except DockerError as exc:
-                        hit = exc
-                    self._cache = (time.monotonic(), hit)
-        if isinstance(hit, DockerError):
-            raise DockerError(hit.kind, hit.status)
-        return hit
+        """All containers (``all=true``), possibly stale; raises DockerError."""
+        got = await self.listing()
+        if got.containers is None:
+            err = got.error or DockerError("timeout")
+            raise DockerError(err.kind, err.status)
+        return got.containers
 
     async def _fetch(self) -> list:
         try:

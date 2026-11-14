@@ -15,7 +15,12 @@ Defences:
   characters, port 0 are rejected), and any unexpected error becomes FetchError;
 - strict timeouts, a total deadline and a response size cap; responses are
   requested with ``Accept-Encoding: identity`` so the cap applies to real bytes;
+- the configured Docker API endpoint (SERVERHUB_DOCKER_HOST: its host name and
+  every address it resolves to, on any port) is always refused, whatever
+  SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS says, so a user- or label-supplied
+  URL can never reach the socket proxy;
 - per-user concurrency and request-rate caps plus a global concurrency cap;
+  internal identities (Docker discovery status checks) can get their own caps;
 - callers only ever see a short generic error message.
 """
 
@@ -90,6 +95,22 @@ class FetchError(Exception):
         super().__init__(kind)
         self.kind = kind
         self.message = self.MESSAGES.get(kind, "Request failed")
+
+
+DENY_RESOLVE_TTL = 30.0  # seconds a lookup of a refused host name is reused
+
+
+def _host_key(host: str) -> str:
+    return host.strip().strip("[]").lower().rstrip(".")
+
+
+def _canonical_ip(ip: IPAddress) -> IPAddress:
+    """IPv4 for IPv4-mapped / NAT64 / 6to4 / Teredo forms, else the address itself."""
+    if isinstance(ip, ipaddress.IPv6Address):
+        embedded = _embedded_ipv4(ip)
+        if embedded is not None:
+            return embedded
+    return ip
 
 
 def _embedded_ipv4(ip: ipaddress.IPv6Address) -> ipaddress.IPv4Address | None:
@@ -246,11 +267,20 @@ class SafeFetcher:
         global_concurrency: int = 32,
         per_user_concurrency: int = 8,
         per_user_per_minute: int = 240,
+        identity_limits: dict[str, tuple[int, int]] | None = None,
+        deny_hosts: Iterable[str] = (),
         ssl_context: ssl.SSLContext | None = None,
     ) -> None:
         self.allow_private = allow_private
         self._resolver = resolver or system_resolver
         self._extra = [ipaddress.ip_network(n) for n in extra_allowed]
+        # {identity: (concurrency, requests per minute)} overriding the per-user caps.
+        self._identity_limits = dict(identity_limits or {})
+        # Host names / IP literals that are never contacted (the Docker API endpoint).
+        self._deny_names: frozenset[str] = frozenset()
+        self._deny_ips: frozenset[IPAddress] = frozenset()
+        self._deny_resolved: tuple[float, frozenset[IPAddress]] | None = None
+        self.deny_hosts(deny_hosts)
         self._total = total_timeout
         self._max_body = max_body
         self._global = anyio.Semaphore(global_concurrency)
@@ -271,9 +301,62 @@ class SafeFetcher:
     async def aclose(self) -> None:
         await self._client.aclose()
 
+    # -- refused hosts (the Docker API endpoint) -----------------------------------
+
+    def deny_hosts(self, hosts: Iterable[str]) -> None:
+        """Never contact these hosts: names (and every address they resolve to) or IPs."""
+        names, ips = set(), set()
+        for raw in hosts:
+            key = _host_key(raw)
+            if not key:
+                continue
+            try:
+                ips.add(_canonical_ip(ipaddress.ip_address(key)))
+            except ValueError:
+                names.add(key)
+        self._deny_names = frozenset(names)
+        self._deny_ips = frozenset(ips)
+        self._deny_resolved = None
+
+    def host_denied(self, host: str) -> bool:
+        key = _host_key(host)
+        if key in self._deny_names:
+            return True
+        try:
+            return _canonical_ip(ipaddress.ip_address(key)) in self._deny_ips
+        except ValueError:
+            return False
+
+    async def _denied_addresses(self) -> frozenset[IPAddress]:
+        if not self._deny_names:
+            return self._deny_ips
+        now = time.monotonic()
+        cached = self._deny_resolved
+        if cached is not None and now - cached[0] < DENY_RESOLVE_TTL:
+            return self._deny_ips | cached[1]
+        # Addresses seen before are kept (a failed lookup must not open a gap
+        # while the endpoint is restarting); bounded.
+        found: set[IPAddress] = set(cached[1]) if cached is not None else set()
+        for name in self._deny_names:
+            try:
+                for cand in await self._resolver(name, 80):
+                    try:
+                        found.add(_canonical_ip(ipaddress.ip_address(cand.split("%", 1)[0])))
+                    except ValueError:
+                        continue
+            except (OSError, UnicodeError):
+                continue
+        if len(found) > 64:
+            found = set(list(found)[-64:])
+        self._deny_resolved = (now, frozenset(found))
+        return self._deny_ips | self._deny_resolved[1]
+
     # -- address selection (called from the transport for every new connection)
 
     async def pick_address(self, host: str, port: int) -> str:
+        if self.host_denied(host):
+            raise _Blocked("blocked")
+        denied = await self._denied_addresses()
         literal = host.strip("[]")
         try:
             candidates = [str(ipaddress.ip_address(literal))]
@@ -291,6 +374,8 @@ class SafeFetcher:
                 continue
             if "%" in cand:
                 continue  # scoped (link-local) addresses are never allowed
+            if _canonical_ip(ip) in denied:
+                continue  # the Docker API endpoint, whatever the port
             if address_allowed(ip, allow_private=self.allow_private, extra_allowed=self._extra):
                 return str(ip)
         raise _Blocked("blocked")
@@ -300,7 +385,8 @@ class SafeFetcher:
     def _user_slot(self, user_id: str) -> tuple[anyio.Semaphore, deque[float]]:
         slot = self._users.get(user_id)
         if slot is None:
-            slot = (anyio.Semaphore(self._per_user_conc), deque())
+            conc = self._identity_limits.get(user_id, (self._per_user_conc, 0))[0]
+            slot = (anyio.Semaphore(conc), deque())
             self._users[user_id] = slot
             while len(self._users) > 1024:
                 self._users.popitem(last=False)
@@ -308,11 +394,12 @@ class SafeFetcher:
             self._users.move_to_end(user_id)
         return slot
 
-    def _take_rate(self, stamps: deque[float]) -> None:
+    def _take_rate(self, stamps: deque[float], user_id: str) -> None:
         now = time.monotonic()
         while stamps and now - stamps[0] > 60:
             stamps.popleft()
-        if len(stamps) >= self._per_user_rate:
+        rate = self._identity_limits.get(user_id, (0, self._per_user_rate))[1]
+        if len(stamps) >= rate:
             raise FetchError("busy")
         stamps.append(now)
 
@@ -335,8 +422,10 @@ class SafeFetcher:
             raise
         except Exception:
             raise FetchError("invalid_url") from None
+        if self.host_denied(urlsplit(url).hostname or ""):
+            raise FetchError("blocked")
         sem, stamps = self._user_slot(user_id)
-        self._take_rate(stamps)
+        self._take_rate(stamps, user_id)
         limit = self._max_body if max_body is None else max_body
         try:
             async with sem, self._global:

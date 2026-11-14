@@ -10,8 +10,9 @@
  */
 
 import * as S from './validate.js';
-import { seedState, DEMO_USERNAME } from './seed.js';
-import { serviceStatus, systemNow, systemsForNewHub, hostStats } from './sim.js';
+import { seedState, DEMO_USERNAME, DOCKER_CONTAINERS, DOCKER_PROXY_HOST, DOCKER_PUBLIC_HOST, DOCKER_SELF_ID_PREFIX } from './seed.js';
+import { serviceStatus, systemNow, systemsForNewHub, hostStats, dockerContainers, dockerServiceHealth } from './sim.js';
+import { discover, suggest } from './docker.js';
 import { matchStep, newSecret, newRecoveryCodes, normalizeRecoveryCode, provisioningUri } from './totp.js';
 import { qrSvg } from './qr.js';
 
@@ -98,13 +99,25 @@ export function createBackend(opts = {}) {
       const raw = storage.getItem(key);
       if (raw) {
         const st = JSON.parse(raw);
-        if (st && st.v === 1 && Array.isArray(st.users) && st.data) return st;
+        if (st && st.v === 1 && Array.isArray(st.users) && st.data) return withDocker(st);
       }
     } catch {
       /* corrupt or unavailable: start over */
     }
-    const st = seedState(uuid);
+    const st = withDocker(seedState(uuid));
     save(st);
+    return st;
+  }
+
+  /**
+   * The Docker simulation's own state. Also fills it in for a document saved
+   * before Docker discovery existed, so visitors with older data keep working.
+   * @param {any} st
+   */
+  function withDocker(st) {
+    if (!st.docker || typeof st.docker !== 'object') st.docker = { t0: null, visible_to_users: false };
+    if (typeof st.docker.t0 !== 'number') st.docker.t0 = now();
+    st.docker.visible_to_users = st.docker.visible_to_users === true;
     return st;
   }
 
@@ -167,8 +180,19 @@ export function createBackend(opts = {}) {
   /** @param {any} st @param {any} user */
   function bootstrap(st, user) {
     const d = userData(st, user.id);
-    return { user: userOut(user), settings: loadSettings(st, user.id), services: d.services, bookmarks: d.bookmarks };
+    return { user: userOut(user), settings: loadSettings(st, user.id), services: d.services, bookmarks: d.bookmarks, docker: { enabled: dockerVisible(st, user) } };
   }
+
+  // ---------- Docker discovery (simulated host, see seed.js / sim.js) ----------
+
+  /** Discovery is always "configured" in the demo; admins always see it, others only while the switch is on. @param {any} st @param {any} user */
+  const dockerVisible = (st, user) => user.role === 'admin' || st.docker.visible_to_users === true;
+
+  /** The containers the simulated Docker API lists right now. @param {any} st */
+  const dockerList = (st) => dockerContainers(DOCKER_CONTAINERS, st.docker.t0, now());
+
+  /** @param {any} st */
+  const readConfig = (st) => ({ registration_open: !!st.registration_open, docker_visible_to_users: st.docker.visible_to_users === true });
 
   /** @param {any} st */
   const adminCount = (st) => st.users.filter((/** @type {any} */ u) => u.role === 'admin').length;
@@ -431,7 +455,40 @@ export function createBackend(opts = {}) {
       if (user.role !== 'admin') entry = { ...entry, http_status: null, latency_ms: null };
       statuses[s.id] = entry;
     }
+    // Discovered Docker services (keyed "docker:<name>"), for users who may see them.
+    if (dockerVisible(st, user)) {
+      for (const d of discover(dockerList(st)).services) {
+        if (!d.check) continue;
+        let entry = serviceStatus(d, dockerServiceHealth(d.container), now());
+        if (user.role !== 'admin') entry = { ...entry, http_status: null, latency_ms: null };
+        statuses[d.id] = entry;
+      }
+    }
     return { statuses };
+  });
+
+  // Docker discovery
+  route('GET', '/api/docker', ({ st }) => {
+    const user = requireUser(st);
+    if (!dockerVisible(st, user)) return { enabled: false, available: false, error: null, services: [] };
+    const found = discover(dockerList(st));
+    /** @type {Record<string, any>} */
+    const body = { enabled: true, available: true, error: null, services: found.services };
+    if (user.role === 'admin') {
+      body.skipped = found.skipped;
+      body.warnings = found.warnings;
+    }
+    return body;
+  });
+  route('GET', '/api/admin/docker/suggestions', ({ st }) => {
+    const user = requireAdmin(st);
+    const suggestions = suggest(dockerList(st), {
+      publicHost: DOCKER_PUBLIC_HOST,
+      existingUrls: userData(st, user.id).services.map((/** @type {any} */ r) => r.url),
+      excludeNames: [DOCKER_PROXY_HOST],
+      excludeIdPrefix: DOCKER_SELF_ID_PREFIX,
+    });
+    return { available: true, error: null, suggestions };
   });
 
   // backup
@@ -565,13 +622,16 @@ export function createBackend(opts = {}) {
   });
   route('GET', '/api/admin/config', ({ st }) => {
     requireAdmin(st);
-    return { registration_open: !!st.registration_open };
+    return readConfig(st);
   });
+  // Partial update: every key is optional, but the body must set at least one.
   route('PUT', '/api/admin/config', ({ st, body }) => {
     requireAdmin(st);
-    const b = parse(() => S.validate(S.RegistrationConfig, body));
-    st.registration_open = b.registration_open;
-    return { registration_open: b.registration_open };
+    const b = parse(() => S.validatePatch(S.AdminConfigPatch, body));
+    if (!Object.keys(b).length) throw new HttpError(400, 'validation', 'Invalid input', { body: 'must set at least one of: ' + S.ADMIN_CONFIG_KEYS.join(', ') });
+    if ('registration_open' in b) st.registration_open = b.registration_open;
+    if ('docker_visible_to_users' in b) st.docker.visible_to_users = b.docker_visible_to_users;
+    return readConfig(st);
   });
   route('GET', '/api/stats', ({ st }) => {
     requireAdmin(st);

@@ -1,0 +1,2144 @@
+{
+ "t0": 1794657600000,
+ "demo": [
+  {
+   "Id": "036d0db1026d0c1e016d0a8b006d08f8076d13fd066d126a056d10d7046d0f44",
+   "Names": [
+    "/dozzle"
+   ],
+   "Image": "amir20/dozzle:v8.13.4",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Dozzle",
+    "serverhub.url": "https://logs.home.arpa",
+    "serverhub.description": "Live logs for every container on this host",
+    "serverhub.icon": "terminal",
+    "serverhub.category": "Dev"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "f0ff4dfef1ff4f91eeff4ad8efff4c6bf4ff544af5ff55ddf2ff5124f3ff52b7",
+   "Names": [
+    "/mealie"
+   ],
+   "Image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+   "State": "running",
+   "Status": "Up 20 seconds (health: starting)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Mealie",
+    "serverhub.url": "https://recipes.home.arpa",
+    "serverhub.description": "Recipes and the weekly meal plan",
+    "serverhub.icon": "book",
+    "serverhub.category": "Home"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "starting",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "5af9bb9b59f9ba085cf9bec15bf9bd2e5ef9c1e75df9c05460f9c50d5ff9c37a",
+   "Names": [
+    "/portainer"
+   ],
+   "Image": "portainer/portainer-ce:2.21.4",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Portainer",
+    "serverhub.url": "https://portainer.home.arpa:9443",
+    "serverhub.description": "Manage the containers on this host"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "2178df112078dd7e1f78dbeb1e78da582578e55d2478e3ca2378e2372278e0a4",
+   "Names": [
+    "/qbittorrent"
+   ],
+   "Image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "qBittorrent",
+    "serverhub.url": "https://downloads.home.arpa",
+    "serverhub.description": "Torrent client behind the VPN container",
+    "serverhub.icon": "download",
+    "serverhub.category": "Media",
+    "serverhub.check": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "89a9432988a9419687a9400386a93e708da949758ca947e28ba9464f8aa944bc",
+   "Names": [
+    "/radarr"
+   ],
+   "Image": "lscr.io/linuxserver/radarr:5.14.0",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Radarr",
+    "serverhub.url": "https://radarr.home.arpa",
+    "serverhub.description": "Movie library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "7f915bbf7e915a2c81915ee580915d527b9155737a9153e07d9158997c915706",
+   "Names": [
+    "/searxng"
+   ],
+   "Image": "searxng/searxng:2025.1.12",
+   "State": "running",
+   "Status": "Up 6 hours (unhealthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "SearXNG",
+    "serverhub.url": "https://search.home.arpa",
+    "serverhub.description": "Private metasearch for the whole house",
+    "serverhub.icon": "globe",
+    "serverhub.category": "Search"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "unhealthy",
+    "FailingStreak": 3
+   }
+  },
+  {
+   "Id": "6250ebd86350ed6b6450eefe6550f0916650f2246750f3b76850f54a6950f6dd",
+   "Names": [
+    "/sonarr"
+   ],
+   "Image": "lscr.io/linuxserver/sonarr:4.0.11",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Sonarr",
+    "serverhub.url": "https://sonarr.home.arpa",
+    "serverhub.description": "TV show library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "290074802a0076132b0077a62c0079392d007acc2e007c5f2f007df230007f85",
+   "Names": [
+    "/syncthing"
+   ],
+   "Image": "syncthing/syncthing:1.29.2",
+   "State": "exited",
+   "Status": "Exited (137) 2 days ago",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Syncthing",
+    "serverhub.url": "https://sync.home.arpa",
+    "serverhub.description": "File sync between the laptops and the NAS",
+    "serverhub.icon": "refresh",
+    "serverhub.category": "Files"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "00ff475dffff45cafeff4437fdff42a4fcff4111fbff3f7efaff3debf9ff3c58",
+   "Names": [
+    "/vikunja"
+   ],
+   "Image": "vikunja/vikunja:0.24.6",
+   "State": "running",
+   "Status": "Up 4 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Vikunja",
+    "serverhub.url": "https://tasks.home.arpa",
+    "serverhub.description": "Shared to-do lists",
+    "serverhub.icon": "tasks",
+    "serverhub.category": "Productivity"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22322cde23322e71203229b821322b4b2632332a273234bd2432300425323197",
+   "Names": [
+    "/whoami"
+   ],
+   "Image": "traefik/whoami:v1.10.3",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Whoami",
+    "serverhub.url": "whoami.home.arpa"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "20bd85111fbd837e1ebd81eb1dbd805824bd8b5d23bd89ca22bd883721bd86a4",
+   "Names": [
+    "/adminer"
+   ],
+   "Image": "adminer:4.8.1",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "a42c718aa52c731da22c6e64a32c6ff7a02c6b3ea12c6cd19e2c68189f2c69ab",
+   "Names": [
+    "/docker-proxy"
+   ],
+   "Image": "tecnativa/docker-socket-proxy:0.3.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "5c1f0a9e2b4d083e15ce093e1761063e12a8073e143b0c3e1c1a0d3e1dad0a3e",
+   "Names": [
+    "/server-hub"
+   ],
+   "Image": "ghcr.io/eco-null/server-hub:2.0.0",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "096c6fc40a6c71570b6c72ea0c6c747d056c6978066c6b0b076c6c9e086c6e31",
+   "Names": [
+    "/postgres"
+   ],
+   "Image": "postgres:16-alpine",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "127.0.0.1",
+     "PrivatePort": 5432,
+     "PublicPort": 5432,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22b8cf1823b8d0ab24b8d23e25b8d3d126b8d56427b8d6f728b8d88a29b8da1d",
+   "Names": [
+    "/old-registry"
+   ],
+   "Image": "registry:2",
+   "State": "exited",
+   "Status": "Exited (0) 2 weeks ago",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "e0466b2ae1466cbdde466804df466997dc4664dedd466671da4661b8db46634b",
+   "Names": [
+    "/bookstack"
+   ],
+   "Image": "lscr.io/linuxserver/bookstack:24.12.1",
+   "State": "running",
+   "Status": "Up 5 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "d9075c3bd8075aa8db075f61da075dcedd076287dc0760f4df0765adde07641a",
+   "Names": [
+    "/filebrowser"
+   ],
+   "Image": "filebrowser/filebrowser:v2.31.2",
+   "State": "running",
+   "Status": "Up 9 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "cdfc6265ccfc60d2cbfc5f3fcafc5dacc9fc5c19c8fc5a86c7fc58f3c6fc5760",
+   "Names": [
+    "/node-red"
+   ],
+   "Image": "nodered/node-red:4.0.8",
+   "State": "running",
+   "Status": "Up 9 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "4e6f714b4d6f6fb8506f74714f6f72de526f7797516f7604546f7abd536f792a",
+   "Names": [
+    "/prometheus"
+   ],
+   "Image": "prom/prometheus:v3.1.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    }
+   ]
+  }
+ ],
+ "demoLater": [
+  {
+   "Id": "036d0db1026d0c1e016d0a8b006d08f8076d13fd066d126a056d10d7046d0f44",
+   "Names": [
+    "/dozzle"
+   ],
+   "Image": "amir20/dozzle:v8.13.4",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Dozzle",
+    "serverhub.url": "https://logs.home.arpa",
+    "serverhub.description": "Live logs for every container on this host",
+    "serverhub.icon": "terminal",
+    "serverhub.category": "Dev"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8888,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "f0ff4dfef1ff4f91eeff4ad8efff4c6bf4ff544af5ff55ddf2ff5124f3ff52b7",
+   "Names": [
+    "/mealie"
+   ],
+   "Image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+   "State": "running",
+   "Status": "Up 3 hours (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Mealie",
+    "serverhub.url": "https://recipes.home.arpa",
+    "serverhub.description": "Recipes and the weekly meal plan",
+    "serverhub.icon": "book",
+    "serverhub.category": "Home"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9000,
+     "PublicPort": 9925,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "5af9bb9b59f9ba085cf9bec15bf9bd2e5ef9c1e75df9c05460f9c50d5ff9c37a",
+   "Names": [
+    "/portainer"
+   ],
+   "Image": "portainer/portainer-ce:2.21.4",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Portainer",
+    "serverhub.url": "https://portainer.home.arpa:9443",
+    "serverhub.description": "Manage the containers on this host"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9443,
+     "PublicPort": 9443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8000,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "2178df112078dd7e1f78dbeb1e78da582578e55d2478e3ca2378e2372278e0a4",
+   "Names": [
+    "/qbittorrent"
+   ],
+   "Image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "qBittorrent",
+    "serverhub.url": "https://downloads.home.arpa",
+    "serverhub.description": "Torrent client behind the VPN container",
+    "serverhub.icon": "download",
+    "serverhub.category": "Media",
+    "serverhub.check": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8085,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "89a9432988a9419687a9400386a93e708da949758ca947e28ba9464f8aa944bc",
+   "Names": [
+    "/radarr"
+   ],
+   "Image": "lscr.io/linuxserver/radarr:5.14.0",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Radarr",
+    "serverhub.url": "https://radarr.home.arpa",
+    "serverhub.description": "Movie library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 7878,
+     "PublicPort": 7878,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "7f915bbf7e915a2c81915ee580915d527b9155737a9153e07d9158997c915706",
+   "Names": [
+    "/searxng"
+   ],
+   "Image": "searxng/searxng:2025.1.12",
+   "State": "running",
+   "Status": "Up 9 hours (unhealthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "SearXNG",
+    "serverhub.url": "https://search.home.arpa",
+    "serverhub.description": "Private metasearch for the whole house",
+    "serverhub.icon": "globe",
+    "serverhub.category": "Search"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8890,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "unhealthy",
+    "FailingStreak": 3
+   }
+  },
+  {
+   "Id": "6250ebd86350ed6b6450eefe6550f0916650f2246750f3b76850f54a6950f6dd",
+   "Names": [
+    "/sonarr"
+   ],
+   "Image": "lscr.io/linuxserver/sonarr:4.0.11",
+   "State": "running",
+   "Status": "Up 3 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Sonarr",
+    "serverhub.url": "https://sonarr.home.arpa",
+    "serverhub.description": "TV show library automation",
+    "serverhub.icon": "film",
+    "serverhub.category": "Media"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8989,
+     "PublicPort": 8989,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "290074802a0076132b0077a62c0079392d007acc2e007c5f2f007df230007f85",
+   "Names": [
+    "/syncthing"
+   ],
+   "Image": "syncthing/syncthing:1.29.2",
+   "State": "exited",
+   "Status": "Exited (137) 2 days ago",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Syncthing",
+    "serverhub.url": "https://sync.home.arpa",
+    "serverhub.description": "File sync between the laptops and the NAS",
+    "serverhub.icon": "refresh",
+    "serverhub.category": "Files"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "00ff475dffff45cafeff4437fdff42a4fcff4111fbff3f7efaff3debf9ff3c58",
+   "Names": [
+    "/vikunja"
+   ],
+   "Image": "vikunja/vikunja:0.24.6",
+   "State": "running",
+   "Status": "Up 4 days (healthy)",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Vikunja",
+    "serverhub.url": "https://tasks.home.arpa",
+    "serverhub.description": "Shared to-do lists",
+    "serverhub.icon": "tasks",
+    "serverhub.category": "Productivity"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 3456,
+     "PublicPort": 3456,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22322cde23322e71203229b821322b4b2632332a273234bd2432300425323197",
+   "Names": [
+    "/whoami"
+   ],
+   "Image": "traefik/whoami:v1.10.3",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.name": "Whoami",
+    "serverhub.url": "whoami.home.arpa"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8089,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "20bd85111fbd837e1ebd81eb1dbd805824bd8b5d23bd89ca22bd883721bd86a4",
+   "Names": [
+    "/adminer"
+   ],
+   "Image": "adminer:4.8.1",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {
+    "serverhub.enable": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8081,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "a42c718aa52c731da22c6e64a32c6ff7a02c6b3ea12c6cd19e2c68189f2c69ab",
+   "Names": [
+    "/docker-proxy"
+   ],
+   "Image": "tecnativa/docker-socket-proxy:0.3.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "5c1f0a9e2b4d083e15ce093e1761063e12a8073e143b0c3e1c1a0d3e1dad0a3e",
+   "Names": [
+    "/server-hub"
+   ],
+   "Image": "ghcr.io/eco-null/server-hub:2.0.0",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 8080,
+     "PublicPort": 8080,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "096c6fc40a6c71570b6c72ea0c6c747d056c6978066c6b0b076c6c9e086c6e31",
+   "Names": [
+    "/postgres"
+   ],
+   "Image": "postgres:16-alpine",
+   "State": "running",
+   "Status": "Up 12 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "127.0.0.1",
+     "PrivatePort": 5432,
+     "PublicPort": 5432,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "22b8cf1823b8d0ab24b8d23e25b8d3d126b8d56427b8d6f728b8d88a29b8da1d",
+   "Names": [
+    "/old-registry"
+   ],
+   "Image": "registry:2",
+   "State": "exited",
+   "Status": "Exited (0) 2 weeks ago",
+   "Labels": {},
+   "Ports": []
+  },
+  {
+   "Id": "e0466b2ae1466cbdde466804df466997dc4664dedd466671da4661b8db46634b",
+   "Names": [
+    "/bookstack"
+   ],
+   "Image": "lscr.io/linuxserver/bookstack:24.12.1",
+   "State": "running",
+   "Status": "Up 5 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 6875,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "d9075c3bd8075aa8db075f61da075dcedd076287dc0760f4df0765adde07641a",
+   "Names": [
+    "/filebrowser"
+   ],
+   "Image": "filebrowser/filebrowser:v2.31.2",
+   "State": "running",
+   "Status": "Up 9 days (healthy)",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 80,
+     "PublicPort": 8082,
+     "Type": "tcp"
+    }
+   ],
+   "Health": {
+    "Status": "healthy",
+    "FailingStreak": 0
+   }
+  },
+  {
+   "Id": "cdfc6265ccfc60d2cbfc5f3fcafc5dacc9fc5c19c8fc5a86c7fc58f3c6fc5760",
+   "Names": [
+    "/node-red"
+   ],
+   "Image": "nodered/node-red:4.0.8",
+   "State": "running",
+   "Status": "Up 9 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 1880,
+     "PublicPort": 1880,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "4e6f714b4d6f6fb8506f74714f6f72de526f7797516f7604546f7abd536f792a",
+   "Names": [
+    "/prometheus"
+   ],
+   "Image": "prom/prometheus:v3.1.0",
+   "State": "running",
+   "Status": "Up 12 days",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 9090,
+     "PublicPort": 9090,
+     "Type": "tcp"
+    }
+   ]
+  }
+ ],
+ "tricky": [
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/my_app-1"
+   ],
+   "Image": "example/my_app-1:1",
+   "State": "running",
+   "Status": "Up 3 hours (health: starting)",
+   "Labels": {
+    "serverhub.enable": " TRUE ",
+    "serverhub.url": "https://app.home.arpa/path/",
+    "serverhub.name": "My\u0007 App\n  line",
+    "serverhub.description": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "serverhub.icon": "Chart",
+    "serverhub.category": "monitoring",
+    "serverhub.check": "maybe"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/no-url"
+   ],
+   "Image": "example/no-url:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/bad-scheme"
+   ],
+   "Image": "example/bad-scheme:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "yes",
+    "serverhub.url": "ftp://files.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/long-url"
+   ],
+   "Image": "example/long-url:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "1",
+    "serverhub.url": "https://a.home.arpa/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/empty-name"
+   ],
+   "Image": "example/empty-name:1",
+   "State": "running",
+   "Status": "Up 2 minutes (unhealthy)",
+   "Labels": {
+    "serverhub.enable": "on",
+    "serverhub.url": "https://e.home.arpa",
+    "serverhub.name": "   ",
+    "serverhub.category": "nonsense",
+    "serverhub.icon": "nope"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/weird-state"
+   ],
+   "Image": "example/weird-state:1",
+   "State": "weird",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://w.home.arpa"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/paused-one"
+   ],
+   "Image": "example/paused-one:1",
+   "State": "paused",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "http://p.home.arpa:8080",
+    "serverhub.check": "OFF",
+    "serverhub.category": "Files"
+   },
+   "Ports": []
+  },
+  {
+   "Id": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+   "Names": [
+    "/a/b",
+    "nope"
+   ],
+   "Image": "x",
+   "State": "running",
+   "Labels": {
+    "serverhub.enable": "true",
+    "serverhub.url": "https://z.home.arpa"
+   }
+  },
+  "not a dict",
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/opted-out"
+   ],
+   "Image": "example/opted-out:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {
+    "serverhub.enable": "false"
+   },
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/https-default"
+   ],
+   "Image": "example/https-default:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 443,
+     "PublicPort": 443,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::",
+     "PrivatePort": 443,
+     "PublicPort": 443,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/https-8443"
+   ],
+   "Image": "example/https-8443:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8443,
+     "PublicPort": 9500,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 53,
+     "PublicPort": 53,
+     "Type": "udp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/udp-only"
+   ],
+   "Image": "example/udp-only:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 5353,
+     "PublicPort": 5353,
+     "Type": "udp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/loopback-only"
+   ],
+   "Image": "example/loopback-only:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "127.0.0.1",
+     "PrivatePort": 80,
+     "PublicPort": 8099,
+     "Type": "tcp"
+    },
+    {
+     "IP": "::1",
+     "PrivatePort": 80,
+     "PublicPort": 8098,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/lowest-port"
+   ],
+   "Image": "example/lowest-port:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 9100,
+     "PublicPort": 9100,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7000,
+     "PublicPort": 7001,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 7000,
+     "PublicPort": 7000,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/stopped"
+   ],
+   "Image": "example/stopped:1",
+   "State": "exited",
+   "Status": "Exited (0) 1 hour ago",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 80,
+     "PublicPort": 8097,
+     "Type": "tcp"
+    }
+   ]
+  },
+  {
+   "Id": "abababababababababababababababababababababababababababababababab",
+   "Names": [
+    "/web-and-other"
+   ],
+   "Image": "example/web-and-other:1",
+   "State": "running",
+   "Status": "Up 3 hours",
+   "Labels": {},
+   "Ports": [
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 22,
+     "PublicPort": 2222,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 8080,
+     "PublicPort": 18080,
+     "Type": "tcp"
+    },
+    {
+     "IP": "0.0.0.0",
+     "PrivatePort": 3000,
+     "PublicPort": 13000,
+     "Type": "tcp"
+    }
+   ]
+  }
+ ],
+ "expected": {
+  "demo": {
+   "discover": {
+    "services": [
+     {
+      "id": "docker:dozzle",
+      "name": "Dozzle",
+      "url": "https://logs.home.arpa",
+      "description": "Live logs for every container on this host",
+      "icon": "terminal",
+      "category": "Dev",
+      "check": true,
+      "container": {
+       "name": "dozzle",
+       "image": "amir20/dozzle:v8.13.4",
+       "state": "running",
+       "status": "Up 12 days (healthy)",
+       "health": "healthy"
+      }
+     },
+     {
+      "id": "docker:mealie",
+      "name": "Mealie",
+      "url": "https://recipes.home.arpa",
+      "description": "Recipes and the weekly meal plan",
+      "icon": "book",
+      "category": "Home",
+      "check": true,
+      "container": {
+       "name": "mealie",
+       "image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+       "state": "running",
+       "status": "Up 20 seconds (health: starting)",
+       "health": "starting"
+      }
+     },
+     {
+      "id": "docker:portainer",
+      "name": "Portainer",
+      "url": "https://portainer.home.arpa:9443",
+      "description": "Manage the containers on this host",
+      "icon": "layers",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "portainer",
+       "image": "portainer/portainer-ce:2.21.4",
+       "state": "running",
+       "status": "Up 12 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:qbittorrent",
+      "name": "qBittorrent",
+      "url": "https://downloads.home.arpa",
+      "description": "Torrent client behind the VPN container",
+      "icon": "download",
+      "category": "Media",
+      "check": false,
+      "container": {
+       "name": "qbittorrent",
+       "image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:radarr",
+      "name": "Radarr",
+      "url": "https://radarr.home.arpa",
+      "description": "Movie library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "radarr",
+       "image": "lscr.io/linuxserver/radarr:5.14.0",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:searxng",
+      "name": "SearXNG",
+      "url": "https://search.home.arpa",
+      "description": "Private metasearch for the whole house",
+      "icon": "globe",
+      "category": "Search",
+      "check": true,
+      "container": {
+       "name": "searxng",
+       "image": "searxng/searxng:2025.1.12",
+       "state": "running",
+       "status": "Up 6 hours (unhealthy)",
+       "health": "unhealthy"
+      }
+     },
+     {
+      "id": "docker:sonarr",
+      "name": "Sonarr",
+      "url": "https://sonarr.home.arpa",
+      "description": "TV show library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "sonarr",
+       "image": "lscr.io/linuxserver/sonarr:4.0.11",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:syncthing",
+      "name": "Syncthing",
+      "url": "https://sync.home.arpa",
+      "description": "File sync between the laptops and the NAS",
+      "icon": "refresh",
+      "category": "Files",
+      "check": true,
+      "container": {
+       "name": "syncthing",
+       "image": "syncthing/syncthing:1.29.2",
+       "state": "exited",
+       "status": "Exited (137) 2 days ago",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:vikunja",
+      "name": "Vikunja",
+      "url": "https://tasks.home.arpa",
+      "description": "Shared to-do lists",
+      "icon": "calendar",
+      "category": "Productivity",
+      "check": true,
+      "container": {
+       "name": "vikunja",
+       "image": "vikunja/vikunja:0.24.6",
+       "state": "running",
+       "status": "Up 4 days (healthy)",
+       "health": "healthy"
+      }
+     }
+    ],
+    "skipped": [
+     {
+      "container": "whoami",
+      "reason": "serverhub.url is not a valid http(s) URL"
+     }
+    ],
+    "warnings": [
+     {
+      "container": "vikunja",
+      "reason": "serverhub.icon is not a known icon id; using a default"
+     }
+    ]
+   },
+   "suggest": [
+    {
+     "container": {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.12.1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 6875,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Bookstack",
+      "url": "http://docker.home.arpa:6875",
+      "icon": "book",
+      "category": "Productivity"
+     }
+    },
+    {
+     "container": {
+      "name": "filebrowser",
+      "image": "filebrowser/filebrowser:v2.31.2",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 8082,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Filebrowser",
+      "url": "http://docker.home.arpa:8082",
+      "icon": "folder",
+      "category": "Files"
+     }
+    },
+    {
+     "container": {
+      "name": "node-red",
+      "image": "nodered/node-red:4.0.8",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 1880,
+       "public": 1880,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Node Red",
+      "url": "http://docker.home.arpa:1880",
+      "icon": "zap",
+      "category": "Home"
+     }
+    },
+    {
+     "container": {
+      "name": "prometheus",
+      "image": "prom/prometheus:v3.1.0",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 9090,
+       "public": 9090,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Prometheus",
+      "url": "http://docker.home.arpa:9090",
+      "icon": "pulse",
+      "category": "Monitoring"
+     }
+    }
+   ],
+   "suggestExisting": [
+    {
+     "container": {
+      "name": "bookstack",
+      "image": "lscr.io/linuxserver/bookstack:24.12.1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 6875,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Bookstack",
+      "url": "http://docker.home.arpa:6875",
+      "icon": "book",
+      "category": "Productivity"
+     }
+    },
+    {
+     "container": {
+      "name": "filebrowser",
+      "image": "filebrowser/filebrowser:v2.31.2",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 80,
+       "public": 8082,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Filebrowser",
+      "url": "http://docker.home.arpa:8082",
+      "icon": "folder",
+      "category": "Files"
+     }
+    },
+    {
+     "container": {
+      "name": "node-red",
+      "image": "nodered/node-red:4.0.8",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 1880,
+       "public": 1880,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Node Red",
+      "url": "http://docker.home.arpa:1880",
+      "icon": "zap",
+      "category": "Home"
+     }
+    }
+   ],
+   "existing": [
+    "http://docker.home.arpa:9090/",
+    "https://Docker.home.arpa:6875"
+   ]
+  },
+  "demoLater": {
+   "discover": {
+    "services": [
+     {
+      "id": "docker:dozzle",
+      "name": "Dozzle",
+      "url": "https://logs.home.arpa",
+      "description": "Live logs for every container on this host",
+      "icon": "terminal",
+      "category": "Dev",
+      "check": true,
+      "container": {
+       "name": "dozzle",
+       "image": "amir20/dozzle:v8.13.4",
+       "state": "running",
+       "status": "Up 12 days (healthy)",
+       "health": "healthy"
+      }
+     },
+     {
+      "id": "docker:mealie",
+      "name": "Mealie",
+      "url": "https://recipes.home.arpa",
+      "description": "Recipes and the weekly meal plan",
+      "icon": "book",
+      "category": "Home",
+      "check": true,
+      "container": {
+       "name": "mealie",
+       "image": "ghcr.io/mealie-recipes/mealie:v2.4.2",
+       "state": "running",
+       "status": "Up 3 hours (healthy)",
+       "health": "healthy"
+      }
+     },
+     {
+      "id": "docker:portainer",
+      "name": "Portainer",
+      "url": "https://portainer.home.arpa:9443",
+      "description": "Manage the containers on this host",
+      "icon": "layers",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "portainer",
+       "image": "portainer/portainer-ce:2.21.4",
+       "state": "running",
+       "status": "Up 12 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:qbittorrent",
+      "name": "qBittorrent",
+      "url": "https://downloads.home.arpa",
+      "description": "Torrent client behind the VPN container",
+      "icon": "download",
+      "category": "Media",
+      "check": false,
+      "container": {
+       "name": "qbittorrent",
+       "image": "lscr.io/linuxserver/qbittorrent:5.0.2",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:radarr",
+      "name": "Radarr",
+      "url": "https://radarr.home.arpa",
+      "description": "Movie library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "radarr",
+       "image": "lscr.io/linuxserver/radarr:5.14.0",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:searxng",
+      "name": "SearXNG",
+      "url": "https://search.home.arpa",
+      "description": "Private metasearch for the whole house",
+      "icon": "globe",
+      "category": "Search",
+      "check": true,
+      "container": {
+       "name": "searxng",
+       "image": "searxng/searxng:2025.1.12",
+       "state": "running",
+       "status": "Up 9 hours (unhealthy)",
+       "health": "unhealthy"
+      }
+     },
+     {
+      "id": "docker:sonarr",
+      "name": "Sonarr",
+      "url": "https://sonarr.home.arpa",
+      "description": "TV show library automation",
+      "icon": "film",
+      "category": "Media",
+      "check": true,
+      "container": {
+       "name": "sonarr",
+       "image": "lscr.io/linuxserver/sonarr:4.0.11",
+       "state": "running",
+       "status": "Up 3 days",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:syncthing",
+      "name": "Syncthing",
+      "url": "https://sync.home.arpa",
+      "description": "File sync between the laptops and the NAS",
+      "icon": "refresh",
+      "category": "Files",
+      "check": true,
+      "container": {
+       "name": "syncthing",
+       "image": "syncthing/syncthing:1.29.2",
+       "state": "exited",
+       "status": "Exited (137) 2 days ago",
+       "health": null
+      }
+     },
+     {
+      "id": "docker:vikunja",
+      "name": "Vikunja",
+      "url": "https://tasks.home.arpa",
+      "description": "Shared to-do lists",
+      "icon": "calendar",
+      "category": "Productivity",
+      "check": true,
+      "container": {
+       "name": "vikunja",
+       "image": "vikunja/vikunja:0.24.6",
+       "state": "running",
+       "status": "Up 4 days (healthy)",
+       "health": "healthy"
+      }
+     }
+    ],
+    "skipped": [
+     {
+      "container": "whoami",
+      "reason": "serverhub.url is not a valid http(s) URL"
+     }
+    ],
+    "warnings": [
+     {
+      "container": "vikunja",
+      "reason": "serverhub.icon is not a known icon id; using a default"
+     }
+    ]
+   }
+  },
+  "tricky": {
+   "discover": {
+    "services": [
+     {
+      "id": "docker:empty-name",
+      "name": "Empty Name",
+      "url": "https://e.home.arpa",
+      "description": "",
+      "icon": "box",
+      "category": null,
+      "check": true,
+      "container": {
+       "name": "empty-name",
+       "image": "example/empty-name:1",
+       "state": "running",
+       "status": "Up 2 minutes (unhealthy)",
+       "health": "unhealthy"
+      }
+     },
+     {
+      "id": "docker:my_app-1",
+      "name": "My App   line",
+      "url": "https://app.home.arpa/path/",
+      "description": "",
+      "icon": "chart",
+      "category": "Monitoring",
+      "check": true,
+      "container": {
+       "name": "my_app-1",
+       "image": "example/my_app-1:1",
+       "state": "running",
+       "status": "Up 3 hours (health: starting)",
+       "health": "starting"
+      }
+     },
+     {
+      "id": "docker:paused-one",
+      "name": "Paused One",
+      "url": "http://p.home.arpa:8080",
+      "description": "",
+      "icon": "box",
+      "category": "Files",
+      "check": false,
+      "container": {
+       "name": "paused-one",
+       "image": "example/paused-one:1",
+       "state": "paused",
+       "status": "Up 3 hours",
+       "health": null
+      }
+     }
+    ],
+    "skipped": [
+     {
+      "container": "no-url",
+      "reason": "serverhub.url is missing"
+     },
+     {
+      "container": "bad-scheme",
+      "reason": "serverhub.url is not a valid http(s) URL"
+     },
+     {
+      "container": "long-url",
+      "reason": "serverhub.url is invalid"
+     },
+     {
+      "container": "weird-state",
+      "reason": "unknown container state"
+     },
+     {
+      "container": "?",
+      "reason": "container has no usable name"
+     }
+    ],
+    "warnings": [
+     {
+      "container": "my_app-1",
+      "reason": "serverhub.check must be true or false; using true"
+     },
+     {
+      "container": "my_app-1",
+      "reason": "serverhub.description is invalid; using a default"
+     },
+     {
+      "container": "empty-name",
+      "reason": "serverhub.name is empty or invalid; using the container name"
+     },
+     {
+      "container": "empty-name",
+      "reason": "serverhub.icon is not a known icon id; using a default"
+     },
+     {
+      "container": "empty-name",
+      "reason": "serverhub.category is not a known category id; using auto"
+     }
+    ]
+   },
+   "suggest": [
+    {
+     "container": {
+      "name": "https-8443",
+      "image": "example/https-8443:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 8443,
+       "public": 9500,
+       "protocol": "tcp"
+      },
+      {
+       "private": 53,
+       "public": 53,
+       "protocol": "udp"
+      }
+     ],
+     "suggested": {
+      "name": "Https",
+      "url": "https://docker.home.arpa:9500",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "https-default",
+      "image": "example/https-default:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 443,
+       "public": 443,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Https Default",
+      "url": "https://docker.home.arpa",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "lowest-port",
+      "image": "example/lowest-port:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 7000,
+       "public": 7000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 7000,
+       "public": 7001,
+       "protocol": "tcp"
+      },
+      {
+       "private": 9100,
+       "public": 9100,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Lowest Port",
+      "url": "http://docker.home.arpa:7000",
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "web-and-other",
+      "image": "example/web-and-other:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 22,
+       "public": 2222,
+       "protocol": "tcp"
+      },
+      {
+       "private": 3000,
+       "public": 13000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 8080,
+       "public": 18080,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Web And Other",
+      "url": "http://docker.home.arpa:18080",
+      "icon": "box",
+      "category": null
+     }
+    }
+   ]
+  },
+  "trickyNoHost": {
+   "suggest": [
+    {
+     "container": {
+      "name": "https-8443",
+      "image": "example/https-8443:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 8443,
+       "public": 9500,
+       "protocol": "tcp"
+      },
+      {
+       "private": 53,
+       "public": 53,
+       "protocol": "udp"
+      }
+     ],
+     "suggested": {
+      "name": "Https",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "https-default",
+      "image": "example/https-default:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 443,
+       "public": 443,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Https Default",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "lowest-port",
+      "image": "example/lowest-port:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 7000,
+       "public": 7000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 7000,
+       "public": 7001,
+       "protocol": "tcp"
+      },
+      {
+       "private": 9100,
+       "public": 9100,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Lowest Port",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    },
+    {
+     "container": {
+      "name": "web-and-other",
+      "image": "example/web-and-other:1",
+      "state": "running"
+     },
+     "ports": [
+      {
+       "private": 22,
+       "public": 2222,
+       "protocol": "tcp"
+      },
+      {
+       "private": 3000,
+       "public": 13000,
+       "protocol": "tcp"
+      },
+      {
+       "private": 8080,
+       "public": 18080,
+       "protocol": "tcp"
+      }
+     ],
+     "suggested": {
+      "name": "Web And Other",
+      "url": null,
+      "icon": "box",
+      "category": null
+     }
+    }
+   ]
+  }
+ }
+}
