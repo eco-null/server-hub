@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from serverhub.auth.crypto import Keys, Passwords
 from serverhub.auth.ratelimit import RateLimiter
@@ -23,3 +23,5 @@ class Hub:
     fetcher: SafeFetcher
     status: StatusChecker
     beszel: BeszelClient
+    # First-run setup token; None once setup is done (or never needed).
+    setup_token: str | None = field(default=None, repr=False)

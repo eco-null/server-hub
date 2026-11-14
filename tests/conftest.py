@@ -17,6 +17,8 @@ SECRET = "test-secret-key-0123456789-abcdefghijklmnop"
 PASSWORD = "correct horse battery"
 FAST_HASH = {"time_cost": 1, "memory_cost": 1024, "parallelism": 1}
 LOCAL_OK = {"extra_allowed": ["127.0.0.1/32"]}
+SETUP_TOKEN = "test-setup-token-0123456789"
+CLIENT_HEADERS = {"X-ServerHub-Client": "tests"}
 
 
 @pytest.fixture
@@ -43,6 +45,8 @@ def make_config(tmp_path: Path, **overrides) -> Config:
         "secret_key": SECRET,
         "data_dir": tmp_path / "data",
         "web_dir": make_web(tmp_path),
+        "allowed_hosts": ("testserver",),
+        "setup_token": SETUP_TOKEN,
         **overrides,
     }
     return Config(**values)
@@ -64,7 +68,9 @@ async def running(
     )
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app, client=(client_ip, 50000))
-        async with httpx.AsyncClient(transport=transport, base_url=base_url) as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url=base_url, headers=CLIENT_HEADERS
+        ) as client:
             client.app = app  # type: ignore[attr-defined]
             yield client
 
@@ -79,7 +85,13 @@ async def setup_admin(
     c: httpx.AsyncClient, username: str = "admin", email: str = "admin@example.org"
 ) -> dict:
     r = await c.post(
-        "/api/auth/setup", json={"email": email, "username": username, "password": PASSWORD}
+        "/api/auth/setup",
+        json={
+            "email": email,
+            "username": username,
+            "password": PASSWORD,
+            "setup_token": SETUP_TOKEN,
+        },
     )
     assert r.status_code == 200, r.text
     return r.json()["user"]
@@ -88,7 +100,7 @@ async def setup_admin(
 async def new_session(app, username: str, password: str = PASSWORD) -> httpx.AsyncClient:
     """A second, independent client (own cookie jar) logged in as ``username``."""
     transport = httpx.ASGITransport(app=app, client=("127.0.0.1", 50001))
-    c = httpx.AsyncClient(transport=transport, base_url="http://testserver")
+    c = httpx.AsyncClient(transport=transport, base_url="http://testserver", headers=CLIENT_HEADERS)
     r = await c.post("/api/auth/login", json={"identifier": username, "password": password})
     assert r.status_code == 200, r.text
     return c

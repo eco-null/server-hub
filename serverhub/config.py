@@ -7,6 +7,7 @@ message naming the variable instead of failing later at request time.
 from __future__ import annotations
 
 import ipaddress
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
@@ -16,6 +17,8 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MIN_SECRET_LENGTH = 32
+_LABEL = r"[a-z0-9_][a-z0-9_-]{0,62}"
+_HOSTNAME_RE = re.compile(rf"^(?=.{{1,253}}$){_LABEL}(\.{_LABEL})*$")
 
 
 class ConfigError(Exception):
@@ -41,6 +44,10 @@ class Config(BaseSettings):
     trusted_proxies: Annotated[
         tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...], NoDecode
     ] = ()
+    allowed_hosts: Annotated[tuple[str, ...], NoDecode] = ()
+    setup_token: str | None = Field(None, repr=False)
+    max_connections: int = Field(512, ge=16, le=100_000)
+    max_connections_per_ip: int = Field(32, ge=2, le=10_000)
     allow_private_network_targets: bool = True
     log_level: Literal["critical", "error", "warning", "info", "debug"] = "info"
     session_idle_days: float = Field(7, gt=0, le=365)
@@ -85,6 +92,33 @@ class Config(BaseSettings):
                 raise ValueError(f"invalid CIDR list: {exc}") from None
         return v
 
+    @field_validator("allowed_hosts", mode="before")
+    @classmethod
+    def _parse_hosts(cls, v: object) -> object:
+        items = v.split(",") if isinstance(v, str) else v
+        if not isinstance(items, list | tuple):
+            return v
+        out = []
+        for raw in items:
+            h = str(raw).strip().lower().rstrip(".")
+            if not h:
+                continue
+            if not _HOSTNAME_RE.match(h):
+                raise ValueError(f"invalid host name {raw!r} (host names only, no scheme or port)")
+            out.append(h)
+        return tuple(out)
+
+    @field_validator("setup_token", mode="before")
+    @classmethod
+    def _setup_token(cls, v: object) -> object:
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
+            if len(v) < 16:
+                raise ValueError("must be at least 16 characters")
+        return v
+
     @field_validator("log_level", "cookie_secure", mode="before")
     @classmethod
     def _lower(cls, v: object) -> object:
@@ -116,6 +150,18 @@ class Config(BaseSettings):
         if self.cookie_secure == "false":
             return False
         return self.tls_enabled or bool(self.public_url and self.public_url.startswith("https:"))
+
+    @property
+    def public_host(self) -> str | None:
+        return urlsplit(self.public_url).hostname if self.public_url else None
+
+    @property
+    def host_allowlist(self) -> frozenset[str]:
+        """Host names (not IP literals, which are always allowed) accepted in Host."""
+        names = {"localhost", *self.allowed_hosts}
+        if self.public_host:
+            names.add(self.public_host.rstrip("."))
+        return frozenset(names)
 
     @property
     def db_path(self) -> Path:

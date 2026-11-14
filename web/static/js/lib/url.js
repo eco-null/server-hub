@@ -93,3 +93,23 @@ export function cssUrl(value) {
   const escaped = href.replace(/["\\()\n\r]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
   return 'url("' + escaped + '")';
 }
+
+/** Strips trailing slashes so "https://a.example.com/" equals "https://a.example.com". @param {string} u */
+export function stripTrailingSlashes(u) {
+  return u.trim().replace(/\/+$/, '');
+}
+
+/**
+ * Why a Beszel hub address is unacceptable, or null when fine. The server
+ * rejects query strings, fragments and credentials in the address.
+ * @param {string} value already has a scheme
+ * @returns {string | null}
+ */
+export function beszelUrlProblem(value) {
+  if (!safeUrl(value)) return 'Enter a valid address starting with https:// or http://.';
+  const u = new URL(value);
+  if (u.search || value.includes('?')) return 'Remove everything after “?” from the address; it can’t contain a query string.';
+  if (u.hash || value.includes('#')) return 'Remove everything after “#” from the address; it can’t contain a fragment.';
+  if (u.username || u.password) return 'Remove the username and password from the address and enter them in the fields below.';
+  return null;
+}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import ipaddress
 import logging
 import secrets
 from collections.abc import AsyncIterator
@@ -13,7 +14,7 @@ from pydantic import ValidationError
 from starlette.applications import Starlette
 from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
-from starlette.requests import Request
+from starlette.requests import ClientDisconnect, Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
@@ -66,12 +67,62 @@ async def _http_error(request: Request, exc: Exception) -> Response:
 
 
 async def _server_error(request: Request, exc: Exception) -> Response:
+    if isinstance(exc, ClientDisconnect):
+        # The client went away (or was cut off by the slow-body timeout).
+        return Response(status_code=400)
     log.exception("unhandled error on %s %s", request.method, request.url.path)
     return _error_response(request, 500, "internal", "Internal server error")
 
 
 async def _api_fallback(request: Request) -> Response:
     raise ApiError(404, "not_found", "Not found")
+
+
+def _announce_setup_token(token: str, *, from_env: bool) -> None:
+    bar = "=" * 72
+    if from_env:
+        detail = "  The setup token is the value of SERVERHUB_SETUP_TOKEN."
+    else:
+        detail = (
+            f"  FIRST-RUN SETUP TOKEN:  {token}\n"
+            "  (a new one is generated at every start until setup is done;\n"
+            "   set SERVERHUB_SETUP_TOKEN to choose your own)"
+        )
+    lines = [
+        "",
+        bar,
+        "  No account exists yet. Open the web UI and create the admin account.",
+        detail,
+        "  Alternatively: python -m serverhub create-admin --email ... --username ...",
+        bar,
+    ]
+    log.warning("%s", "\n".join(lines))
+
+
+def startup_warnings(cfg: Config) -> list[str]:
+    """Configuration that works but is probably not what the operator wants."""
+    out = []
+    try:
+        loopback = cfg.host in ("localhost", "") or ipaddress.ip_address(cfg.host).is_loopback
+    except ValueError:
+        loopback = False
+    https_url = bool(cfg.public_url and cfg.public_url.startswith("https:"))
+    if not loopback and not cfg.tls_enabled and not https_url:
+        out.append(
+            f"Serving PLAIN HTTP on {cfg.host}:{cfg.port}: passwords and session cookies cross "
+            "the network unencrypted. Fine on a trusted LAN/VPN; otherwise set "
+            "SERVERHUB_TLS_CERT_FILE and SERVERHUB_TLS_KEY_FILE (see .env.example), or set "
+            "SERVERHUB_PUBLIC_URL=https://... if an HTTPS tunnel terminates TLS for you."
+        )
+    if cfg.secure_cookies and not cfg.tls_enabled and not cfg.trusted_proxies:
+        out.append(
+            "Secure cookies are on (SERVERHUB_COOKIE_SECURE / https SERVERHUB_PUBLIC_URL) but "
+            "this process serves plain HTTP and SERVERHUB_TRUSTED_PROXIES is empty. Browsers "
+            "drop Secure cookies on http:// pages, so signing in over plain HTTP will silently "
+            "loop back to the login page. Reach the hub only through its https:// URL, enable "
+            "TLS here, or set SERVERHUB_COOKIE_SECURE=false."
+        )
+    return out
 
 
 def create_app(
@@ -101,11 +152,15 @@ def create_app(
             beszel=BeszelClient(fetcher),
         )
         app.state.hub = hub
+        if await db.run(repo.count_users) == 0:
+            hub.setup_token = cfg.setup_token or secrets.token_urlsafe(18)
+            _announce_setup_token(hub.setup_token, from_env=cfg.setup_token is not None)
+        idle = int(cfg.session_idle_days * 86400)
 
         async def housekeeping() -> None:
             while True:
                 try:
-                    await db.run(repo.prune, LONGEST_WINDOW)
+                    await db.run(repo.prune, LONGEST_WINDOW, idle)
                 except Exception:
                     log.exception("housekeeping failed")
                 await anyio.sleep(600 + secrets.randbelow(60))
@@ -147,11 +202,15 @@ def create_app(
 def run(config: Config | None = None) -> None:
     import uvicorn
 
+    from serverhub.server import guarded_protocol
+
     cfg = config or load_config()
     logging.basicConfig(
         level=cfg.log_level.upper(), format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
     app = create_app(cfg)
+    for warning in startup_warnings(cfg):
+        log.warning("%s", warning)
     scheme = "https" if cfg.tls_enabled else "http"
     log.info("Server Hub listening on %s://%s:%d", scheme, cfg.host, cfg.port)
     uvicorn.run(
@@ -165,10 +224,17 @@ def run(config: Config | None = None) -> None:
         proxy_headers=False,  # X-Forwarded-* is handled by SecurityMiddleware
         server_header=False,
         date_header=True,
-        http="h11",
+        # h11 with slow-client defences: header deadline, body-progress
+        # timeout and per-IP / global connection caps (serverhub/server.py).
+        http=guarded_protocol(
+            max_connections=cfg.max_connections,
+            max_per_ip=cfg.max_connections_per_ip,
+            exempt=cfg.trusted_proxies,
+        ),
         ws="none",
         lifespan="on",
-        limit_concurrency=256,
+        # Connections are capped by the protocol above; this is only a backstop.
+        limit_concurrency=cfg.max_connections + 64,
         backlog=512,
         timeout_keep_alive=5,
         timeout_graceful_shutdown=15,

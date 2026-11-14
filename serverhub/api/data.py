@@ -171,7 +171,14 @@ async def get_status(request: Request) -> Response:
     h = hub(request)
     rows = await h.db.run(repo.list_owned, "services", user["id"])
     targets = [(r["id"], r["url"]) for r in rows if r["check_enabled"]]
-    return json_response({"statuses": await h.status.check_many(user["id"], targets)})
+    statuses = await h.status.check_many(user["id"], targets)
+    if user["role"] != "admin":
+        # State only: HTTP codes and timings of arbitrary targets would make
+        # this an internal-network probe for non-admin accounts.
+        statuses = {
+            sid: {**st, "http_status": None, "latency_ms": None} for sid, st in statuses.items()
+        }
+    return json_response({"statuses": statuses})
 
 
 # ---- backup ---------------------------------------------------------------------------

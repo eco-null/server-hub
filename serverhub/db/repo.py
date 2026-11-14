@@ -56,6 +56,9 @@ def get_user(conn: sqlite3.Connection, user_id: str) -> dict | None:
 
 
 def get_user_by_identifier(conn: sqlite3.Connection, identifier: str) -> dict | None:
+    identifier = identifier.strip()
+    if "@" in identifier:
+        identifier = identifier.lower()
     return _row(
         conn.execute(
             "SELECT * FROM users WHERE email = ? OR username = ? LIMIT 1",
@@ -210,6 +213,9 @@ def consume_recovery_code(conn: sqlite3.Connection, user_id: str, code_hash: str
 # ---- sessions ----------------------------------------------------------------
 
 
+MAX_SESSIONS_PER_USER = 20
+
+
 def create_session(
     conn: sqlite3.Connection, id_hash: str, user_id: str, max_age: int, replace: str | None
 ) -> None:
@@ -221,6 +227,13 @@ def create_session(
             "INSERT INTO sessions (id_hash, user_id, created_at, last_seen, expires_at)"
             " VALUES (?, ?, ?, ?, ?)",
             (id_hash, user_id, ts, ts, ts + max_age),
+        )
+        # At most MAX_SESSIONS_PER_USER live sessions; the oldest go first.
+        conn.execute(
+            "DELETE FROM sessions WHERE user_id = ? AND rowid NOT IN"
+            " (SELECT rowid FROM sessions WHERE user_id = ?"
+            "  ORDER BY created_at DESC, rowid DESC LIMIT ?)",
+            (user_id, user_id, MAX_SESSIONS_PER_USER),
         )
 
 
@@ -284,9 +297,12 @@ def delete_pending(conn: sqlite3.Connection, id_hash: str) -> None:
     conn.execute("DELETE FROM pending_logins WHERE id_hash = ?", (id_hash,))
 
 
-def prune(conn: sqlite3.Connection, rate_window_max: int) -> None:
+def prune(conn: sqlite3.Connection, rate_window_max: int, idle: int | None = None) -> None:
+    """Delete expired (or idle-expired) sessions, pending logins and stale counters."""
     ts = now_ts()
     conn.execute("DELETE FROM sessions WHERE expires_at <= ?", (ts,))
+    if idle is not None:
+        conn.execute("DELETE FROM sessions WHERE last_seen <= ?", (ts - idle,))
     conn.execute("DELETE FROM pending_logins WHERE expires_at <= ?", (ts,))
     conn.execute(
         "DELETE FROM rate_limits WHERE window_start < ? AND locked_until < ?",
@@ -313,37 +329,65 @@ def set_config(conn: sqlite3.Connection, key: str, value: Any) -> None:
 # ---- rate limits -------------------------------------------------------------
 
 
-def rate_status(conn: sqlite3.Connection, keys: list[str]) -> int:
-    """Seconds until the longest active lock among ``keys`` ends (0 if none)."""
-    ts = now_ts()
-    worst = 0
-    for key in keys:
-        row = conn.execute("SELECT locked_until FROM rate_limits WHERE key = ?", (key,)).fetchone()
-        if row and row["locked_until"] > ts:
-            worst = max(worst, row["locked_until"] - ts)
-    return worst
+def rate_reserve(
+    conn: sqlite3.Connection, key: str, limit: int, window: int, lockout: int
+) -> tuple[int, int]:
+    """Atomically count one attempt for ``key`` before it is evaluated.
 
-
-def rate_hit(conn: sqlite3.Connection, key: str, limit: int, window: int, lockout: int) -> int:
-    """Count one event for ``key``; returns lock seconds if this hit tripped the limit."""
+    Returns ``(count, retry_after)``: the attempt number within the current
+    window, and the seconds until the key unlocks (0 = this attempt may go on).
+    A key whose count exceeds ``limit`` is locked for ``lockout`` seconds.
+    """
     ts = now_ts()
     with transaction(conn):
         row = conn.execute(
-            "SELECT count, window_start FROM rate_limits WHERE key = ?", (key,)
+            "INSERT INTO rate_limits (key, count, window_start, locked_until)"
+            " VALUES (:key, 1, :ts, 0)"
+            " ON CONFLICT(key) DO UPDATE SET"
+            " count = CASE WHEN rate_limits.locked_until <= :ts"
+            "   AND rate_limits.window_start <= :ts - :window THEN 1"
+            "   ELSE rate_limits.count + 1 END,"
+            " window_start = CASE WHEN rate_limits.locked_until <= :ts"
+            "   AND rate_limits.window_start <= :ts - :window THEN :ts"
+            "   ELSE rate_limits.window_start END"
+            " RETURNING count, locked_until",
+            {"key": key, "ts": ts, "window": window},
         ).fetchone()
-        if row is None or ts - row["window_start"] >= window:
-            count, start = 1, ts
-        else:
-            count, start = row["count"] + 1, row["window_start"]
-        locked_until = ts + lockout if count >= limit else 0
-        conn.execute(
-            "INSERT INTO rate_limits (key, count, window_start, locked_until) VALUES (?, ?, ?, ?)"
-            " ON CONFLICT(key) DO UPDATE SET count = excluded.count,"
-            " window_start = excluded.window_start,"
-            " locked_until = MAX(rate_limits.locked_until, excluded.locked_until)",
-            (key, 0 if locked_until else count, ts if locked_until else start, locked_until),
-        )
-        return lockout if locked_until else 0
+        count, locked_until = row[0], row[1]
+        if locked_until > ts:
+            return count, locked_until - ts
+        if count > limit:
+            conn.execute(
+                "UPDATE rate_limits SET locked_until = ? WHERE key = ?", (ts + lockout, key)
+            )
+            return count, lockout
+        return count, 0
+
+
+def rate_refund(conn: sqlite3.Connection, keys: list[str]) -> None:
+    conn.executemany(
+        "UPDATE rate_limits SET count = MAX(count - 1, 0) WHERE key = ? AND locked_until <= ?",
+        [(k, now_ts()) for k in keys],
+    )
+
+
+def rate_reset_prefix(conn: sqlite3.Connection, prefix: str) -> None:
+    conn.execute("DELETE FROM rate_limits WHERE substr(key, 1, ?) = ?", (len(prefix), prefix))
+
+
+def rate_reset_user(conn: sqlite3.Connection, user_id: str) -> None:
+    """Delete every account-scoped counter of ``user_id`` (all rules, all IPs)."""
+    uid = user_id.lower()
+    conn.execute(
+        "DELETE FROM rate_limits WHERE key IN (?, ?, ?) OR substr(key, 1, ?) = ?",
+        (
+            f"login_acct:{uid}",
+            f"2fa_acct:{uid}",
+            f"password_acct:{uid}",
+            len(f"login_acct_ip:{uid}:"),
+            f"login_acct_ip:{uid}:",
+        ),
+    )
 
 
 def rate_reset(conn: sqlite3.Connection, keys: list[str]) -> None:

@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from tests.conftest import PASSWORD, create_user, new_session, running, setup_admin
+from tests.conftest import (
+    PASSWORD,
+    SETUP_TOKEN,
+    create_user,
+    new_session,
+    running,
+    setup_admin,
+)
 
 pytestmark = pytest.mark.anyio
 
@@ -22,7 +29,12 @@ async def test_state_and_first_run_setup(client):
     # Setup only works once.
     r = await client.post(
         "/api/auth/setup",
-        json={"email": "x@example.org", "username": "second", "password": PASSWORD},
+        json={
+            "email": "x@example.org",
+            "username": "second",
+            "password": PASSWORD,
+            "setup_token": SETUP_TOKEN,
+        },
     )
     assert r.status_code == 409
 
@@ -34,7 +46,7 @@ async def test_setup_validation(client):
     assert r.status_code == 400
     err = r.json()["error"]
     assert err["code"] == "validation"
-    assert set(err["fields"]) == {"email", "username", "password"}
+    assert set(err["fields"]) == {"email", "username", "password", "setup_token"}
 
 
 async def test_login_by_username_or_email_and_uniform_errors(client):
@@ -114,7 +126,12 @@ async def test_session_rotation_on_login(client):
 async def test_cookie_flags(client):
     r = await client.post(
         "/api/auth/setup",
-        json={"email": "a@example.org", "username": "admin", "password": PASSWORD},
+        json={
+            "email": "a@example.org",
+            "username": "admin",
+            "password": PASSWORD,
+            "setup_token": SETUP_TOKEN,
+        },
     )
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=lax" in cookie and "path=/" in cookie
@@ -125,7 +142,12 @@ async def test_secure_cookie_uses_host_prefix(tmp_path):
     async with running(tmp_path, cookie_secure="true", base_url="https://testserver") as c:
         r = await c.post(
             "/api/auth/setup",
-            json={"email": "a@example.org", "username": "admin", "password": PASSWORD},
+            json={
+                "email": "a@example.org",
+                "username": "admin",
+                "password": PASSWORD,
+                "setup_token": SETUP_TOKEN,
+            },
         )
         assert r.status_code == 200
         assert r.headers["set-cookie"].startswith("__Host-serverhub_session=")

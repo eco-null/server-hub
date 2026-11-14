@@ -11,7 +11,7 @@ pytestmark = pytest.mark.anyio
 
 
 async def enable_2fa(client) -> tuple[str, list[str]]:
-    r = await client.post("/api/me/2fa/setup")
+    r = await client.post("/api/me/2fa/setup", json={"current_password": PASSWORD})
     assert r.status_code == 200, r.text
     data = r.json()
     assert data["otpauth_uri"].startswith("otpauth://totp/")
@@ -114,9 +114,22 @@ async def test_cannot_disable_via_settings(client):
 async def test_disable_requires_valid_code(client):
     await setup_admin(client)
     _secret, codes = await enable_2fa(client)
-    r = await client.post("/api/me/2fa/disable", json={"code": "999999"})
+    r = await client.post(
+        "/api/me/2fa/disable", json={"current_password": PASSWORD, "code": "999999"}
+    )
     assert r.status_code == 401
     r = await client.post("/api/me/2fa/disable", json={"code": codes[3]})
+    assert r.status_code == 400 and r.json()["error"]["fields"] == {"current_password": "required"}
+    r = await client.post(
+        "/api/me/2fa/disable", json={"current_password": "wrong pass", "code": codes[3]}
+    )
+    assert r.status_code == 400
+    assert r.json()["error"]["code"] == "validation"
+    assert r.json()["error"]["fields"] == {"current_password": "incorrect"}
+    assert (await client.get("/api/me")).json()["user"]["twofa_enabled"] is True
+    r = await client.post(
+        "/api/me/2fa/disable", json={"current_password": PASSWORD, "code": codes[3]}
+    )
     assert r.status_code == 204
     assert (await client.get("/api/me")).json()["user"]["twofa_enabled"] is False
     await client.post("/api/auth/logout")
@@ -129,7 +142,8 @@ async def test_setup_twice_and_enable_without_setup(client):
     r = await client.post("/api/me/2fa/enable", json={"code": "123456"})
     assert r.status_code == 409
     await enable_2fa(client)
-    assert (await client.post("/api/me/2fa/setup")).status_code == 409
+    r = await client.post("/api/me/2fa/setup", json={"current_password": PASSWORD})
+    assert r.status_code == 409
 
 
 async def test_admin_can_clear_2fa(client):
@@ -139,3 +153,62 @@ async def test_admin_can_clear_2fa(client):
     r = await client.patch(f"/api/admin/users/{me['id']}", json={"disable_twofa": True})
     assert r.status_code == 200
     assert r.json()["user"]["twofa_enabled"] is False
+
+
+async def test_2fa_setup_requires_current_password(client):
+    await setup_admin(client)
+    r = await client.post("/api/me/2fa/setup")
+    assert r.status_code == 400
+    assert r.json()["error"]["fields"] == {"current_password": "required"}
+    r = await client.post("/api/me/2fa/setup", json={"current_password": "not it"})
+    assert r.status_code == 400
+    err = r.json()["error"]
+    assert err["code"] == "validation" and err["fields"] == {"current_password": "incorrect"}
+
+
+async def test_2fa_setup_password_checks_are_rate_limited(client):
+    await setup_admin(client)
+    statuses = []
+    for _ in range(9):
+        r = await client.post("/api/me/2fa/setup", json={"current_password": "not it"})
+        statuses.append(r.status_code)
+    assert statuses[:8] == [400] * 8 and statuses[8] == 429
+    # Shares the password-change budget.
+    r = await client.put(
+        "/api/me/password", json={"current_password": PASSWORD, "new_password": "x" * 12}
+    )
+    assert r.status_code == 429
+
+
+async def test_2fa_login_burst_is_capped_by_reservation(client):
+    """Concurrent wrong codes cannot exceed the per-account 2FA budget (6)."""
+    import anyio
+    import httpx
+
+    from tests.conftest import CLIENT_HEADERS
+
+    await setup_admin(client)
+    await enable_2fa(client)
+    app = client.app
+    clients = []
+    for i in range(12):
+        transport = httpx.ASGITransport(app=app, client=(f"198.51.100.{i + 1}", 40000))
+        c = httpx.AsyncClient(
+            transport=transport, base_url="http://testserver", headers=CLIENT_HEADERS
+        )
+        await password_step(c)
+        clients.append(c)
+    results: list[int] = []
+
+    async def guess(c, n):
+        r = await c.post("/api/auth/2fa", json={"code": f"{n:06d}"})
+        results.append(r.status_code)
+
+    async with anyio.create_task_group() as tg:
+        for i, c in enumerate(clients):
+            for j in range(5):
+                tg.start_soon(guess, c, 100000 + i * 10 + j)
+    for c in clients:
+        await c.aclose()
+    assert results.count(401) <= 6, results
+    assert results.count(200) == 0

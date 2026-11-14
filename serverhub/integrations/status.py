@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from collections import OrderedDict
 from datetime import UTC, datetime
@@ -9,6 +10,8 @@ from datetime import UTC, datetime
 import anyio
 
 from serverhub.integrations.fetcher import FetchError, SafeFetcher
+
+log = logging.getLogger(__name__)
 
 CACHE_TTL = 20.0
 CACHE_MAX = 4096
@@ -24,19 +27,20 @@ class StatusChecker:
     def __init__(self, fetcher: SafeFetcher, ttl: float = CACHE_TTL) -> None:
         self._fetcher = fetcher
         self._ttl = ttl
-        # Keyed by URL only; values hold no secrets. Bounded LRU.
-        self._cache: OrderedDict[str, tuple[float, dict]] = OrderedDict()
+        # Keyed by (user id, URL) so one user's results never answer another
+        # user's check. Values hold no secrets. Bounded LRU.
+        self._cache: OrderedDict[tuple[str, str], tuple[float, dict]] = OrderedDict()
         self._user_locks: OrderedDict[str, anyio.Lock] = OrderedDict()
 
-    def _cached(self, url: str) -> dict | None:
-        hit = self._cache.get(url)
+    def _cached(self, key: tuple[str, str]) -> dict | None:
+        hit = self._cache.get(key)
         if hit and time.monotonic() - hit[0] < self._ttl:
             return hit[1]
         return None
 
-    def _store(self, url: str, result: dict) -> None:
-        self._cache[url] = (time.monotonic(), result)
-        self._cache.move_to_end(url)
+    def _store(self, key: tuple[str, str], result: dict) -> None:
+        self._cache[key] = (time.monotonic(), result)
+        self._cache.move_to_end(key)
         while len(self._cache) > CACHE_MAX:
             self._cache.popitem(last=False)
 
@@ -49,7 +53,8 @@ class StatusChecker:
         return lock
 
     async def check_one(self, url: str, user_id: str) -> dict:
-        cached = self._cached(url)
+        key = (user_id, url)
+        cached = self._cached(key)
         if cached is not None:
             return cached
         started = time.monotonic()
@@ -73,7 +78,7 @@ class StatusChecker:
             }
             if exc.kind == "busy":
                 return result  # do not cache throttling
-        self._store(url, result)
+        self._store(key, result)
         return result
 
     async def check_many(self, user_id: str, targets: list[tuple[str, str]]) -> dict[str, dict]:
@@ -88,7 +93,11 @@ class StatusChecker:
 
         async def run(sid: str, url: str) -> None:
             async with limiter:
-                out[sid] = await self.check_one(url, user_id)
+                try:
+                    out[sid] = await self.check_one(url, user_id)
+                except Exception:
+                    # One bad target must never break the whole sweep.
+                    log.warning("status check failed unexpectedly", exc_info=True)
 
         # One sweep per user at a time; concurrent polls wait and then hit the cache.
         async with self._lock_for(user_id):

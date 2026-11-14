@@ -6,6 +6,7 @@
  */
 
 import { api } from './client.js';
+import { ApiError } from './api.js';
 import { h, byId } from './dom.js';
 import { createField, createNotice, showFormError, whileBusy } from './ui.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
@@ -129,15 +130,16 @@ function viewSignUp() {
 
 /**
  * Shared by first-run setup and sign up.
- * @param {{ endpoint: string, label: string, busy: string, email: import('./ui.js').Field, username: import('./ui.js').Field, password: import('./ui.js').Field, notice: ReturnType<typeof createNotice> }} o
+ * @param {{ token?: import('./ui.js').Field, endpoint: string, label: string, busy: string, email: import('./ui.js').Field, username: import('./ui.js').Field, password: import('./ui.js').Field, notice: ReturnType<typeof createNotice> }} o
  */
 function accountForm(o) {
+  const token = o.token || null;
   const confirm = createField({ label: 'Confirm password', name: 'confirm', type: 'password', autocomplete: 'new-password', required: true, maxLength: 128 });
   return form({
     submitLabel: o.label,
     busyLabel: o.busy,
-    fields: [o.email, o.username, o.password, confirm],
-    map: { email: o.email, username: o.username, password: o.password },
+    fields: [...(token ? [token] : []), o.email, o.username, o.password, confirm],
+    map: { email: o.email, username: o.username, password: o.password, ...(token ? { setup_token: token } : {}) },
     notice: o.notice,
     validate: () => {
       /** @type {Array<[import('./ui.js').Field, string | null]>} */
@@ -147,13 +149,24 @@ function accountForm(o) {
         [o.password, o.password.input.value.length >= 10 && o.password.input.value.length <= 128 ? null : 'Use 10 to 128 characters.'],
         [confirm, confirm.input.value === o.password.input.value ? null : 'The passwords don’t match.'],
       ];
+      if (token) checks.unshift([token, token.input.value.trim() ? null : 'Enter the setup token.']);
       const bad = checks.filter(([, msg]) => msg);
       for (const [field, msg] of bad) field.setError(msg);
       if (bad.length) bad[0][0].input.focus();
       return bad.length === 0;
     },
     run: async () => {
-      await api.post(o.endpoint, { email: o.email.input.value.trim(), username: o.username.input.value.trim(), password: o.password.input.value }, { silent401: true });
+      /** @type {Record<string, string>} */
+      const body = { email: o.email.input.value.trim(), username: o.username.input.value.trim(), password: o.password.input.value };
+      if (token) body.setup_token = token.input.value.trim();
+      try {
+        await api.post(o.endpoint, body, { silent401: true });
+      } catch (err) {
+        if (err instanceof ApiError && err.code === 'invalid_setup_token') {
+          throw new ApiError({ status: err.status, code: err.code, message: 'The setup token is not correct.', fields: { setup_token: 'This token is not correct. Check the server log.' } });
+        }
+        throw err;
+      }
       done();
     },
   });
@@ -262,12 +275,13 @@ function showTabs(state, active) {
 
 function showSetup() {
   const notice = createNotice();
-  const email = createField({ label: 'Email', name: 'email', type: 'email', autocomplete: 'email', required: true, autofocus: true, spellcheck: false });
+  const email = createField({ label: 'Email', name: 'email', type: 'email', autocomplete: 'email', required: true, spellcheck: false });
   const username = createField({ label: 'Username', name: 'username', autocomplete: 'username', required: true, hint: '3–20 characters: letters, numbers or underscore.', maxLength: 20, spellcheck: false });
   const password = createField({ label: 'Password', name: 'password', type: 'password', autocomplete: 'new-password', required: true, hint: 'At least 10 characters.', maxLength: 128 });
+  const token = createField({ label: 'Setup token', name: 'setup_token', autocomplete: 'off', required: true, autofocus: true, spellcheck: false, hint: 'Printed in the server log on first start (docker compose logs server-hub), or set with SERVERHUB_SETUP_TOKEN.' });
   show(
     ...heading('Welcome to Server Hub', 'Create the administrator account to get started. You can add more people later.'),
-    accountForm({ endpoint: '/api/auth/setup', label: 'Create admin account', busy: 'Creating account…', email, username, password, notice }),
+    accountForm({ token, endpoint: '/api/auth/setup', label: 'Create admin account', busy: 'Creating account…', email, username, password, notice }),
   );
 }
 

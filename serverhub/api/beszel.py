@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from urllib.parse import urlsplit
 
 from pydantic import ValidationError
@@ -16,11 +17,20 @@ from serverhub.auth.sessions import require_user
 from serverhub.db import repo
 from serverhub.errors import not_found, validation
 from serverhub.http import hub, json_response, no_content, parse, read_json, validation_from
-from serverhub.integrations.beszel import BeszelError, Target
+from serverhub.integrations.beszel import GENERIC_ERROR, BeszelError, Target
+
+log = logging.getLogger(__name__)
 
 
 def _default_name(url: str) -> str:
     return (urlsplit(url).hostname or "Beszel")[:200]
+
+
+def _failed(user: dict, detail: str) -> Response:
+    """Admins see why a test failed; other users get one generic message, so the
+    endpoint cannot be used to map the internal network (SSRF oracle)."""
+    message = detail if user["role"] == "admin" else GENERIC_ERROR
+    return json_response({"ok": False, "name": None, "error": message})
 
 
 async def list_instances(request: Request) -> Response:
@@ -91,9 +101,7 @@ async def test_instance(request: Request) -> Response:
                 raise not_found()
             password = h.keys.decrypt(row["password_enc"])
             if password is None:
-                return json_response(
-                    {"ok": False, "name": None, "error": "Stored password cannot be decrypted"}
-                )
+                return _failed(user, "Stored password cannot be decrypted")
             target = Target(row["url"], row["username"], password)
         else:
             adhoc = s.BeszelTestAdhoc.model_validate(data)
@@ -103,7 +111,10 @@ async def test_instance(request: Request) -> Response:
     try:
         name, _count = await h.beszel.test(target, user["id"])
     except BeszelError as exc:
-        return json_response({"ok": False, "name": None, "error": exc.message})
+        return _failed(user, exc.message)
+    except Exception:
+        log.warning("Beszel test failed unexpectedly", exc_info=True)
+        return _failed(user, GENERIC_ERROR)
     return json_response({"ok": True, "name": name, "error": None})
 
 
@@ -116,7 +127,12 @@ async def systems(request: Request) -> Response:
         password = h.keys.decrypt(r["password_enc"])
         target = Target(r["url"], r["username"], password) if password is not None else None
         pairs.append((r, target))
-    return json_response({"instances": await h.beszel.fan_out(user["id"], pairs)})
+    results = await h.beszel.fan_out(user["id"], pairs)
+    if user["role"] != "admin":
+        for r in results:
+            if r["error"] is not None:
+                r["error"] = GENERIC_ERROR
+    return json_response({"instances": results})
 
 
 routes = [

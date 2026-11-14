@@ -130,10 +130,25 @@ export function mountAccount(root, env) {
   }
 
   async function startSetup() {
+    /** @type {any} */
+    let res = null;
+    const confirmed = await openInputDialog({
+      title: 'Confirm your password',
+      message: 'Enter your current password to start setting up two-factor authentication.',
+      label: 'Current password',
+      type: 'password',
+      autocomplete: 'current-password',
+      maxLength: 1024,
+      submitLabel: 'Continue',
+      fieldNames: ['current_password', 'value'],
+      run: async (pw) => {
+        res = await api.post('/api/me/2fa/setup', { current_password: pw });
+      },
+    });
+    if (!confirmed || !res) return;
     setupHost.replaceChildren(h('p', { class: 'muted', role: 'status' }, 'Preparing…'));
     twofaAction.hidden = true;
     try {
-      const res = await api.post('/api/me/2fa/setup');
       const qr = svgDataUrl(res.qr_svg);
       const code = createField({ label: 'Verification code', name: 'code', autocomplete: 'one-time-code', inputMode: 'numeric', required: true, maxLength: 6, hint: 'The 6-digit code your app shows.', autofocus: true, spellcheck: false });
       const notice = createNotice();
@@ -201,15 +216,16 @@ export function mountAccount(root, env) {
   async function disable() {
     const ok = await openInputDialog({
       title: 'Turn off two-factor authentication?',
-      message: 'Enter a code from your authenticator app, or one of your recovery codes, to confirm.',
-      label: 'Code',
-      autocomplete: 'one-time-code',
-      inputMode: 'text',
+      message: 'Enter your current password and a code from your authenticator app, or one of your recovery codes, to confirm.',
+      label: 'Current password',
+      type: 'password',
+      extra: { label: 'Code', autocomplete: 'one-time-code', inputMode: 'text', fieldNames: ['code'] },
+      autocomplete: 'current-password',
       submitLabel: 'Turn off',
       danger: true,
-      fieldNames: ['code', 'value'],
-      run: async (code) => {
-        await api.post('/api/me/2fa/disable', { code: code.replace(/\s+/g, '') });
+      fieldNames: ['current_password', 'value'],
+      run: async (pw, code) => {
+        await api.post('/api/me/2fa/disable', { current_password: pw, code: code.replace(/\s+/g, '') });
       },
     });
     if (ok) {

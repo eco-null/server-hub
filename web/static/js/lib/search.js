@@ -22,7 +22,14 @@ export function buildSearchUrl(search, query) {
   const provider = search && search.provider;
   if (provider === 'searxng') {
     const base = safeUrl(search && search.searxngUrl);
-    if (base) return base.replace(/\/+$/, '') + '/search?q=' + q;
+    if (base) {
+      const u = new URL(base);
+      const path = u.pathname.replace(/\/+$/, '');
+      u.pathname = (path.endsWith('/search') ? path : path + '/search') || '/search';
+      u.hash = '';
+      u.searchParams.set('q', query);
+      return u.href;
+    }
   } else if (typeof provider === 'string' && Object.hasOwn(SEARCH_PROVIDERS, provider)) {
     const prefix = SEARCH_PROVIDERS[/** @type {keyof typeof SEARCH_PROVIDERS} */ (provider)].url;
     if (prefix) return prefix + q;

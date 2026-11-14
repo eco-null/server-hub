@@ -5,7 +5,7 @@ import { h } from '../dom.js';
 import { createField, createNotice, showFormError, whileBusy } from '../ui.js';
 import { confirmDialog } from '../dialog.js';
 import { icon } from '../icons.js';
-import { safeUrl, withScheme } from '../lib/url.js';
+import { withScheme, stripTrailingSlashes, beszelUrlProblem } from '../lib/url.js';
 import { toastSuccess, toastError } from '../toast.js';
 
 /** @typedef {import('../types.js').BeszelInstance} Instance */
@@ -50,7 +50,8 @@ export function mountBeszel(root, env) {
       for (const f of Object.values(map)) f.setError(null);
       const u = withScheme(url.input.value);
       let ok = true;
-      if (!safeUrl(u)) (url.setError('Enter a valid address starting with https:// or http://.'), (ok = false));
+      const problem = beszelUrlProblem(u);
+      if (problem) (url.setError(problem), (ok = false));
       if (!user.input.value.trim()) (user.setError('Enter the username.'), (ok = false));
       if (!saved && !pass.input.value) (pass.setError('Enter the password.'), (ok = false));
       if (!ok) return null;
@@ -97,10 +98,11 @@ export function mountBeszel(root, env) {
       /** @type {Record<string, any>} */
       let body;
       const u = withScheme(url.input.value);
-      const unchanged = saved && !pass.input.value && u === saved.url && user.input.value.trim() === saved.username;
+      const unchanged = saved && !pass.input.value && stripTrailingSlashes(u) === stripTrailingSlashes(saved.url) && user.input.value.trim() === saved.username;
       if (unchanged && saved) body = { instance_id: saved.id };
       else {
-        if (!safeUrl(u)) return url.setError('Enter a valid address starting with https:// or http://.'), url.input.focus();
+        const problem = beszelUrlProblem(u);
+        if (problem) return url.setError(problem), url.input.focus();
         if (!user.input.value.trim()) return user.setError('Enter the username.'), user.input.focus();
         if (!pass.input.value) return pass.setError('Enter the password to test the changed details.'), pass.input.focus();
         body = { url: u, username: user.input.value.trim(), password: pass.input.value };

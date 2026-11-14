@@ -15,7 +15,7 @@ from pydantic import TypeAdapter, ValidationError
 from serverhub.api import schemas
 from serverhub.auth.crypto import Passwords
 from serverhub.config import ConfigError, load_config
-from serverhub.db import Database, backup_to, repo, transaction
+from serverhub.db import Database, backup_to, repo
 from serverhub.errors import ApiError
 
 
@@ -62,20 +62,7 @@ def cmd_reset_password(args: argparse.Namespace) -> int:
         pw_hash = Passwords().hash_sync(_password(args))
         db.call(repo.set_password, user["id"], pw_hash, None)
 
-        def _clear_locks(conn):
-            with transaction(conn):
-                conn.execute(
-                    "DELETE FROM rate_limits WHERE key IN (?, ?, ?, ?, ?)",
-                    (
-                        f"login_acct:{user['username'].lower()}",
-                        f"login_acct:{user['email'].lower()}",
-                        f"2fa_acct:{user['id']}",
-                        f"password_acct:{user['id']}",
-                        "",
-                    ),
-                )
-
-        db.call(_clear_locks)
+        db.call(repo.rate_reset_user, user["id"])
         if args.disable_2fa:
             db.call(repo.disable_totp, user["id"])
     finally:

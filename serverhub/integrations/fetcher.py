@@ -11,7 +11,10 @@ Defences:
   RFC 1918 / ULA / CGNAT ranges are allowed only with
   SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS=true (the default);
 - redirects are never followed; environment proxies are ignored;
-- strict timeouts, a total deadline and a response size cap;
+- URLs are parsed with the HTTP client's own parser before use (IDNA, control
+  characters, port 0 are rejected), and any unexpected error becomes FetchError;
+- strict timeouts, a total deadline and a response size cap; responses are
+  requested with ``Accept-Encoding: identity`` so the cap applies to real bytes;
 - per-user concurrency and request-rate caps plus a global concurrency cap;
 - callers only ever see a short generic error message.
 """
@@ -19,17 +22,21 @@ Defences:
 from __future__ import annotations
 
 import ipaddress
+import logging
 import socket
 import ssl
 import time
+import unicodedata
 from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit
 
 import anyio
 import httpcore
 import httpx
+
+log = logging.getLogger(__name__)
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 Resolver = Callable[[str, int], Awaitable[list[str]]]
@@ -49,6 +56,8 @@ ALWAYS_BLOCKED = [
     _N("fec0::/10"),  # deprecated site-local
     _N("ff00::/8"),  # multicast
     _N("fd00:ec2::254/128"),  # AWS IMDS over IPv6 (inside ULA)
+    _N("::ffff:0:0:0/96"),  # IPv4-translated ::ffff:0:a.b.c.d (RFC 2765 SIIT)
+    _N("5f00::/16"),  # SRv6 SIDs (RFC 9602), never a public web host
 ]
 PRIVATE_RANGES = [
     _N("10.0.0.0/8"),
@@ -155,6 +164,11 @@ class _GuardedBackend(httpcore.AsyncNetworkBackend):
 class _GuardedTransport(httpx.AsyncHTTPTransport):
     def __init__(self, fetcher: SafeFetcher, ssl_context: ssl.SSLContext) -> None:
         super().__init__(verify=ssl_context, trust_env=False, retries=0)
+        if not isinstance(getattr(self, "_pool", None), httpcore.AsyncConnectionPool):
+            raise RuntimeError(
+                "httpx.AsyncHTTPTransport no longer has a '_pool' attribute; the SSRF guard "
+                "cannot be installed with this httpx version (pin the version in requirements.lock)"
+            )
         self._pool = httpcore.AsyncConnectionPool(
             ssl_context=ssl_context,
             max_connections=64,
@@ -180,16 +194,38 @@ class FetchResult:
     body: bytes
 
 
-def validate_url(url: str) -> str:
-    """Return a cleaned http(s) URL or raise FetchError('invalid_url')."""
-    if not isinstance(url, str) or len(url) > 2000 or any(c.isspace() for c in url):
+def _bad_char(c: str) -> bool:
+    return c.isspace() or unicodedata.category(c) in ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp")
+
+
+def check_url_syntax(url: str) -> SplitResult:
+    """Parse ``url`` exactly as the fetcher will, or raise FetchError('invalid_url').
+
+    Used both at input validation time and before every request, so a stored
+    URL can never reach the HTTP client in a shape it cannot handle (IDNA
+    failures, control characters, port 0, ...).
+    """
+    if not isinstance(url, str) or not url or len(url) > 2000 or any(_bad_char(c) for c in url):
         raise FetchError("invalid_url")
     try:
         parts = urlsplit(url)
-        _ = parts.port
-    except ValueError:
+        port = parts.port
+        if parts.scheme.lower() not in ("http", "https") or not parts.hostname or port == 0:
+            raise FetchError("invalid_url")
+        parsed = httpx.URL(url)  # the HTTP client's own parser (IDNA etc.)
+        if not parsed.host:
+            raise FetchError("invalid_url")
+    except FetchError:
+        raise
+    except Exception:  # ValueError, httpx.InvalidURL, idna errors, ...
         raise FetchError("invalid_url") from None
-    if parts.scheme not in ("http", "https") or not parts.hostname:
+    return parts
+
+
+def validate_url(url: str) -> str:
+    """Return an http(s) URL safe to hand to the client, or raise FetchError('invalid_url')."""
+    parts = check_url_syntax(url)
+    if parts.scheme not in ("http", "https"):
         raise FetchError("invalid_url")
     if parts.username is not None or parts.password is not None:
         raise FetchError("invalid_url")
@@ -227,7 +263,9 @@ class SafeFetcher:
             follow_redirects=False,
             trust_env=False,
             timeout=httpx.Timeout(read_timeout, connect=connect_timeout, pool=connect_timeout),
-            headers={"User-Agent": "ServerHub/2", "Accept": "*/*"},
+            # identity: the size cap applies to what we actually read, and no
+            # decompression bomb can expand behind it.
+            headers={"User-Agent": "ServerHub/2", "Accept": "*/*", "Accept-Encoding": "identity"},
         )
 
     async def aclose(self) -> None:
@@ -291,7 +329,12 @@ class SafeFetcher:
         read_body: bool = True,
         max_body: int | None = None,
     ) -> FetchResult:
-        url = validate_url(url)
+        try:
+            url = validate_url(url)
+        except FetchError:
+            raise
+        except Exception:
+            raise FetchError("invalid_url") from None
         sem, stamps = self._user_slot(user_id)
         self._take_rate(stamps)
         limit = self._max_body if max_body is None else max_body
@@ -328,6 +371,11 @@ class SafeFetcher:
             raise FetchError("protocol") from None
         except _Blocked as exc:
             raise FetchError(exc.kind) from None
+        except Exception:
+            # Anything unexpected (parser edge cases, library bugs) becomes our
+            # own error type so callers never see a raw exception.
+            log.warning("outbound request failed unexpectedly", exc_info=True)
+            raise FetchError("protocol") from None
 
 
 def _classify_connect(exc: BaseException) -> str:

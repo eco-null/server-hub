@@ -26,7 +26,7 @@ test('buildSearchUrl: every provider, encoding and fallbacks', () => {
   assert.equal(buildSearchUrl({ provider: 'duckduckgo' }, 'x'), 'https://duckduckgo.com/?q=x');
   assert.equal(buildSearchUrl({ provider: 'bing' }, 'x'), 'https://www.bing.com/search?q=x');
   assert.equal(buildSearchUrl({ provider: 'startpage' }, 'x'), 'https://www.startpage.com/sp/search?query=x');
-  assert.equal(buildSearchUrl({ provider: 'searxng', searxngUrl: 'https://searx.example.com/' }, 'x y'), 'https://searx.example.com/search?q=x%20y');
+  assert.equal(buildSearchUrl({ provider: 'searxng', searxngUrl: 'https://searx.example.com/' }, 'x y'), 'https://searx.example.com/search?q=x+y');
   // invalid SearXNG url, unknown provider, missing settings -> Google
   assert.equal(buildSearchUrl({ provider: 'searxng', searxngUrl: 'javascript:alert(1)' }, 'x'), 'https://www.google.com/search?q=x');
   assert.equal(buildSearchUrl({ provider: 'searxng', searxngUrl: '' }, 'x'), 'https://www.google.com/search?q=x');
@@ -96,4 +96,38 @@ test('svgDataUrl adds the namespace and rejects non-SVG', () => {
   assert.match(decoded, /xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
   assert.equal(svgDataUrl('<html><svg></svg></html>'), null);
   assert.equal(svgDataUrl(5), null);
+});
+
+import { stripTrailingSlashes, beszelUrlProblem } from '../static/js/lib/url.js';
+import { createApi } from '../static/js/api.js';
+
+test('searxng url is built with the URL API', () => {
+  const q = (u, s = 'a b') => buildSearchUrl({ provider: 'searxng', searxngUrl: u }, s);
+  assert.equal(q('https://s.example.com'), 'https://s.example.com/search?q=a+b');
+  assert.equal(q('https://s.example.com/'), 'https://s.example.com/search?q=a+b');
+  assert.equal(q('https://s.example.com/searx/'), 'https://s.example.com/searx/search?q=a+b');
+  assert.equal(q('https://s.example.com/searx?x=1'), 'https://s.example.com/searx/search?x=1&q=a+b');
+  assert.equal(q('https://s.example.com/search'), 'https://s.example.com/search?q=a+b');
+  assert.equal(q('https://s.example.com/?q=old#frag', 'new'), 'https://s.example.com/search?q=new');
+  assert.equal(q('https://s.example.com', 'x&y=1'), 'https://s.example.com/search?q=x%26y%3D1');
+});
+
+test('beszel url helpers', () => {
+  assert.equal(stripTrailingSlashes('https://b.example.com///'), 'https://b.example.com');
+  assert.equal(beszelUrlProblem('https://b.example.com/'), null);
+  assert.equal(beszelUrlProblem('http://b.example.com:8090/path'), null);
+  assert.match(beszelUrlProblem('https://b.example.com?x=1'), /query/);
+  assert.match(beszelUrlProblem('https://b.example.com/#top'), /fragment/);
+  assert.match(beszelUrlProblem('https://u:p@b.example.com'), /username/);
+  assert.match(beszelUrlProblem('javascript:alert(1)'), /valid address/);
+});
+
+test('api sends the client header and survives plain-text errors', async () => {
+  const calls = [];
+  const mk = (res) => createApi({ fetchImpl: async (p, i) => (calls.push(i), res) });
+  const text = (status, body) => ({ status, ok: false, headers: { get: () => null }, text: async () => body });
+  await assert.rejects(mk(text(400, 'Invalid host header')).get('/api/x'), (e) => e.status === 400 && /rejected the request/.test(e.message));
+  await assert.rejects(mk(text(502, '<html>x</html>')).post('/api/x', {}), (e) => e.status === 502 && !/JSON|Unexpected/.test(e.message));
+  await assert.rejects(mk(text(403, '')).del('/api/x'), (e) => e.status === 403);
+  assert.equal(calls.every((c) => c.headers['X-ServerHub-Client'] === 'web'), true);
 });

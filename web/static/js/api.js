@@ -78,7 +78,7 @@ export function createApi({ fetchImpl, onUnauthenticated, timeoutMs = 15000 }) {
    */
   async function request(method, path, opts = {}) {
     /** @type {Record<string, string>} */
-    const headers = { Accept: 'application/json' };
+    const headers = { Accept: 'application/json', 'X-ServerHub-Client': 'web' };
     if (method !== 'GET') headers['Content-Type'] = 'application/json';
 
     const ctrl = new AbortController();
@@ -115,11 +115,18 @@ export function createApi({ fetchImpl, onUnauthenticated, timeoutMs = 15000 }) {
 
     /** @type {any} */
     let data = null;
+    let notJson = false;
     try {
       const text = await res.text();
-      data = text ? JSON.parse(text) : null;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          notJson = true;
+        }
+      }
     } catch {
-      data = null;
+      notJson = true;
     }
     if (res.ok) return data;
 
@@ -127,7 +134,8 @@ export function createApi({ fetchImpl, onUnauthenticated, timeoutMs = 15000 }) {
     const retryAfter = Number.isFinite(retryHeader) && retryHeader > 0 ? Math.ceil(retryHeader) : null;
     const serverError = data && typeof data === 'object' && data.error && typeof data.error === 'object' ? data.error : null;
     const code = serverError && typeof serverError.code === 'string' ? serverError.code : 'http_' + res.status;
-    const message = serverError && typeof serverError.message === 'string' && serverError.message ? serverError.message : fallbackMessage(res.status, retryAfter);
+    let message = serverError && typeof serverError.message === 'string' && serverError.message ? serverError.message : fallbackMessage(res.status, retryAfter);
+    if (!serverError && notJson && res.status === 400) message = 'The server rejected the request. Open Server Hub with the address it is configured for and try again.';
     const err = new ApiError({ status: res.status, code, message, fields: normalizeFields(serverError && serverError.fields), retryAfter });
 
     if (res.status === 401 && !opts.silent401 && (code === 'unauthenticated' || !serverError) && onUnauthenticated) {

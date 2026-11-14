@@ -11,7 +11,8 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.lock /tmp/requirements.lock
-RUN pip install -r /tmp/requirements.lock
+# Every file is verified against the sha256 hashes in the lock file.
+RUN pip install --require-hashes --no-deps -r /tmp/requirements.lock
 
 COPY serverhub /app/serverhub
 COPY web /app/web

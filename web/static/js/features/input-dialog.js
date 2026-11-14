@@ -16,7 +16,8 @@ import { createField, createNotice, showFormError, whileBusy } from '../ui.js';
  *   submitLabel?: string, danger?: boolean,
  *   fieldNames?: string[],
  *   validate?: (value: string) => string | null,
- *   run: (value: string) => Promise<void>,
+ *   extra?: { label: string, type?: string, autocomplete?: string, inputMode?: string, hint?: string, maxLength?: number, fieldNames: string[] },
+ *   run: (value: string, extra: string) => Promise<void>,
  * }} o
  * @returns {Promise<boolean>} true when `run` succeeded
  */
@@ -36,8 +37,11 @@ export function openInputDialog(o) {
         autofocus: true,
         spellcheck: false,
       });
+      const second = o.extra
+        ? createField({ label: o.extra.label, type: o.extra.type || 'text', autocomplete: o.extra.autocomplete || 'off', inputMode: o.extra.inputMode, hint: o.extra.hint, maxLength: o.extra.maxLength, required: true, spellcheck: false })
+        : null;
       const notice = createNotice();
-      const map = Object.fromEntries((o.fieldNames || ['value']).map((n) => [n, field]));
+      const map = Object.fromEntries([...(o.fieldNames || ['value']).map((n) => [n, field]), ...(o.extra ? o.extra.fieldNames.map((n) => [n, /** @type {typeof field} */ (second)]) : [])]);
       const submit = h('button', { type: 'submit', class: 'btn ' + (o.danger ? 'btn-danger-solid' : 'btn-primary') }, o.submitLabel || 'Continue');
       const cancel = h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => ctrl.close(false) }, 'Cancel');
       return h(
@@ -49,7 +53,13 @@ export function openInputDialog(o) {
             e.preventDefault();
             notice.clear();
             field.setError(null);
+            if (second) second.setError(null);
             const value = field.input.value.trim();
+            if (second && !second.input.value.trim()) {
+              second.setError('This field is required.');
+              second.input.focus();
+              return;
+            }
             const problem = o.validate ? o.validate(value) : value ? null : 'This field is required.';
             if (problem) {
               field.setError(problem);
@@ -58,7 +68,7 @@ export function openInputDialog(o) {
             }
             await whileBusy([submit, cancel], async () => {
               try {
-                await o.run(value);
+                await o.run(value, second ? second.input.value.trim() : '');
                 ctrl.close(true);
               } catch (err) {
                 showFormError(err, map, notice);
@@ -69,6 +79,7 @@ export function openInputDialog(o) {
         o.message ? h('p', { class: 'dlg-message' }, o.message) : null,
         notice.el,
         field.root,
+        second ? second.root : null,
         h('div', { class: 'dlg-footer' }, cancel, submit),
       );
     },

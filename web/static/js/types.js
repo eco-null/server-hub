@@ -17,7 +17,7 @@
  * @typedef {{ id: string, name: string, url: string, color: string, created_at?: string }} Bookmark
  * @typedef {{ user: User, settings: Settings, services: Service[], bookmarks: Bookmark[] }} Bootstrap
  *
- * @typedef {{ state: 'up' | 'down' | 'unknown', http_status: number | null, latency_ms: number | null, checked_at: string }} ServiceStatus
+ * @typedef {{ state: 'up' | 'down' | 'unknown', http_status: number | null, latency_ms: number | null, checked_at: string | null }} ServiceStatus
  * @typedef {{ id: string, name: string, url: string, username: string, has_password: boolean }} BeszelInstance
  * @typedef {{ name: string, status: string, host: string, cpu: number | null, memory: number | null, disk: number | null, uptime_seconds: number | null }} BeszelSystem
  */

@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints
 
+from serverhub.integrations.fetcher import FetchError, check_url_syntax
+
 KNOWN_ICONS = frozenset(
     {
         "chart", "pulse", "database", "shield", "shield-check", "key", "lock",
@@ -38,17 +40,31 @@ class Strict(BaseModel):
 
 
 def _http_url(v: str) -> str:
+    """http(s) URL whose host parses exactly as the outbound fetcher parses it."""
     v = v.strip()
     if any(c.isspace() for c in v):
         raise ValueError("must not contain spaces")
     try:
-        parts = urlsplit(v)
-        _ = parts.port
-    except ValueError:
+        check_url_syntax(v)
+    except FetchError:
         raise ValueError("must be a valid http(s) URL") from None
-    if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
-        raise ValueError("must be a valid http(s) URL")
     return v
+
+
+def _beszel_url(v: str) -> str:
+    """Beszel base URL: scheme, host, optional port and path prefix only."""
+    v = _http_url(v)
+    parts = urlsplit(v)
+    if "?" in v or "#" in v or "@" in parts.netloc:
+        raise ValueError("must not contain a query, fragment or credentials")
+    if not _BESZEL_PATH.match(parts.path) or any(
+        seg in (".", "..") for seg in parts.path.split("/")
+    ):
+        raise ValueError("path may only contain letters, digits and . _ ~ - /")
+    return v
+
+
+_BESZEL_PATH = re.compile(r"^[A-Za-z0-9._~/-]*$")
 
 
 def _optional_http_url(v: str) -> str:
@@ -81,6 +97,7 @@ def _category(v: str | None) -> str | None:
 
 
 HttpUrl = Annotated[str, StringConstraints(max_length=2000), AfterValidator(_http_url)]
+BeszelUrl = Annotated[str, StringConstraints(max_length=2000), AfterValidator(_beszel_url)]
 OptHttpUrl = Annotated[str, StringConstraints(max_length=2000), AfterValidator(_optional_http_url)]
 Color = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
@@ -192,14 +209,14 @@ class BookmarkPatch(Strict):
 
 class BeszelCreate(Strict):
     name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] = ""
-    url: HttpUrl
+    url: BeszelUrl
     username: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=254)]
     password: Annotated[str, StringConstraints(min_length=1, max_length=1024)]
 
 
 class BeszelPatch(Strict):
     name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
-    url: HttpUrl | None = None
+    url: BeszelUrl | None = None
     username: (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=254)]
         | None
@@ -208,7 +225,7 @@ class BeszelPatch(Strict):
 
 
 class BeszelTestAdhoc(Strict):
-    url: HttpUrl
+    url: BeszelUrl
     username: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=254)]
     password: Annotated[str, StringConstraints(min_length=1, max_length=1024)]
 
@@ -226,12 +243,25 @@ class SignupIn(Strict):
     password: NewPassword
 
 
+class SetupIn(SignupIn):
+    setup_token: Annotated[str, StringConstraints(max_length=512)]
+
+
 class LoginIn(Strict):
     identifier: Annotated[str, StringConstraints(strip_whitespace=True, max_length=254)]
     password: AnyPassword
 
 
 class CodeIn(Strict):
+    code: Code
+
+
+class TwofaSetupIn(Strict):
+    current_password: AnyPassword
+
+
+class TwofaDisableIn(Strict):
+    current_password: AnyPassword
     code: Code
 
 

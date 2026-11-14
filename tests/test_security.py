@@ -71,7 +71,7 @@ async def test_json_content_type_enforced(client):
     )
     assert r.status_code == 201
     # Body-less POSTs need no content type.
-    assert (await client.post("/api/me/2fa/setup")).status_code == 200
+    assert (await client.post("/api/auth/logout")).status_code == 204
 
 
 async def test_body_size_limit(client):

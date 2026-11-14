@@ -9,14 +9,18 @@ Only plain dicts and short strings are cached, never exception objects.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 import anyio
 
-from serverhub.integrations.fetcher import FetchError, SafeFetcher
+from serverhub.integrations.fetcher import FetchError, SafeFetcher, check_url_syntax
+
+log = logging.getLogger(__name__)
 
 TOKEN_TTL = 15 * 60.0
 RESULT_TTL = 15.0
@@ -38,6 +42,25 @@ class Target:
     url: str
     username: str
     password: str
+
+
+GENERIC_ERROR = "Could not reach Beszel or sign in; check the URL and credentials"
+
+
+def base_url(url: str) -> str:
+    """scheme://host[:port][/prefix] of a stored Beszel URL.
+
+    Query, fragment and credentials are dropped (rows saved before they were
+    rejected at input), and API paths are always joined onto this base.
+    """
+    try:
+        check_url_syntax(url)
+        parts = urlsplit(url)
+        if "@" in parts.netloc:
+            raise BeszelError(FetchError.MESSAGES["invalid_url"])
+    except FetchError as exc:
+        raise BeszelError(exc.message) from None
+    return f"{parts.scheme}://{parts.netloc}{parts.path}".rstrip("/")
 
 
 def _pct(v: Any) -> float | None:
@@ -129,7 +152,7 @@ class BeszelClient:
 
     async def login(self, target: Target, user_id: str) -> tuple[str, str | None]:
         """Authenticate; returns (token, display name). Tries users, then _superusers."""
-        base = target.url.rstrip("/")
+        base = base_url(target.url)
         payload = {"identity": target.username, "password": target.password}
         for collection in ("users", "_superusers"):
             status, data = await self._call(
@@ -173,8 +196,8 @@ class BeszelClient:
             if isinstance(cached, str):
                 raise BeszelError(cached)
             return cached
-        base = target.url.rstrip("/")
         try:
+            base = base_url(target.url)
             token = self._tokens.get(key, TOKEN_TTL)
             items = None
             if token:
@@ -194,7 +217,7 @@ class BeszelClient:
 
     async def test(self, target: Target, user_id: str) -> tuple[str | None, int]:
         """Check credentials and API access without caching. Returns (name, system count)."""
-        base = target.url.rstrip("/")
+        base = base_url(target.url)
         token, name = await self.login(target, user_id)
         items = await self._systems_with_token(base, token, user_id)
         if items is None:
@@ -222,6 +245,9 @@ class BeszelClient:
                 results[i]["ok"] = True
             except BeszelError as exc:
                 results[i]["error"] = exc.message
+            except Exception:
+                log.warning("Beszel query failed unexpectedly", exc_info=True)
+                results[i]["error"] = GENERIC_ERROR
 
         async with anyio.create_task_group() as tg:
             for i, (inst, target) in enumerate(instances):
