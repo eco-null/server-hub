@@ -206,10 +206,121 @@ jobs:
             exit 1
           fi
 
+      # ---- Phase 2: Docker auto-discovery through the read-only socket proxy ----
+
+      - name: "Discovery: validate the profile's compose configuration"
+        run: |
+          set -euo pipefail
+          cfg="$(COMPOSE_PROFILES=docker docker compose config --format json)"
+          # The socket is mounted read-only into the proxy, and into nothing else.
+          jq -e '.services["docker-proxy"].volumes[]
+                 | select(.target == "/var/run/docker.sock") | .read_only == true' <<<"$cfg"
+          jq -e '[.services["server-hub"].volumes[]? | select(.target == "/var/run/docker.sock")]
+                 | length == 0' <<<"$cfg"
+          # Only container listing is allowed; writes are off.
+          jq -e '.services["docker-proxy"].environment
+                 | .CONTAINERS == "1" and .POST == "0" and .EXEC == "0" and .IMAGES == "0"' <<<"$cfg"
+          jq -e '.networks["docker-proxy"].internal == true' <<<"$cfg"
+          jq -e '.services["docker-proxy"].ports == null' <<<"$cfg"
+
+      - name: "Discovery: enable the profile and restart"
+        run: |
+          set -euo pipefail
+          {
+            echo "COMPOSE_PROFILES=docker"
+            echo "SERVERHUB_DOCKER_HOST=tcp://docker-proxy:2375"
+            echo "SERVERHUB_DOCKER_PUBLIC_HOST=localhost"
+          } >> .env
+          docker compose up -d
+          for _ in $(seq 1 45); do
+            if curl -fsS http://localhost:8642/healthz; then echo; exit 0; fi
+            sleep 2
+          done
+          echo "Timed out waiting for /healthz after enabling discovery" >&2
+          exit 1
+
+      - name: "Discovery: start test containers"
+        run: |
+          set -euo pipefail
+          docker run -d --name sh-ci-labelled \
+            --label serverhub.enable=true \
+            --label "serverhub.name=CI Labelled" \
+            --label serverhub.url=http://example.com \
+            busybox:1.37 sleep 600
+          docker run -d --name sh-ci-web -p 18080:80 busybox:1.37 httpd -f -p 80
+
+      - name: "Discovery: API assertions"
+        run: |
+          set -euo pipefail
+          base="http://localhost:8642"
+          jar="$RUNNER_TEMP/cookies-discovery.txt"
+          code="$(curl -sS -o /dev/null -w '%{http_code}' -c "$jar" -b "$jar" \
+            -H 'Content-Type: application/json' -H 'X-ServerHub-Client: ci' \
+            -d '{"identifier":"admin","password":"ci-Test-Passw0rd-2026"}' "$base/api/auth/login")"
+          test "$code" = 200
+
+          boot="$(curl -fsS -b "$jar" "$base/api/bootstrap")"
+          jq -e '.docker.enabled == true' <<<"$boot"
+
+          # The container list is cached for a few seconds; poll until it shows up.
+          ok=""
+          for _ in $(seq 1 20); do
+            docker_json="$(curl -fsS -b "$jar" "$base/api/docker")"
+            if jq -e '.enabled == true and .available == true and any(.services[];
+                  .id == "docker:sh-ci-labelled" and .name == "CI Labelled"
+                  and .url == "http://example.com" and .container.state == "running")' \
+                <<<"$docker_json" >/dev/null; then
+              ok=1; break
+            fi
+            sleep 2
+          done
+          echo "$docker_json" | jq .
+          test -n "$ok"
+
+          sugg="$(curl -fsS -b "$jar" "$base/api/admin/docker/suggestions")"
+          echo "$sugg" | jq .
+          jq -e '.available == true' <<<"$sugg"
+          jq -e 'any(.suggestions[]; .container.name == "sh-ci-web"
+                 and .suggested.url == "http://localhost:18080")' <<<"$sugg"
+          # Neither Server Hub itself nor the labelled container is suggested.
+          jq -e 'all(.suggestions[]; .container.name != "server-hub"
+                 and .container.name != "sh-ci-labelled")' <<<"$sugg"
+
+      - name: "Discovery: the proxy refuses writes and other API sections"
+        run: |
+          set -euo pipefail
+          net="$(docker network ls -q --filter label=com.docker.compose.network=docker-proxy)"
+          test -n "$net"
+          probe() {
+            docker run --rm --network "$net" curlimages/curl:8.11.1 \
+              -sS -o /dev/null -w '%{http_code}' "$@"
+          }
+          code="$(probe http://docker-proxy:2375/containers/json)"
+          echo "GET /containers/json -> $code"; test "$code" = 200
+          code="$(probe -X POST -H 'Content-Type: application/json' -d '{"Image":"busybox:1.37"}' \
+            http://docker-proxy:2375/containers/create)"
+          echo "POST /containers/create -> $code"; test "$code" = 403
+          code="$(probe -X POST http://docker-proxy:2375/containers/sh-ci-web/stop)"
+          echo "POST /containers/{id}/stop -> $code"; test "$code" = 403
+          code="$(probe http://docker-proxy:2375/images/json)"
+          echo "GET /images/json -> $code"; test "$code" = 403
+          # The internal network has no route out.
+          if docker run --rm --network "$net" curlimages/curl:8.11.1 -sS -m 5 -o /dev/null \
+              http://example.com; then
+            echo "internal network reached the internet" >&2
+            exit 1
+          fi
+          test "$(docker ps -q -f name=^sh-ci-web$ | wc -l)" -eq 1
+
       - name: Print compose logs on failure
         if: failure()
-        run: docker compose logs --no-color
+        run: |
+          COMPOSE_PROFILES=docker docker compose logs --no-color
+          docker logs sh-ci-labelled || true
+          docker logs sh-ci-web || true
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: |
+          docker rm -f sh-ci-labelled sh-ci-web || true
+          COMPOSE_PROFILES=docker docker compose down -v

@@ -22,6 +22,7 @@ from serverhub.api import admin as admin_api
 from serverhub.api import auth as auth_api
 from serverhub.api import beszel as beszel_api
 from serverhub.api import data as data_api
+from serverhub.api import docker as docker_api
 from serverhub.auth.crypto import Keys, Passwords
 from serverhub.auth.ratelimit import LONGEST_WINDOW, RateLimiter
 from serverhub.config import Config, load_config
@@ -30,6 +31,7 @@ from serverhub.errors import ApiError
 from serverhub.http import validation_from
 from serverhub.hub import Hub
 from serverhub.integrations.beszel import BeszelClient
+from serverhub.integrations.docker import DockerClient
 from serverhub.integrations.fetcher import SafeFetcher
 from serverhub.integrations.status import StatusChecker
 from serverhub.middleware import SecurityMiddleware
@@ -130,8 +132,10 @@ def create_app(
     *,
     fetcher_options: dict[str, Any] | None = None,
     password_options: dict[str, int] | None = None,
+    docker_options: dict[str, Any] | None = None,
 ) -> Starlette:
-    """Build the ASGI app. Keyword options exist for tests (cheap hashing, stub DNS)."""
+    """Build the ASGI app. Keyword options exist for tests (cheap hashing, stub DNS,
+    short Docker timeouts)."""
     cfg = config or load_config()
 
     @contextlib.asynccontextmanager
@@ -150,6 +154,9 @@ def create_app(
             fetcher=fetcher,
             status=StatusChecker(fetcher),
             beszel=BeszelClient(fetcher),
+            docker=(
+                DockerClient(cfg.docker_host, **(docker_options or {})) if cfg.docker_host else None
+            ),
         )
         app.state.hub = hub
         if await db.run(repo.count_users) == 0:
@@ -172,6 +179,8 @@ def create_app(
                 tg.cancel_scope.cancel()
         finally:
             await fetcher.aclose()
+            if hub.docker is not None:
+                await hub.docker.aclose()
             db.close()
 
     routes = [
@@ -179,6 +188,7 @@ def create_app(
         *auth_api.routes,
         *data_api.routes,
         *beszel_api.routes,
+        *docker_api.routes,
         *admin_api.routes,
         Route(
             "/api/{rest:path}",

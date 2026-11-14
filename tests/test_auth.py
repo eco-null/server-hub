@@ -191,7 +191,7 @@ async def test_registration_closed_by_default_and_switchable(client):
     assert r.status_code == 403 and r.json()["error"]["code"] == "registration_closed"
 
     r = await client.put("/api/admin/config", json={"registration_open": True})
-    assert r.json() == {"registration_open": True}
+    assert r.json() == {"registration_open": True, "docker_visible_to_users": False}
     assert (await client.get("/api/auth/state")).json()["registration_open"] is True
 
     await client.post("/api/auth/logout")

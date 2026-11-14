@@ -59,12 +59,14 @@ async def running(
     fetcher_options: dict | None = None,
     client_ip: str = "127.0.0.1",
     base_url: str = "http://testserver",
+    docker_options: dict | None = None,
     **cfg,
 ) -> AsyncIterator[httpx.AsyncClient]:
     app = create_app(
         make_config(tmp_path, **cfg),
         fetcher_options=fetcher_options,
         password_options=FAST_HASH,
+        docker_options=docker_options,
     )
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app, client=(client_ip, 50000))

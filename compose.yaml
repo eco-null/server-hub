@@ -14,6 +14,11 @@
 # next to it. Compose merges that file automatically, and Git ignores it, so
 # `git pull` never conflicts. A complete TLS example is in docs/DEPLOYMENT.md
 # ("TLS"); without an override file this file works as it is.
+#
+# Docker auto-discovery (optional, off by default): set COMPOSE_PROFILES=docker
+# and SERVERHUB_DOCKER_HOST=tcp://docker-proxy:2375 in .env (see .env.example).
+# That starts the read-only socket proxy below; Server Hub itself never mounts
+# the Docker socket.
 services:
   server-hub:
     build: .
@@ -46,6 +51,108 @@ services:
       - no-new-privileges:true
     pids_limit: 256
     stop_grace_period: 20s
+    networks:
+      - default
+      - docker-proxy
+    labels:
+      # Never offered as a Docker discovery suggestion for itself.
+      serverhub.enable: "false"
+    # No depends_on on docker-proxy: it only exists with the "docker" profile,
+    # and Server Hub copes with it being absent or late (the dashboard shows
+    # discovery as unavailable and retries on the next request).
+
+  # Read-only Docker API for auto-discovery (profile "docker").
+  # Image: LinuxServer.io socket-proxy, a maintained HAProxy-based fork of
+  # Tecnativa's docker-socket-proxy (same variables), with regular releases and
+  # documented support for a read-only root filesystem (tmpfs /run) and a
+  # read-only socket mount. Pinned to a release tag; bump it deliberately.
+  # Only GET/HEAD on /containers/* is allowed (CONTAINERS=1, POST=0); every
+  # other API section is explicitly off. The port is not published: it is
+  # reachable only on the internal "docker-proxy" network, shared with
+  # server-hub alone. Note that CONTAINERS=1 also allows `docker inspect`
+  # (which includes container environment variables) to anything on that
+  # network, which is why nothing else may join it.
+  docker-proxy:
+    image: lscr.io/linuxserver/socket-proxy:3.4.7-r0-ls105
+    profiles: ["docker"]
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      POST: "0"
+      ALLOW_ARCHIVE: "0"
+      ALLOW_CHANGES: "0"
+      ALLOW_EXPORT: "0"
+      ALLOW_LOGS: "0"
+      ALLOW_TOP: "0"
+      ALLOW_START: "0"
+      ALLOW_STOP: "0"
+      ALLOW_RESTARTS: "0"
+      ALLOW_PAUSE: "0"
+      ALLOW_UNPAUSE: "0"
+      AUTH: "0"
+      BUILD: "0"
+      COMMIT: "0"
+      CONFIGS: "0"
+      DISTRIBUTION: "0"
+      EVENTS: "0"
+      EXEC: "0"
+      IMAGES: "0"
+      INFO: "0"
+      NETWORKS: "0"
+      NODES: "0"
+      PING: "0"
+      PLUGINS: "0"
+      SECRETS: "0"
+      SERVICES: "0"
+      SESSION: "0"
+      SWARM: "0"
+      SYSTEM: "0"
+      TASKS: "0"
+      VERSION: "0"
+      VOLUMES: "0"
+      LIBPOD_CONTAINERS: "0"
+      LIBPOD_EVENTS: "0"
+      LIBPOD_EXEC: "0"
+      LIBPOD_GENERATE: "0"
+      LIBPOD_IMAGES: "0"
+      LIBPOD_INFO: "0"
+      LIBPOD_MANIFESTS: "0"
+      LIBPOD_NETWORKS: "0"
+      LIBPOD_PING: "0"
+      LIBPOD_PLAY: "0"
+      LIBPOD_PODS: "0"
+      LIBPOD_SECRETS: "0"
+      LIBPOD_SYSTEM: "0"
+      LIBPOD_VERSION: "0"
+      LIBPOD_VOLUMES: "0"
+      LOG_LEVEL: warning
+      # Bind IPv4 only: the internal network has no IPv6.
+      DISABLE_IPV6: "1"
+    volumes:
+      # The socket is mounted into the proxy only, and read-only.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - docker-proxy
+    labels:
+      serverhub.enable: "false"
+    read_only: true
+    tmpfs:
+      # The entrypoint writes its HAProxy configuration here at startup.
+      - /run
+    cap_drop:
+      - ALL
+    cap_add:
+      # HAProxy's generated config has "chroot /", and chroot(2) needs this
+      # capability; nothing else is granted.
+      - SYS_CHROOT
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+
+networks:
+  # internal: no route to the outside world. Only server-hub and the proxy join it.
+  docker-proxy:
+    internal: true
 
 volumes:
   server-hub-data:

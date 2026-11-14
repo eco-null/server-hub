@@ -15,6 +15,9 @@ import { createServicesView } from './features/services.js';
 import { createBookmarksWidget } from './features/bookmarks.js';
 import { createStatsWidget } from './features/stats.js';
 import { createStatusPoller } from './features/status.js';
+import { createDockerPoller } from './features/docker.js';
+import { openDiscoveredDetails } from './features/docker-dialogs.js';
+import { emptyDockerView, nextDockerView, mergeServices, unavailableNotice } from './lib/docker.js';
 import { openSearchPalette } from './features/search.js';
 import { openAddService, openEditService, removeService } from './features/service-dialogs.js';
 
@@ -32,14 +35,22 @@ const state = createState({
   bookmarks: [],
   /** @type {Record<string, import('./types.js').ServiceStatus>} */
   statuses: {},
+  /** Docker discovery is on for this user (from the bootstrap). */
+  dockerOn: false,
+  docker: emptyDockerView(),
   loaded: false,
 });
+
+/** Own services plus the discovered ones (the user's own card wins on an equal address). */
+const allServices = () => mergeServices(state.get().services, state.get().docker.services);
+const isAdmin = () => state.get().user?.role === 'admin';
 
 const $ = (/** @type {string} */ id) => byId(id);
 const skeletons = $('skeletons');
 const emptyState = $('empty-state');
 const loadError = $('load-error');
 const offline = $('offline-banner');
+const dockerNotice = $('docker-notice');
 const groupsEl = $('groups');
 
 // ---------- feature modules ----------
@@ -69,6 +80,7 @@ const services = createServicesView({
         $('add-service').focus();
       },
     }),
+  onDetails: (s) => openDiscoveredDetails(s, { stale: state.get().docker.stale }),
   onDelete: async (s) => {
     if (await removeService(api, s)) {
       state.set({ services: state.get().services.filter((x) => x.id !== s.id) });
@@ -96,10 +108,21 @@ const stats = createStatsWidget({
 
 const status = createStatusPoller({
   api,
-  isEnabled: () => store.get().features.statusChecks && state.get().services.some((s) => s.check),
+  isEnabled: () => store.get().features.statusChecks && allServices().some((s) => s.check),
   onStatuses: (statuses) => {
     state.set({ statuses });
     services.applyStatuses(statuses);
+  },
+});
+
+const docker = createDockerPoller({
+  api,
+  isEnabled: () => state.get().dockerOn,
+  onResponse: (res) => {
+    const next = nextDockerView(state.get().docker, res);
+    if (next !== state.get().docker) state.set({ docker: next });
+    // The server says the feature is off for this user: stop asking until the next bootstrap.
+    if (!next.enabled && state.get().dockerOn && res) state.set({ dockerOn: false });
   },
 });
 
@@ -110,13 +133,25 @@ let lastStatsFeature = store.get().features.stats;
 function renderServices() {
   const s = state.get();
   const showStatus = store.get().features.statusChecks;
+  const shown = allServices();
+  // A repaint (for example after a Docker poll) must not drop the keyboard focus.
+  const active = document.activeElement;
+  const focusedId = active instanceof HTMLElement && groupsEl.contains(active) ? active.closest('[data-id]')?.getAttribute('data-id') : null;
   // Visible before rendering so the grid can measure its width and pick balanced columns at once.
-  groupsEl.hidden = s.services.length === 0;
-  services.render(s.services, { showStatus });
+  groupsEl.hidden = shown.length === 0;
+  services.render(shown, { showStatus, stale: s.docker.stale });
   services.applyStatuses(s.statuses);
+  if (focusedId) services.focusCard(focusedId);
   skeletons.hidden = true;
-  emptyState.hidden = !(s.loaded && s.services.length === 0);
+  emptyState.hidden = !(s.loaded && shown.length === 0);
   void status.refresh();
+}
+
+/** One quiet line for admins when Docker cannot be read; non-admins never see it. */
+function renderDockerNotice() {
+  const text = isAdmin() ? unavailableNotice(state.get().docker) : null;
+  dockerNotice.hidden = !text;
+  byId('docker-notice-text').textContent = text || '';
 }
 
 /** @param {import('./types.js').Settings} s */
@@ -129,7 +164,9 @@ function renderFeatures(s) {
 
 state.subscribe((s, prev) => {
   if (s.user !== prev.user) header.renderUser(s.user);
-  if (s.services !== prev.services) renderServices();
+  if (s.services !== prev.services || s.docker !== prev.docker) renderServices();
+  if (s.docker !== prev.docker || s.user !== prev.user) renderDockerNotice();
+  if (s.dockerOn !== prev.dockerOn && s.dockerOn) void docker.refresh();
   if (s.bookmarks !== prev.bookmarks) bookmarks.render();
   if (s.user !== prev.user || s.services !== prev.services || s.bookmarks !== prev.bookmarks) {
     if (s.user) ctx.cache({ user: s.user, settings: store.get(), services: s.services, bookmarks: s.bookmarks });
@@ -154,7 +191,8 @@ store.subscribe((s) => {
 // ---------- data ----------
 /** @param {Bootstrap} data */
 function apply(data) {
-  state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, loaded: true });
+  const dockerOn = !!(data.docker && data.docker.enabled === true);
+  state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, loaded: true, dockerOn, ...(dockerOn ? {} : { docker: emptyDockerView() }) });
 }
 
 async function load() {
@@ -182,6 +220,7 @@ if (ctx.cached) apply(ctx.cached);
 await load();
 stats.start();
 status.start();
+docker.start();
 
 // ---------- interactions ----------
 let lastLoad = Date.now();
@@ -193,7 +232,7 @@ byId('offline-retry').addEventListener('click', () => void load());
 
 function openSearch() {
   if (!store.get().features.search) return;
-  openSearchPalette({ getServices: () => state.get().services, getSearch: () => store.get().search });
+  openSearchPalette({ getServices: allServices, getSearch: () => store.get().search });
 }
 byId('search-btn').addEventListener('click', openSearch);
 byId('add-service').addEventListener('click', () =>

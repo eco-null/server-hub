@@ -283,8 +283,11 @@ class AdminUserPatch(Strict):
     disable_twofa: Literal[True] | None = None
 
 
-class RegistrationConfig(Strict):
-    registration_open: bool
+class AdminConfigPatch(Strict):
+    """Partial update: clients that only know ``registration_open`` keep working."""
+
+    registration_open: bool | None = None
+    docker_visible_to_users: bool | None = None
 
 
 # ---- backup -----------------------------------------------------------------------------

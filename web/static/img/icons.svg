@@ -71,4 +71,6 @@
 <symbol id="ui-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
 <symbol id="ui-globe-search" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9Z"/></symbol>
 <symbol id="ui-check" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></symbol>
+<symbol id="ui-docker" viewBox="0 0 24 24"><path d="M2.5 12h19c0 4.5-3.2 7.5-8.5 7.5-5 0-8.6-2.7-10.5-7.5Z"/><path d="M5.5 12V9h3v3M8.5 12V9h3v3M11.5 12V9h3v3M8.5 9V6h3v3"/></symbol>
+<symbol id="ui-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></symbol>
 </svg>

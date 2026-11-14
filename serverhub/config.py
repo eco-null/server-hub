@@ -53,6 +53,74 @@ class Config(BaseSettings):
     session_idle_days: float = Field(7, gt=0, le=365)
     session_max_days: float = Field(30, gt=0, le=365)
     web_dir: Path = PROJECT_ROOT / "web"
+    # Docker auto-discovery (off when empty): the socket proxy's address.
+    docker_host: str | None = None
+    docker_public_host: str | None = None
+
+    @field_validator("docker_host", mode="before")
+    @classmethod
+    def _docker_host(cls, v: object) -> object:
+        """``tcp://host:port`` or ``http://host:port``, normalised to ``http://host:port``."""
+        if v is None:
+            return None
+        if not isinstance(v, str):
+            return v
+        raw = v.strip()
+        if not raw:
+            return None
+        hint = (
+            "must be tcp://host:port or http://host:port, e.g. tcp://docker-proxy:2375 "
+            "(Server Hub never opens the Docker socket itself: run the socket proxy, "
+            "see .env.example)"
+        )
+        try:
+            parts = urlsplit(raw)
+            port = parts.port
+        except ValueError:
+            raise ValueError(hint) from None
+        scheme = parts.scheme.lower()
+        host = parts.hostname
+        if (
+            scheme not in ("tcp", "http")
+            or not host
+            or parts.username is not None
+            or parts.password is not None
+            or parts.path not in ("", "/")
+            or parts.query
+            or parts.fragment
+            or any(c.isspace() for c in raw)
+            or port == 0
+        ):
+            raise ValueError(hint)
+        if not _HOSTNAME_RE.match(host.rstrip(".")):
+            try:
+                ipaddress.ip_address(host)
+            except ValueError:
+                raise ValueError(hint) from None
+        if port is None:
+            port = 2375 if scheme == "tcp" else 80
+        shown = f"[{host}]" if ":" in host else host
+        return f"http://{shown}:{port}"
+
+    @field_validator("docker_public_host", mode="before")
+    @classmethod
+    def _docker_public_host(cls, v: object) -> object:
+        if v is None:
+            return None
+        if not isinstance(v, str):
+            return v
+        h = v.strip().lower().rstrip(".")
+        if not h:
+            return None
+        if h.startswith("[") and h.endswith("]"):
+            h = h[1:-1]
+        try:
+            return str(ipaddress.ip_address(h))
+        except ValueError:
+            pass
+        if not _HOSTNAME_RE.match(h):
+            raise ValueError("must be a host name or IP address only (no scheme, port or path)")
+        return h
 
     @field_validator("secret_key")
     @classmethod

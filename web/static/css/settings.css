@@ -396,3 +396,112 @@
     min-height: 2.75rem;
   }
 }
+
+/* ---------- Docker section ---------- */
+.docker-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.docker-status p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.docker-ref {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.docker-ref > summary {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.docker-ref-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0 0.875rem 0.875rem;
+}
+
+.docker-labels {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.375rem 1rem;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.docker-labels dt {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-text);
+}
+
+.docker-labels dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+.docker-pre {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hi);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.docker-pre:focus-visible {
+  outline-offset: 0;
+}
+
+.docker-ref-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.docker-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.docker-sub h3:focus {
+  outline: none;
+}
+
+.sug-row .list-sub {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sug-row .list-title {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+@media (max-width: 560px) {
+  .docker-labels {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.125rem;
+  }
+
+  .docker-labels dd {
+    margin-bottom: 0.5rem;
+  }
+}

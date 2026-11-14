@@ -150,7 +150,7 @@ async def test_backup_round_trip(client):
     r = await client.post("/api/backup", json=exported)
     assert r.status_code == 200, r.text
     body = r.json()
-    assert set(body) == {"user", "settings", "services", "bookmarks"}
+    assert set(body) == {"user", "settings", "services", "bookmarks", "docker"}
     assert body["settings"]["pageTitle"] == "Home" and body["settings"]["theme"] == "light"
     assert [(s["name"], s["check"]) for s in body["services"]] == [
         ("svc0", True),

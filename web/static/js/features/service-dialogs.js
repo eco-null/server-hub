@@ -6,7 +6,7 @@
 import { h, nextId } from '../dom.js';
 import { openDialog, confirmDialog } from '../dialog.js';
 import { createField, createSelect, createNotice, createSwitch, showFormError, whileBusy } from '../ui.js';
-import { icon, ICON_IDS, knownIcon } from '../icons.js';
+import { icon, ICON_IDS, ICON_SET, knownIcon } from '../icons.js';
 import { CATEGORIES, autoCategorize, resolveCategory, suggestIcon } from '../categorize.js';
 import { buildServiceUrl, safeUrl, splitScheme } from '../lib/url.js';
 import { toastSuccess, toastError } from '../toast.js';
@@ -14,13 +14,16 @@ import { toastSuccess, toastError } from '../toast.js';
 /** @typedef {import('../types.js').Service} Service */
 
 /**
- * @param {{ service?: Service, defaultDomain: string, full: boolean }} o
+ * `full` adds the icon picker and the category select (edit). `withCategory`
+ * adds just the category select (add with prefilled values). `focusUrl` puts
+ * the first focus on the address; `urlHint` replaces that field's hint.
+ * @param {{ service?: Service, defaultDomain: string, full: boolean, withCategory?: boolean, focusUrl?: boolean, urlHint?: string }} o
  */
 function buildForm(o) {
   const svc = o.service;
   const initial = svc ? splitScheme(svc.url) : { scheme: null, rest: '' };
 
-  const name = createField({ label: 'Name', name: 'name', value: svc ? svc.name : '', placeholder: 'e.g. Grafana', required: true, maxLength: 200, autofocus: true });
+  const name = createField({ label: 'Name', name: 'name', value: svc ? svc.name : '', placeholder: 'e.g. Grafana', required: true, maxLength: 200, autofocus: !o.focusUrl });
   const scheme = createSelect({
     label: 'Scheme',
     value: initial.scheme || 'https://',
@@ -40,7 +43,8 @@ function buildForm(o) {
     autocomplete: 'off',
     inputMode: 'url',
     spellcheck: false,
-    hint: o.defaultDomain ? `A name without a dot gets “.${o.defaultDomain}” added.` : undefined,
+    autofocus: !!o.focusUrl,
+    hint: o.urlHint || (o.defaultDomain ? `A name without a dot gets “.${o.defaultDomain}” added.` : undefined),
   });
   // Typing or pasting a full URL moves its scheme into the select.
   host.input.addEventListener('input', () => {
@@ -69,7 +73,7 @@ function buildForm(o) {
   const currentUrl = () => buildServiceUrl(scheme.input.value, host.input.value, o.defaultDomain);
   const updatePreview = () => {
     const url = currentUrl();
-    const chosen = o.full ? catSelect.input.value : 'auto';
+    const chosen = o.full || o.withCategory ? catSelect.input.value : 'auto';
     if (chosen !== 'auto') {
       preview.textContent = '';
       return;
@@ -131,7 +135,7 @@ function buildForm(o) {
       (n ? host : name).input.focus();
       return { values: null };
     }
-    const category = o.full ? (catSelect.input.value === 'auto' ? null : catSelect.input.value) : null;
+    const category = o.full || o.withCategory ? (catSelect.input.value === 'auto' ? null : catSelect.input.value) : null;
     return {
       values: {
         name: n,
@@ -151,7 +155,7 @@ function buildForm(o) {
     name.root,
     h('fieldset', { class: 'field-wrap field-set' }, h('legend', { class: 'field-label' }, 'Address', h('span', { class: 'req', 'aria-hidden': 'true' }, ' *')), h('div', { class: 'field-row' }, scheme.root, host.root)),
     desc.root,
-    o.full ? catSelect.root : null,
+    o.full || o.withCategory ? catSelect.root : null,
     preview,
     iconPicker,
     check.root,
@@ -160,14 +164,28 @@ function buildForm(o) {
 }
 
 /**
- * Opens the "add service" dialog.
- * @param {{ api: import('../api.js').Api, defaultDomain: string, onSaved: (s: Service) => void }} o
+ * Opens the "add service" dialog. With `prefill` (a Docker suggestion) the
+ * fields start with its values, the category can be chosen, and the address is
+ * focused when it is empty.
+ * @param {{
+ *   api: import('../api.js').Api, defaultDomain: string, onSaved: (s: Service) => void,
+ *   prefill?: { name: string, url: string, description: string, icon: string, category: string | null, check: boolean, urlHint?: string },
+ * }} o
+ * @returns {Promise<boolean>} resolves to true when a service was added
  */
 export function openAddService(o) {
-  openDialog({
+  const pre = o.prefill;
+  const ctrl = openDialog({
     title: 'Add a service',
     build(ctrl) {
-      const form = buildForm({ defaultDomain: o.defaultDomain, full: false });
+      const form = buildForm({
+        service: pre ? { id: '', created_at: '', ...pre } : undefined,
+        defaultDomain: o.defaultDomain,
+        full: false,
+        withCategory: !!pre,
+        focusUrl: !!pre && !pre.url,
+        urlHint: pre && !pre.url ? pre.urlHint : undefined,
+      });
       const submit = h('button', { type: 'submit', class: 'btn btn-primary' }, 'Add service');
       const cancel = h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => ctrl.close() }, 'Cancel');
       return h(
@@ -183,7 +201,8 @@ export function openAddService(o) {
             await whileBusy([submit, cancel], async () => {
               try {
                 const auto = autoCategorize(values.name, values.url, values.description);
-                const res = await o.api.post('/api/services', { ...values, icon: suggestIcon(auto.category, values.name) });
+                const icon = pre && ICON_SET.has(pre.icon) ? pre.icon : suggestIcon(auto.category, values.name);
+                const res = await o.api.post('/api/services', { ...values, icon });
                 ctrl.close(true);
                 o.onSaved(res.service);
                 toastSuccess(`Added ${res.service.name}.`);
@@ -198,6 +217,7 @@ export function openAddService(o) {
       );
     },
   });
+  return ctrl.closed.then((v) => v === true);
 }
 
 /**

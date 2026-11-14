@@ -129,7 +129,12 @@ budget of 8 failures / 15 min per account (`429 rate_limited` beyond it).
 ## Bootstrap
 
 `GET /api/bootstrap` →
-`{"user": User, "settings": Settings, "services": [Service], "bookmarks": [Bookmark]}`
+`{"user": User, "settings": Settings, "services": [Service], "bookmarks": [Bookmark], "docker": {"enabled": bool}}`
+
+`docker.enabled` is true only when Docker discovery is configured (`SERVERHUB_DOCKER_HOST`)
+**and** this user may see discovered services (admins always; other users only while
+`docker_visible_to_users` is on). `services` never contains discovered services; fetch
+them from `GET /api/docker`.
 
 ## Settings
 
@@ -178,6 +183,10 @@ Same four routes as services under `/api/bookmarks`, with `{"bookmark": …}` / 
 `GET /api/status` →
 `{"statuses": {"<service_id>": {"state": "up" | "down" | "unknown", "http_status": 200 | null, "latency_ms": 42 | null, "checked_at": "…" | null}}}`
 
+When the caller may see discovered Docker services (see Docker discovery), the map also
+contains every discovered service with `check: true`, keyed by its `docker:<name>` id,
+with the same per-role detail rules.
+
 Checks run server-side with a concurrency cap, a timeout and a short per-user TTL cache.
 `up` means the target answered with a status below 500. `http_status` and `latency_ms`
 are always `null` for non-admin users (state only), and `null` whenever no response
@@ -208,6 +217,83 @@ Beszel `url`: `http(s)://host[:port][/path-prefix]` only — no query (`?`), fra
 one generic message for every failure ("Could not reach Beszel or sign in; check the URL
 and credentials"), so the endpoints cannot be used to probe the network.
 
+## Docker discovery
+
+Optional, off unless `SERVERHUB_DOCKER_HOST` is set (`tcp://host:port` or
+`http://host:port` of a read-only socket proxy; see `.env.example`). Containers labelled
+`serverhub.enable=true` become read-only service cards; admins get suggestions for
+unlabelled containers that publish ports. Nothing is stored: results are rebuilt from the
+Docker API's container list (`GET /containers/json?all=true`, cached about 10 s, one
+upstream call at a time) on each request.
+
+```jsonc
+DiscoveredService = {
+  "id": "docker:<container name>",   // stable across container re-creation
+  "name", "url", "description", "icon", "category", "check",   // as for Service
+  "container": {
+    "name": "<container name>", "image": "<image reference>",
+    "state": "running" | "exited" | "paused" | "restarting" | "created" | "dead" | "removing",
+    "status": "<Docker's human status text, e.g. Up 2 hours (healthy)>",
+    "health": "healthy" | "unhealthy" | "starting" | null
+  }
+}
+```
+
+Labels (values are untrusted input and validated like an ordinary Service):
+
+| Label | Default | Invalid value |
+|---|---|---|
+| `serverhub.enable` | – (required: `true`) | not discovered |
+| `serverhub.url` | – (required, http/https) | container skipped |
+| `serverhub.name` | container name, prettified (`my_app-1` → `My App`) | default |
+| `serverhub.description` | `""` (≤ 500) | default |
+| `serverhub.icon` | guessed from the image/name, else `box` | default |
+| `serverhub.category` | `null` (auto) | `null` |
+| `serverhub.check` | `true` (`true`/`false`) | `true` |
+
+Control characters are stripped from names and descriptions; label values over 2048
+characters count as invalid; at most 500 containers are examined. Stopped containers
+are still returned (see `container.state`).
+
+| Method | Path | Access | Result |
+|---|---|---|---|
+| GET | `/api/docker` | session | `{"enabled": bool, "available": bool, "error": string \| null, "services": [DiscoveredService]}`; admins also get `"skipped"` and `"warnings"` |
+| GET | `/api/admin/docker/suggestions` | admin | `{"available": bool, "error": string \| null, "suggestions": [Suggestion]}` |
+
+`GET /api/docker`:
+- feature off, or a non-admin while `docker_visible_to_users` is off:
+  `{"enabled": false, "available": false, "error": null, "services": []}`;
+- Docker API unreachable or misbehaving: `"available": false` and a short `error`.
+  Non-admins always get `"Docker discovery is unavailable right now"`; admins get a more
+  specific but safe text (e.g. "The Docker API did not answer in time", "The socket proxy
+  refused to list containers; enable CONTAINERS=1 on the proxy", "The Docker API answered
+  HTTP 500"). Remote output is never echoed;
+- admin-only diagnostics: `"skipped": [{"container", "reason"}]` (labelled containers that
+  produced no card, e.g. missing or invalid `serverhub.url`) and
+  `"warnings": [{"container", "reason"}]` (labels that fell back to a default;
+  `container` is `"*"` for listing-wide notes such as the 500-container cap).
+
+```jsonc
+Suggestion = {
+  "container": { "name", "image", "state": "running" },
+  "ports": [{ "private": 80, "public": 8081, "protocol": "tcp" | "udp" }],
+  "suggested": { "name", "url": string | null, "icon", "category": string | null }
+}
+```
+
+Suggestions are running containers without a `serverhub.enable` label (any value) that
+publish at least one TCP port (ports bound only to the Docker host's loopback are
+ignored), excluding Server Hub's own container, the socket proxy, and containers whose
+suggested URL is already one of the calling admin's services. `suggested.url` is
+`http(s)://<SERVERHUB_DOCKER_PUBLIC_HOST>[:<public port>]` for the most likely web port
+(preferring container ports 80, 443, 8080, 3000, 8000, 8443, …, else the lowest), `https`
+for 443/8443/9443, and `null` when `SERVERHUB_DOCKER_PUBLIC_HOST` is empty. To add one,
+`POST /api/services` with the suggested fields; the new service is an ordinary service of
+that admin.
+
+Discovered services are read-only: `PATCH`/`DELETE /api/services/docker:…` answer
+`404 not_found`, and they are never part of a backup.
+
 ## Host stats (admin only)
 
 `GET /api/stats` → `{"hostname", "cpu", "memory", "disk"}` (percentages, nullable).
@@ -226,8 +312,11 @@ services and bookmarks in one transaction. Returns the same shape as `/api/boots
 | POST | `/api/admin/users` | `{email, username, password, role}` | `201 {"user": User}` |
 | PATCH | `/api/admin/users/{id}` | `{role?, password?, disable_twofa?: true}` | `{"user": User}` |
 | DELETE | `/api/admin/users/{id}` | – | `204`; the last admin cannot be removed |
-| GET | `/api/admin/config` | – | `{"registration_open": bool}` |
-| PUT | `/api/admin/config` | `{registration_open}` | same |
+| GET | `/api/admin/config` | – | `{"registration_open": bool, "docker_visible_to_users": bool}` |
+| PUT | `/api/admin/config` | partial: `{registration_open?, docker_visible_to_users?}` (at least one; `null` is rejected) | the full config, as GET |
+
+`docker_visible_to_users` (default `false`): show discovered Docker services to every
+user, not only admins. It has no effect while Docker discovery is not configured.
 
 ## Secret key changes
 

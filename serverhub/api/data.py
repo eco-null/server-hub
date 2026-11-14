@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from functools import partial
 
 from pydantic import BaseModel, ValidationError
 from starlette.requests import Request
@@ -10,6 +11,7 @@ from starlette.responses import Response
 from starlette.routing import Route
 
 from serverhub.api import schemas as s
+from serverhub.api.docker import discovered_for
 from serverhub.api.serialize import bookmark_out, bootstrap, load_settings, service_out
 from serverhub.auth.sessions import require_user
 from serverhub.db import repo
@@ -46,7 +48,10 @@ def reject_nulls(model: BaseModel, nullable: frozenset[str] = frozenset()) -> No
 
 async def get_bootstrap(request: Request) -> Response:
     user = await require_user(request)
-    return json_response(await hub(request).db.run(bootstrap, user))
+    h = hub(request)
+    return json_response(
+        await h.db.run(partial(bootstrap, docker_configured=h.docker is not None), user)
+    )
 
 
 async def get_settings(request: Request) -> Response:
@@ -171,6 +176,8 @@ async def get_status(request: Request) -> Response:
     h = hub(request)
     rows = await h.db.run(repo.list_owned, "services", user["id"])
     targets = [(r["id"], r["url"]) for r in rows if r["check_enabled"]]
+    # Discovered Docker services (keyed "docker:<name>"), for users who may see them.
+    targets += [(d["id"], d["url"]) for d in await discovered_for(h, user) if d["check"]]
     statuses = await h.status.check_many(user["id"], targets)
     if user["role"] != "admin":
         # State only: HTTP codes and timings of arbitrary targets would make
@@ -213,11 +220,13 @@ async def import_backup(request: Request) -> Response:
     services = [_service_fields(x) for x in doc.services]
     bookmarks = [x.model_dump() for x in doc.bookmarks]
 
+    h = hub(request)
+
     def _replace(conn):
         repo.replace_user_data(conn, user["id"], settings, services, bookmarks)
-        return bootstrap(conn, user)
+        return bootstrap(conn, user, docker_configured=h.docker is not None)
 
-    return json_response(await hub(request).db.run(_replace))
+    return json_response(await h.db.run(_replace))
 
 
 routes = [

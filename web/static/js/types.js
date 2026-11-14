@@ -15,9 +15,16 @@
  *
  * @typedef {{ id: string, name: string, url: string, description: string, icon: string, category: string | null, check: boolean, created_at?: string }} Service
  * @typedef {{ id: string, name: string, url: string, color: string, created_at?: string }} Bookmark
- * @typedef {{ user: User, settings: Settings, services: Service[], bookmarks: Bookmark[] }} Bootstrap
+ * @typedef {{ user: User, settings: Settings, services: Service[], bookmarks: Bookmark[], docker?: { enabled: boolean } }} Bootstrap
  *
  * @typedef {{ state: 'up' | 'down' | 'unknown', http_status: number | null, latency_ms: number | null, checked_at: string | null }} ServiceStatus
+ * @typedef {'running' | 'exited' | 'paused' | 'restarting' | 'created' | 'dead' | 'removing'} ContainerState
+ * @typedef {{ name: string, image: string, state: ContainerState, status: string, health: 'healthy' | 'unhealthy' | 'starting' | null }} DockerContainer
+ * @typedef {{ id: string, name: string, url: string, description: string, icon: string, category: string | null, check: boolean, container: DockerContainer }} DiscoveredService
+ * @typedef {{ enabled: boolean, available: boolean, error: string | null, services: DiscoveredService[], skipped?: Array<{ container: string, reason: string }> }} DockerResponse
+ * @typedef {{ private: number, public: number, protocol: 'tcp' | 'udp' }} DockerPort
+ * @typedef {{ container: { name: string, image: string, state: string }, ports: DockerPort[], suggested: { name: string, url: string | null, icon: string, category: string | null } }} DockerSuggestion
+ * @typedef {{ available: boolean, error: string | null, suggestions: DockerSuggestion[] }} DockerSuggestions
  * @typedef {{ id: string, name: string, url: string, username: string, has_password: boolean }} BeszelInstance
  * @typedef {{ name: string, status: string, host: string, cpu: number | null, memory: number | null, disk: number | null, uptime_seconds: number | null }} BeszelSystem
  */

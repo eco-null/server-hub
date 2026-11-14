@@ -64,11 +64,22 @@ def load_settings(conn: sqlite3.Connection, user_id: str) -> dict:
         return dict(DEFAULT_SETTINGS)
 
 
-def bootstrap(conn: sqlite3.Connection, user: dict) -> dict:
+DOCKER_VISIBLE_KEY = "docker_visible_to_users"
+
+
+def docker_visible(conn: sqlite3.Connection, user: dict) -> bool:
+    """May ``user`` see discovered Docker services? Admins always; others only
+    when an admin turned the switch on. (Whether the feature is configured at
+    all is checked by the caller.)"""
+    return user["role"] == "admin" or bool(repo.get_config(conn, DOCKER_VISIBLE_KEY, False))
+
+
+def bootstrap(conn: sqlite3.Connection, user: dict, *, docker_configured: bool = False) -> dict:
     uid = user["id"]
     return {
         "user": user_out(user),
         "settings": load_settings(conn, uid),
         "services": [service_out(r) for r in repo.list_owned(conn, "services", uid)],
         "bookmarks": [bookmark_out(r) for r in repo.list_owned(conn, "bookmarks", uid)],
+        "docker": {"enabled": docker_configured and docker_visible(conn, user)},
     }
