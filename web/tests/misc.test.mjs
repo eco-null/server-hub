@@ -131,3 +131,12 @@ test('api sends the client header and survives plain-text errors', async () => {
   await assert.rejects(mk(text(403, '')).del('/api/x'), (e) => e.status === 403);
   assert.equal(calls.every((c) => c.headers['X-ServerHub-Client'] === 'web'), true);
 });
+
+import { fieldMessage } from '../static/js/lib/format.js';
+test('fieldMessage turns terse API field codes into sentences', () => {
+  assert.equal(fieldMessage('incorrect'), 'That is incorrect. Check it and try again.');
+  assert.equal(fieldMessage('taken'), 'That is already taken.');
+  assert.equal(fieldMessage('required'), 'This field is required.');
+  assert.equal(fieldMessage('must not contain spaces'), 'must not contain spaces');
+  assert.equal(fieldMessage(undefined), '');
+});

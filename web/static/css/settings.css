@@ -93,6 +93,10 @@
   border: 0;
 }
 
+.choice-group .field-hint {
+  margin-top: 0.5rem;
+}
+
 .choice-group legend {
   padding: 0;
   margin-bottom: 0.5rem;
@@ -121,17 +125,20 @@
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 500;
-  transition: background-color var(--t) var(--ease), border-color var(--t) var(--ease);
+  color: var(--fg-muted);
+  transition: background-color var(--t) var(--ease), border-color var(--t) var(--ease), color var(--t) var(--ease);
 }
 
 .choice:hover .choice-text {
   background: var(--surface-hi);
+  color: var(--fg);
 }
 
 .choice:has(input:checked) .choice-text {
   border-color: var(--accent-text);
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--fg);
+  font-weight: 650;
 }
 
 .choice:has(input:focus-visible) {

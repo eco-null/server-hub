@@ -54,7 +54,7 @@ export function openInputDialog(o) {
             notice.clear();
             field.setError(null);
             if (second) second.setError(null);
-            const value = field.input.value.trim();
+            const value = o.type === 'password' ? field.input.value : field.input.value.trim();
             if (second && !second.input.value.trim()) {
               second.setError('This field is required.');
               second.input.focus();

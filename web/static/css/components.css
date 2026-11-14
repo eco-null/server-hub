@@ -423,7 +423,7 @@ kbd {
 dialog.dlg {
   padding: 0;
   width: min(92vw, 28rem);
-  max-height: min(90vh, 90dvh);
+  max-height: min(94vh, 94dvh);
   border: 1px solid var(--border-hi);
   border-radius: 18px;
   background: var(--dialog-bg);
@@ -553,7 +553,7 @@ dialog.dlg-lg {
 
 .bar-label {
   flex: none;
-  width: 2.25rem;
+  width: 3rem;
   font-size: 0.6875rem;
   color: var(--fg-muted);
 }

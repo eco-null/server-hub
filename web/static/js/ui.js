@@ -3,6 +3,7 @@
 
 import { h, nextId } from './dom.js';
 import { ApiError } from './api.js';
+import { fieldMessage } from './lib/format.js';
 
 /**
  * @typedef {{
@@ -171,9 +172,9 @@ export function showFormError(err, fields, notice) {
   for (const [name, msg] of Object.entries(err.fields)) {
     const field = Object.hasOwn(fields, name) ? fields[name] : fields[name.split('.').pop() || ''];
     if (field) {
-      field.setError(msg);
+      field.setError(fieldMessage(msg));
       first = first || field;
-    } else unmatched.push(msg);
+    } else unmatched.push(fieldMessage(msg));
   }
   notice.show('error', [err.message, ...unmatched].filter(Boolean).join(' '));
   if (first) first.input.focus();

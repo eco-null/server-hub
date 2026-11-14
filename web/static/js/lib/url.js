@@ -14,6 +14,8 @@ export function safeUrl(value, opts = {}) {
   if (typeof value !== 'string') return null;
   const s = value.trim();
   if (!s || s.length > MAX_URL) return null;
+  // Browsers percent-encode a space in the host instead of failing, but the server rejects it.
+  if (/[\s\x00-\x1f\x7f]/.test(s)) return null;
   let u;
   try {
     u = new URL(s);

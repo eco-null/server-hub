@@ -52,9 +52,11 @@ export function createStatsWidget(o) {
     if (host.status === 'fulfilled' && host.value) {
       const s = host.value;
       hostName = typeof s.hostname === 'string' ? s.hostname : '';
-      blocks.push(
-        h('div', { class: 'sys' }, h('div', { class: 'sys-head' }, h('span', { class: 'sys-name' }, 'This server'), h('span', { class: 'sys-meta mono' }, hostName)), ...bars(s)),
-      );
+      // Hosts that report no metrics at all (all null) add nothing, so the widget can hide.
+      const hostBars = bars(s);
+      if (hostBars.length) {
+        blocks.push(h('div', { class: 'sys' }, h('div', { class: 'sys-head' }, h('span', { class: 'sys-name' }, 'This server'), h('span', { class: 'sys-meta mono' }, hostName)), ...hostBars));
+      }
     }
 
     if (beszel.status === 'fulfilled' && beszel.value && Array.isArray(beszel.value.instances)) {

@@ -56,3 +56,19 @@ export function greetingFor(hour) {
 export function formatClock(d) {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
+
+/**
+ * Human wording for the terse per-field codes the API returns
+ * ("required", "incorrect", "taken", "unknown field"); other text passes through.
+ * @param {unknown} msg
+ */
+export function fieldMessage(msg) {
+  const text = typeof msg === 'string' ? msg : '';
+  const known = /** @type {Record<string, string>} */ ({
+    required: 'This field is required.',
+    incorrect: 'That is incorrect. Check it and try again.',
+    taken: 'That is already taken.',
+    'unknown field': 'This field is not recognised.',
+  });
+  return Object.hasOwn(known, text) ? known[text] : text;
+}

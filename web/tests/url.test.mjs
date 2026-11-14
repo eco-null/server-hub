@@ -14,6 +14,8 @@ test('safeUrl rejects absurdly long and malformed input', () => {
   assert.equal(safeUrl('https://example.com/' + 'a'.repeat(2100)), null);
   assert.equal(safeUrl('https://'), null);
   assert.equal(safeUrl('https://exa mple.com'), null);
+  assert.equal(safeUrl('https://example.com/a b'), null);
+  assert.equal(safeUrl('https://example.com/\u0001'), null);
 });
 
 test('safeUrl httpsOnly', () => {
