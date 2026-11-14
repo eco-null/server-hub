@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Server Hub: your apps and services, reachable from one place.">
+  <title>Server Hub</title>
+  <link rel="icon" type="image/png" href="/static/img/logo.png">
+  <link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <script src="/static/js/theme-boot.js"></script>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <script type="module" src="/static/js/dashboard.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#services">Skip to services</a>
+  <div id="wallpaper" class="wallpaper" aria-hidden="true"></div>
+
+  <noscript>
+    <p class="noscript-msg">Server Hub needs JavaScript to show your dashboard. Please enable it and reload the page.</p>
+  </noscript>
+
+  <div class="page">
+    <header class="page-head">
+      <div class="head-top">
+        <div class="brand">
+          <img class="brand-logo" src="/static/img/logo.png" alt="" width="40" height="40">
+          <div class="brand-text">
+            <p class="greeting mono" id="greeting" data-feature="greeting"></p>
+            <h1 id="page-title">Server Hub</h1>
+            <p class="subtitle" id="page-subtitle">Your apps and services, reachable from one place.</p>
+            <div class="chips">
+              <span class="chip chip-user" id="user-chip" hidden></span>
+              <button type="button" class="chip" id="logout-btn">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-logout"/></svg>
+                <span>Log out</span>
+              </button>
+              <button type="button" class="chip" id="theme-btn" aria-label="Switch theme">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-theme-auto"/></svg>
+                <span>Theme</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="clock" data-feature="clock">
+          <time id="clock" class="clock-time mono">--:--:--</time>
+          <p id="date" class="clock-date"></p>
+        </div>
+      </div>
+
+      <button type="button" class="search-trigger glass glass-blur" id="search-btn" data-feature="search" aria-haspopup="dialog" aria-keyshortcuts="/">
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-search"/></svg>
+        <span class="search-trigger-text">Search services or the web…</span>
+        <kbd aria-hidden="true">/</kbd>
+      </button>
+    </header>
+
+    <aside class="page-aside" aria-label="Overview">
+      <section class="glass glass-blur widget" aria-labelledby="bookmarks-title">
+        <div class="widget-head">
+          <h2 class="eyebrow" id="bookmarks-title">Bookmarks</h2>
+          <button type="button" class="btn btn-sm" id="bookmarks-add" aria-expanded="false" aria-controls="bookmarks-form-host">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-plus"/></svg>
+            <span>Add</span>
+          </button>
+        </div>
+        <div id="bookmarks" class="bookmarks"></div>
+        <div id="bookmarks-form-host"></div>
+      </section>
+
+      <section class="glass glass-blur widget" id="stats-card" data-feature="stats" aria-labelledby="stats-title" hidden>
+        <h2 class="eyebrow" id="stats-title">System</h2>
+        <div id="stats-body" class="stats-body"></div>
+      </section>
+    </aside>
+
+    <main class="page-main">
+      <div class="banner banner-info banner-row" id="offline-banner" role="status" hidden>
+        <span>Can't reach the server. Showing the last data that loaded; changes won't be saved until it responds.</span>
+        <button type="button" class="btn btn-sm" id="offline-retry">Try again</button>
+      </div>
+
+      <section id="services" class="services" aria-labelledby="services-title" tabindex="-1">
+        <h2 class="sr-only" id="services-title">Services</h2>
+
+        <div id="skeletons" class="skeletons" aria-hidden="true">
+          <div class="skeleton skeleton-card skeleton-wide"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+        </div>
+
+        <div class="groups-wrap">
+          <div id="groups" class="groups" hidden></div>
+        </div>
+
+        <div id="empty-state" class="empty glass" hidden>
+          <svg class="icon icon-xl" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#server"/></svg>
+          <h3>No services yet</h3>
+          <p class="muted">Add the apps you run and they show up here, grouped automatically.</p>
+          <button type="button" class="btn btn-primary" id="empty-add">Add your first service</button>
+        </div>
+
+        <div id="load-error" class="empty glass" hidden>
+          <h3>Couldn't load your dashboard</h3>
+          <p class="muted" id="load-error-text" role="alert"></p>
+          <button type="button" class="btn btn-primary" id="retry-load">Try again</button>
+        </div>
+      </section>
+
+      <footer class="page-foot">
+        <p class="mono">Server Hub</p>
+      </footer>
+    </main>
+  </div>
+
+  <a href="/settings" class="fab fab-settings glass" aria-label="Open settings" title="Settings">
+    <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-settings"/></svg>
+  </a>
+  <button type="button" class="fab fab-add" id="fab-add" aria-label="Add service" title="Add service">
+    <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-plus"/></svg>
+  </button>
+</body>
+</html>

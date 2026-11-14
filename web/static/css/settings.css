@@ -1,0 +1,384 @@
+/* Settings page. (dashboard.css is also loaded for the shared dialog/card/bookmark styles.) */
+
+.settings {
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.settings-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.settings-head h1 {
+  font-size: clamp(1.5rem, 4vw, 1.875rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.save-status {
+  min-height: 1.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.settings-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.settings-nav .chip {
+  min-height: 2.25rem;
+  padding-inline: 0.875rem;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+}
+
+.settings-nav .chip:hover {
+  color: var(--fg);
+  border-color: var(--border-hi);
+}
+
+.settings-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.settings-main:focus {
+  outline: none;
+}
+
+.panel {
+  padding: 1.25rem;
+  scroll-margin-top: 1rem;
+}
+
+.panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.panel-intro {
+  font-size: 0.875rem;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.card-title-sm {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+/* ---------- choices: segmented, swatches ---------- */
+.choice-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice-group .field-hint {
+  margin-top: 0.5rem;
+}
+
+.choice-group legend {
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.choice {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.choice-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4.5rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  transition: background-color var(--t) var(--ease), border-color var(--t) var(--ease), color var(--t) var(--ease);
+}
+
+.choice:hover .choice-text {
+  background: var(--surface-hi);
+  color: var(--fg);
+}
+
+.choice:has(input:checked) .choice-text {
+  border-color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--fg);
+  font-weight: 650;
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.swatch {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 2px solid var(--border-hi);
+  border-radius: 10px;
+  background: var(--swatch, transparent);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--fg-muted);
+  transition: transform var(--t) var(--ease), border-color var(--t) var(--ease);
+}
+
+.choice:hover .swatch {
+  transform: scale(1.08);
+}
+
+.choice:has(input:checked) .swatch {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 2px var(--accent-text);
+}
+
+.swatch-none {
+  background: repeating-linear-gradient(45deg, transparent 0 6px, var(--border) 6px 7px);
+}
+
+@media (pointer: coarse) {
+  .swatch {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+.field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.field-inline .field-label {
+  order: 2;
+}
+
+.field-with-action {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.field-with-action .field-wrap {
+  flex: 1;
+}
+
+.field-with-action .btn {
+  margin-top: 1.4rem;
+}
+
+@media (max-width: 560px) {
+  .field-with-action {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .field-with-action .btn {
+    margin-top: 0;
+  }
+}
+
+/* ---------- lists ---------- */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem 0.875rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.list-icon {
+  display: grid;
+  place-items: center;
+  color: var(--fg-muted);
+}
+
+.list-main {
+  min-width: 0;
+}
+
+.list-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.list-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+}
+
+.list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
+.list-row .bookmark-dot {
+  margin-inline: 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .list-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .list-meta,
+  .list-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+.list-row-user .field-wrap {
+  min-width: 7rem;
+}
+
+/* ---------- sub cards (hubs, password, 2FA setup) ---------- */
+.sub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.sub-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.twofa-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 560px) {
+  .twofa-grid {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+}
+
+/* QR codes need a light quiet zone in every theme. */
+.qr {
+  display: block;
+  padding: 0.5rem;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.secret {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hi);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.codes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.375rem 1rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hi);
+  list-style: none;
+  font-size: 0.875rem;
+  user-select: all;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.check {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--accent);
+}
+
+.empty h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}

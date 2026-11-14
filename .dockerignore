@@ -1,0 +1,8 @@
+# Only serverhub/, web/ and requirements.lock are needed in the build context.
+*
+!serverhub/
+!web/
+!requirements.lock
+**/__pycache__
+**/*.pyc
+**/.DS_Store

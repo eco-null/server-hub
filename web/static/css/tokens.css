@@ -1,0 +1,151 @@
+/* ==========================================================================
+   Design tokens, shared by every page.
+   Dark is the default; `html.light` swaps the same token names.
+   The accent tokens (--accent, --accent-fg, --accent-text, --accent-glow) are
+   overridden at runtime from the user's accent colour (theme.js).
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/static/fonts/inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  src: url('/static/fonts/fira-code.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  /* surfaces */
+  --bg-deep: #080b12;
+  --bg-base: #0b101a;
+  --bg-elev: #111827;
+  --dialog-bg: #111827;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-hi: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-hi: rgba(255, 255, 255, 0.18);
+  --grid-line: rgba(255, 255, 255, 0.03);
+  --scrim: rgba(0, 0, 0, 0.55);
+
+  /* text */
+  --fg: #ededef;
+  --fg-muted: #9096a0;
+
+  /* accent (overridden per user) */
+  --accent: #5e6ad2;
+  --accent-fg: #ffffff;
+  --accent-text: var(--accent-text-dark, #98a1ee);
+  --accent-glow: rgba(94, 106, 210, 0.2);
+
+  /* status */
+  --green: #22c55e;
+  --red: #ef4444;
+  --amber: #eab308;
+  --green-text: #4ade80;
+  --red-text: #f87171;
+  --amber-text: #facc15;
+  --danger-solid: #dc2626;
+
+  /* shape and motion */
+  --radius: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 150ms;
+  --t: 200ms;
+  --t-slow: 400ms;
+  --shadow-pop: 0 24px 64px -20px rgba(0, 0, 0, 0.6);
+
+  /* layering */
+  --z-fab: 30;
+  --z-toast: 90;
+}
+
+html.light {
+  color-scheme: light;
+
+  --bg-deep: #f3f6fb;
+  --bg-base: #ffffff;
+  --bg-elev: #f8faff;
+  --dialog-bg: #ffffff;
+  --surface: rgba(15, 23, 42, 0.04);
+  --surface-hi: rgba(15, 23, 42, 0.08);
+  --border: rgba(15, 23, 42, 0.12);
+  --border-hi: rgba(15, 23, 42, 0.22);
+  --grid-line: rgba(0, 0, 0, 0.04);
+  --scrim: rgba(15, 23, 42, 0.4);
+
+  --fg: #0f172a;
+  --fg-muted: #566074;
+
+  --accent: #4f56c0;
+  --accent-text: var(--accent-text-light, #4349ad);
+  --accent-glow: rgba(79, 86, 192, 0.18);
+
+  --green: #16a34a;
+  --red: #dc2626;
+  --amber: #ca8a04;
+  --green-text: #166534;
+  --red-text: #b91c1c;
+  --amber-text: #92400e;
+
+  --shadow-pop: 0 24px 64px -24px rgba(15, 23, 42, 0.35);
+}
+
+/* Wallpaper readability: toggled on <html> by wallpaper.js so glass and text
+   stay legible over any image. The light theme always wins (declared after). */
+html.wallpaper-light {
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-hi: rgba(255, 255, 255, 0.88);
+  --border: rgba(0, 0, 0, 0.14);
+  --border-hi: rgba(0, 0, 0, 0.22);
+  --fg: #111318;
+  --fg-muted: #3d4148;
+}
+
+html.wallpaper-light:not(.light) {
+  --accent-text: var(--accent-text-light, #4349ad);
+  --green-text: #166534;
+  --red-text: #991b1b;
+  --amber-text: #854d0e;
+}
+
+html.wallpaper-dark {
+  --surface: rgba(0, 0, 0, 0.55);
+  --surface-hi: rgba(0, 0, 0, 0.65);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-hi: rgba(255, 255, 255, 0.2);
+  --fg: #ededef;
+  --fg-muted: #b3b7bf;
+}
+
+html.light.wallpaper-dark,
+html.light.wallpaper-light {
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-hi: rgba(255, 255, 255, 0.96);
+  --border: rgba(15, 23, 42, 0.14);
+  --border-hi: rgba(15, 23, 42, 0.22);
+  --fg: #0f172a;
+  --fg-muted: #566074;
+}
+
+/* Reduced motion: every transition and animation reads these durations. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0s;
+    --t: 0s;
+    --t-slow: 0s;
+  }
+}

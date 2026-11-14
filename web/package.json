@@ -1,0 +1,9 @@
+{
+  "name": "server-hub-web",
+  "private": true,
+  "type": "module",
+  "description": "Frontend of Server Hub. No build step and no runtime dependencies; this file only marks the JS as ES modules for `node --test`.",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\""
+  }
+}

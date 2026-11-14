@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "serverhub"
+version = "2.0.0"
+description = "Self-hosted dashboard for your apps and services"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+# Runtime dependencies, pinned exactly. The full transitive set (used by the
+# Docker image) is pinned in requirements.lock.
+dependencies = [
+    "starlette==1.10.0",
+    "anyio==4.16.0",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
+    "httpcore==1.0.9",
+    "pydantic==2.14.3",
+    "pydantic-settings==2.16.3",
+    "argon2-cffi==25.1.0",
+    "cryptography==50.0.2",
+    "pyotp==2.10.0",
+    "segno==1.6.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.5",
+]
+
+[project.scripts]
+serverhub = "serverhub.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["serverhub*"]
+
+[tool.setuptools.package-data]
+"serverhub.db" = ["migrations/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -p no:cacheprovider"
+filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["web", "docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF", "SIM", "PTH"]
+ignore = [
+    "S104",   # binding to 0.0.0.0 is the intended default inside the container
+    "RUF012", # mutable class defaults are fine for pydantic models
+]
+
+[tool.ruff.lint.per-file-ignores]
+"serverhub/integrations/fetcher.py" = ["ASYNC109"]  # httpcore backend interface
+"tests/**" = ["S101", "S105", "S106", "S107", "S108", "S310", "S311", "ASYNC", "PTH", "B017"]
