@@ -74,7 +74,7 @@ export function createApi({ fetchImpl, onUnauthenticated, onWrite, timeoutMs = 1
   /**
    * @param {string} method
    * @param {string} path
-   * @param {{ body?: unknown, timeout?: number, keepalive?: boolean, signal?: AbortSignal, silent401?: boolean }} [opts]
+   * @param {{ body?: unknown, timeout?: number, keepalive?: boolean, signal?: AbortSignal, silent401?: boolean, notifyWrite?: boolean }} [opts]
    * @returns {Promise<any>} parsed JSON, or null for 204
    */
   async function request(method, path, opts = {}) {
@@ -112,7 +112,7 @@ export function createApi({ fetchImpl, onUnauthenticated, onWrite, timeoutMs = 1
       clearTimeout(timer);
     }
 
-    if (res.ok && method !== 'GET' && onWrite) onWrite();
+    if (res.ok && method !== 'GET' && opts.notifyWrite !== false && onWrite) onWrite();
     if (res.status === 204) return null;
 
     /** @type {any} */

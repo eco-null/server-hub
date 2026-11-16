@@ -1,10 +1,11 @@
-"""Command line: serve, create-admin, reset-password, backup, healthcheck."""
+"""Commands for serving, accounts, backup and recovery, and health checks."""
 
 from __future__ import annotations
 
 import argparse
 import getpass
 import os
+import sqlite3
 import ssl
 import sys
 import urllib.request
@@ -15,7 +16,7 @@ from pydantic import TypeAdapter, ValidationError
 from serverhub.api import schemas
 from serverhub.auth.crypto import Passwords
 from serverhub.config import ConfigError, load_config
-from serverhub.db import Database, backup_to, repo
+from serverhub.db import Database, backup_to, repo, restore_backup, verify_backup
 from serverhub.errors import ApiError
 
 
@@ -83,6 +84,25 @@ def cmd_backup(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_verify_backup(args: argparse.Namespace) -> int:
+    try:
+        version = verify_backup(Path(args.input))
+    except (ValueError, OSError, sqlite3.Error) as exc:
+        raise SystemExit(f"Backup verification failed: {exc}") from None
+    print(f"Verified SQLite backup (schema version {version})")
+    return 0
+
+
+def cmd_restore(args: argparse.Namespace) -> int:
+    cfg = load_config()
+    try:
+        version = restore_backup(Path(args.input), cfg.db_path)
+    except (ValueError, OSError, sqlite3.Error) as exc:
+        raise SystemExit(f"Restore failed: {exc}") from None
+    print(f"Restored {cfg.db_path} (schema version {version})")
+    return 0
+
+
 def cmd_healthcheck(args: argparse.Namespace) -> int:
     """Used by the Docker HEALTHCHECK; needs no secrets."""
     port = int(os.environ.get("SERVERHUB_PORT", "8642"))
@@ -127,6 +147,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("output", help="destination file, e.g. /data/backup-2026-01-01.db")
     p.add_argument("--force", action="store_true")
     p.set_defaults(fn=cmd_backup)
+
+    p = sub.add_parser("verify-backup", help="check the integrity and schema of a SQLite snapshot")
+    p.add_argument("input", help="standalone backup file produced by backup")
+    p.set_defaults(fn=cmd_verify_backup)
+
+    p = sub.add_parser("restore", help="replace the SQLite database while the server is stopped")
+    p.add_argument("input", help="standalone backup file produced by backup")
+    p.set_defaults(fn=cmd_restore)
 
     sub.add_parser("healthcheck", help="exit 0 if /healthz answers").set_defaults(
         fn=cmd_healthcheck

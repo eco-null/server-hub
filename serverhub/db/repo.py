@@ -488,20 +488,41 @@ def insert_owned(
         return get_owned(conn, table, user_id, row_id)  # type: ignore[return-value]
 
 
+def _update_owned(
+    conn: sqlite3.Connection, table: str, user_id: str, row_id: str, fields: dict
+) -> None:
+    cols = [c for c in _OWNED[table] if c in fields]
+    if cols:
+        sets = ", ".join(f"{c} = ?" for c in cols)
+        if table == "beszel_instances":
+            sets += ", revision = revision + 1"
+        conn.execute(
+            f"UPDATE {table} SET {sets} WHERE id = ? AND user_id = ?",  # noqa: S608
+            (*(fields[c] for c in cols), row_id, user_id),
+        )
+
+
 def update_owned(
     conn: sqlite3.Connection, table: str, user_id: str, row_id: str, fields: dict
 ) -> dict | None:
-    cols = [c for c in _OWNED[table] if c in fields]
     with transaction(conn):
-        if cols:
-            sets = ", ".join(f"{c} = ?" for c in cols)
-            if table == "beszel_instances":
-                sets += ", revision = revision + 1"
-            conn.execute(
-                f"UPDATE {table} SET {sets} WHERE id = ? AND user_id = ?",  # noqa: S608
-                (*(fields[c] for c in cols), row_id, user_id),
-            )
+        _update_owned(conn, table, user_id, row_id, fields)
         return get_owned(conn, table, user_id, row_id)
+
+
+def merge_owned(
+    conn: sqlite3.Connection,
+    table: str,
+    user_id: str,
+    additions: list[dict],
+    updates: list[tuple[str, dict]],
+) -> list[dict]:
+    """Apply a checked merge inside the caller's transaction."""
+    for fields in additions:
+        _insert_owned(conn, table, user_id, fields)
+    for row_id, fields in updates:
+        _update_owned(conn, table, user_id, row_id, fields)
+    return list_owned(conn, table, user_id)
 
 
 def delete_owned(conn: sqlite3.Connection, table: str, user_id: str, row_id: str) -> bool:

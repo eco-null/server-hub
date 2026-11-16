@@ -11,7 +11,9 @@ from __future__ import annotations
 import contextlib
 import logging
 import re
+import shutil
 import sqlite3
+import tempfile
 import threading
 from collections.abc import Callable, Iterator
 from importlib import resources
@@ -120,3 +122,52 @@ def backup_to(src: Path, dest: Path) -> None:
             target.close()
     finally:
         source.close()
+
+
+def _has_sidecars(path: Path) -> bool:
+    return any(
+        path.with_name(path.name + suffix).exists() for suffix in ("-wal", "-shm", "-journal")
+    )
+
+
+def verify_backup(path: Path) -> int:
+    """Check a standalone Server Hub SQLite snapshot without writing to it."""
+    if not path.is_file():
+        raise ValueError(f"No backup at {path}")
+    if _has_sidecars(path):
+        raise ValueError("Use a standalone backup file made with the backup command")
+    uri = path.resolve().as_uri() + "?mode=ro&immutable=1"
+    with contextlib.closing(sqlite3.connect(uri, uri=True)) as conn:
+        conn.execute("PRAGMA trusted_schema = OFF")
+        if conn.execute("PRAGMA integrity_check(1)").fetchone() != ("ok",):
+            raise ValueError("SQLite integrity check failed")
+        version = conn.execute("PRAGMA user_version").fetchone()[0]
+        required = {"users", "user_settings", "services", "bookmarks", "app_config"}
+        tables = {
+            name for (name,) in conn.execute("SELECT name FROM sqlite_schema WHERE type = 'table'")
+        }
+        if version < 1 or not required.issubset(tables):
+            raise ValueError("This file is not a Server Hub backup")
+        if version > len(_migrations()):
+            raise ValueError(f"Backup schema version {version} requires a newer Server Hub")
+        if conn.execute("PRAGMA foreign_key_check").fetchone() is not None:
+            raise ValueError("SQLite foreign-key check failed")
+    return version
+
+
+def restore_backup(src: Path, dest: Path) -> int:
+    """Stage and verify a snapshot before atomically replacing a stopped server's database."""
+    if src.resolve() == dest.resolve() or _has_sidecars(src):
+        raise ValueError("Restore from a standalone backup separate from the live database")
+    if _has_sidecars(dest):
+        raise ValueError("The database has journal files. Stop the server cleanly before restoring")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=dest.parent) as staging:
+        staged = Path(staging) / dest.name
+        staged.touch(mode=0o600)
+        shutil.copyfile(src, staged)
+        version = verify_backup(staged)
+        if _has_sidecars(dest):
+            raise ValueError("The database became active during restore. Stop the server and retry")
+        staged.replace(dest)
+    return version

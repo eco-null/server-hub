@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serverhub"
-version = "2.0.0"
+version = "2.1.0"
 description = "Self-hosted dashboard for your apps and services"
 readme = "README.md"
 license = "MIT"
@@ -22,6 +22,7 @@ dependencies = [
     "argon2-cffi==25.1.0",
     "cryptography==50.0.2",
     "pyotp==2.10.0",
+    "PyYAML==6.0.3",
     "segno==1.6.6",
 ]
 

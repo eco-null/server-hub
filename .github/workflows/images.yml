@@ -1,0 +1,119 @@
+name: Docker images
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/images.yml'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - 'compose.yaml'
+      - 'requirements.lock'
+      - 'serverhub/**'
+      - 'web/**'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Image and recovery (linux/${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        if: matrix.arch == 'arm64'
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          tags: server-hub:smoke
+          load: true
+      - name: Boot, back up and rehearse recovery
+        env:
+          IMAGE_PLATFORM: linux/${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          export SERVERHUB_SECRET_KEY="$(openssl rand -hex 24)"
+          container=serverhub-smoke
+          image=server-hub:smoke
+          docker volume create serverhub-smoke-data
+          opts=(--platform "$IMAGE_PLATFORM" -e SERVERHUB_SECRET_KEY -v serverhub-smoke-data:/data
+                --read-only --tmpfs /tmp:size=16m,mode=1777 --cap-drop ALL --security-opt no-new-privileges)
+          wait_ready() {
+            for attempt in {1..30}; do
+              if docker exec "$container" python -m serverhub healthcheck; then return; fi
+              sleep 2
+            done
+            docker logs "$container"
+            return 1
+          }
+          printf '%s\n' 'smoke-test-password' | docker run --rm -i "${opts[@]}" "$image" \
+            create-admin --email before@example.org --username before --password-stdin
+          docker run -d --name "$container" "${opts[@]}" "$image"
+          wait_ready
+          docker exec "$container" python -m serverhub backup /data/pre-upgrade.db
+          docker exec "$container" python -m serverhub verify-backup /data/pre-upgrade.db
+          printf '%s\n' 'smoke-test-password' | docker exec -i "$container" python -m serverhub \
+            create-admin --email after@example.org --username after --password-stdin
+          docker stop "$container"
+          docker run --rm "${opts[@]}" "$image" restore /data/pre-upgrade.db
+          docker start "$container"
+          wait_ready
+          docker exec "$container" python -c 'import sqlite3; db = sqlite3.connect("/data/serverhub.db"); assert db.execute("SELECT username FROM users").fetchall() == [("before",)]'
+
+  publish:
+    name: Publish versioned image to GHCR
+    if: github.event_name == 'release'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate release tag
+        id: image
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if ! [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+([.-][A-Za-z0-9]+)*)?$ ]]; then
+            echo "Use a version tag such as v2.1.0 or v2.1.0-rc.1" >&2
+            exit 1
+          fi
+          printf 'ref=ghcr.io/%s:%s\n' "${REPOSITORY,,}" "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.image.outputs.ref }}
+          push: true
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.event.release.tag_name }}

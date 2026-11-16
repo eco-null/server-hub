@@ -15,7 +15,7 @@ from serverhub.http import resolve_client
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 DEFAULT_BODY_LIMIT = 64 * 1024
-LARGE_BODY_LIMITS = {"/api/backup": 4 * 1024 * 1024}
+LARGE_BODY_LIMITS = dict.fromkeys(("/api/backup", "/api/import-links"), 4 * 1024 * 1024)
 
 CSP = (
     "default-src 'self'; "

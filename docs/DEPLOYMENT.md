@@ -196,18 +196,17 @@ Users can additionally export their own data (settings, services, bookmarks, no 
 
 ### Restoring a backup
 
-Restoring replaces the whole database. Stop the server, copy the backup over `serverhub.db`, remove stale journal files, and start again. The one-shot container below runs as the same user (uid `10001`) so file ownership stays correct. Use the same `SERVERHUB_SECRET_KEY` the backup was made with.
+Restoring replaces the whole database with the snapshot. Use the same `SERVERHUB_SECRET_KEY` the backup was made with. The one-shot container below runs as the same user (uid `10001`) so file ownership stays correct.
 
 ```bash
 docker compose stop server-hub
-docker compose run --rm --no-deps \
+docker compose run --rm --no-deps --pull never \
   -v "$PWD/backups/backup-2026-11-14.db:/restore/backup.db:ro" \
-  --entrypoint python server-hub -c \
-  "import os, shutil; [os.path.exists('/data/serverhub.db'+s) and os.remove('/data/serverhub.db'+s) for s in ('-wal','-shm')]; shutil.copyfile('/restore/backup.db', '/data/serverhub.db')"
-docker compose up -d
+  server-hub restore /restore/backup.db
+docker compose up -d --no-build --wait
 ```
 
-Replace the file name with your backup. Check `docker compose logs server-hub` and sign in. If you use a bind-mounted data directory you can instead stop the container, delete `serverhub.db-wal` and `serverhub.db-shm`, and copy the file over `serverhub.db` as the owner uid `10001`.
+Replace the file name with your backup. The command checks SQLite integrity, foreign keys and the schema version before atomically replacing the database. It refuses to proceed if SQLite journal files are present. Stop the running version cleanly so SQLite can close the database before retrying. Check `docker compose logs server-hub` and sign in after the restart.
 
 ## Upgrades and rollback
 
@@ -223,18 +222,39 @@ docker compose logs --tail 50 server-hub
 
 Schema migrations are numbered SQL files applied automatically at start; each one runs in a transaction. Read [CHANGELOG.md](../CHANGELOG.md) before upgrading.
 
-Rollback: there are no down-migrations. If the new version applied a migration, an older build refuses to start on that database (`database schema version N is newer than this build supports`). To go back, check out the previous version, restore the backup you took before upgrading ([Restoring a backup](#restoring-a-backup)), and rebuild:
+If the upgrade applied a migration, an older build refuses to open that database. To roll back, stop the app and restore the pre-upgrade snapshot using the current build as described in [Restoring a backup](#restoring-a-backup). Run the stop and restore commands, then check out the previous version and rebuild:
 
 ```bash
-docker compose down
 git checkout <previous-tag-or-commit>
-# restore the pre-upgrade backup here
-docker compose up -d --build
+docker compose up -d --build --wait
 ```
 
 If a release has no schema change, you can roll back the code alone without restoring.
 
-Version 2 does not migrate data from the previous (Supabase) version; it starts with an empty database.
+### Prebuilt images
+
+Publishing a GitHub release with a tag such as `v2.1.0` builds and tests AMD64 and ARM64 images before publishing to `ghcr.io/eco-null/server-hub:<tag>`. The image uses the exact version tag. On the first release, confirm that the GHCR package is public before advertising anonymous pulls.
+
+Use the current `compose.yaml` and keep your existing Compose project, data volume, and secret key. Record the old `SERVERHUB_IMAGE` value (or `server-hub:latest` for a local build). Set `SERVERHUB_IMAGE` in `.env` to the new tag, then run:
+
+```bash
+mkdir -p -m 700 backups
+backup="pre-upgrade-$(date -u +%Y%m%dT%H%M%SZ).db"
+docker compose exec -T server-hub python -m serverhub backup "/data/$backup" &&
+docker compose cp "server-hub:/data/$backup" "./backups/$backup" &&
+docker compose pull server-hub &&
+docker compose run --rm --no-deps --pull never \
+  -v "$PWD/backups/$backup:/restore/backup.db:ro" \
+  server-hub verify-backup /restore/backup.db &&
+docker compose exec -T server-hub rm "/data/$backup" &&
+docker compose up -d --no-build --pull never --wait --wait-timeout 120 server-hub
+```
+
+The sequence stops before replacing the running container if a backup, pull or validation step fails. If the new version fails its health check, inspect its logs. If it migrated the database, stop it and use its image to [restore the pre-upgrade snapshot](#restoring-a-backup). Run the stop and restore commands, then set the previous image reference in `.env` before starting again with `docker compose up -d --no-build --pull never --wait server-hub`. Restoring the snapshot discards writes made after the backup.
+
+### Moving links from the previous version
+
+Export a JSON backup from the old dashboard, then open **Settings → Backup → Import links** in the new installation. The preview shows how services and bookmarks will merge into the signed-in user's account. Old settings, Beszel credentials and accounts must be set up separately. See [API.md](API.md#bulk-link-import) for the YAML format and matching rules.
 
 ## Secret key
 

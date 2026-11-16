@@ -23,7 +23,7 @@
 services:
   server-hub:
     build: .
-    image: server-hub:latest
+    image: ${SERVERHUB_IMAGE:-server-hub:latest}
     container_name: server-hub
     restart: unless-stopped
     env_file: .env
