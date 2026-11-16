@@ -164,7 +164,7 @@ test('colour helpers: contrast guarantees for any accent', () => {
   assert.equal(readableOn('#EAB308'), '#0b0f19', 'yellow accent gets dark button text');
   assert.equal(readableOn('#5E6AD2'), '#ffffff');
   for (const accent of ['#EAB308', '#22C55E', '#5E6AD2', '#F97316', '#EC4899', '#64748B', '#ffffff', '#000000']) {
-    for (const bg of ['#080b12', '#f3f6fb', '#ffffff', '#111827']) {
+    for (const bg of ['#000000', '#0f0f10', '#f3f6fb', '#ffffff']) {
       assert.ok(contrast(ensureContrast(accent, bg, 4.5), bg) >= 4.5, `${accent} on ${bg}`);
     }
     const fg = readableOn(accent);

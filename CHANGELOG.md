@@ -17,6 +17,7 @@ All notable changes to this project are documented in this file. The format foll
 
 ### Changed
 
+- Default look: a new account (and the demo) starts in the dark theme on a flat black (`#000000`) page, with no wallpaper and no grid overlay. The surface tokens are neutral greys instead of blue-tinted ones, and the grid is now opt-in (Settings > Appearance). Stored settings are not rewritten and there is no data migration, but the look follows the defaults wherever nothing was saved: an account that never saved a theme, wallpaper or grid setting (no stored settings row) also gets the dark theme, the flat black page and no grid after upgrading, because the server merges the defaults over whatever is missing. Accounts that saved a theme, wallpaper or grid choice keep it.
 - Service URLs must not contain credentials (`user:password@`): creating or editing a service with one answers `400 validation`. The status checker never sends credentials, so such a service could only ever show `unknown`. Services already stored with credentials keep working and can still be edited, and backups that contain them still restore.
 - `PUT /api/admin/config` accepts a partial body: `registration_open` and `docker_visible_to_users` are both optional, with at least one required.
 - Dashboard layout: Settings is a chip in the header and "Add service" is a button next to the search field, replacing the floating buttons. The sign-out button reads "Sign out", and the greeting no longer repeats the date, which the clock shows. Groups and cards are laid out in balanced columns, and long names show their full text as a tooltip.
@@ -32,6 +33,15 @@ All notable changes to this project are documented in this file. The format foll
 - Documentation: the configuration table in the README now matches `.env.example` and `serverhub/config.py` (including the fixed container values for the data directory, host and port, and fractional session days). The `SERVERHUB_LOG_LEVEL` note is now exact: `warning` is the quietest level that still prints the setup token and the configuration warnings, while `error` and `critical` hide them.
 - Documentation: the README no longer tells readers to uncomment a volume in `compose.yaml` for TLS, and its screenshots and captions match the current interface.
 - `.env.example` documents `SERVERHUB_WEB_DIR` and the secret-key generation commands.
+- Signing in as a different account in the same browser no longer shows the previous account's cached dashboard (services, bookmarks, name) before the fresh data arrives. This happened when the previous session ended without the browser noticing, for example when it expired while the browser was closed.
+- Editing a service whose address is a single-label host (such as `http://nas`) no longer rewrites the address with the default domain when only another field (name, description, icon, category) is changed. The default domain is still added to an address you type.
+- A wrong method on a known API path (for example `PUT /api/settings`) answers `405 method_not_allowed` with an `Allow` header, as documented, instead of `404 not_found`.
+- `SERVERHUB_PUBLIC_URL` written with the scheme's default port (`https://hub.example.org:443`) no longer makes every write, sign-in included, fail with `403 csrf`: the port is dropped to match the browser's `Origin`.
+- `OPTIONS` on a known API path (for example `/api/settings`) answers `204` with a complete `Allow` header instead of a `405` listing only the first matching route's methods.
+- `SERVERHUB_PUBLIC_URL` is normalized to the browser's `Origin` form for unusual hosts too: IPv6 literals in compressed form (`https://[0:0::1]:8443` becomes `https://[::1]:8443`) and international host names in punycode (`https://Bücher.example` becomes `https://xn--bcher-kva.example`); a host that cannot be encoded is a configuration error.
+- The opt-in grid stays visible while a wallpaper image loads or fails to load, the "Grid" wallpaper preset always shows its grid, the grid is in place on first paint (no flat-then-grid flash), and the built-in default theme is no longer saved as the device's theme before the server has answered.
+- Narrow screens: a long single-word service name is cut with an ellipsis on one line instead of breaking in the middle of the word.
+- Demo: service and bookmark addresses without a host (`https:///path`) are refused like on the real server.
 
 ## [2.0.0] - 2026-11-14
 

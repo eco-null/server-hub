@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { safeUrl, hostOf, splitScheme, buildServiceUrl, withScheme, cssUrl, hasCredentials } from '../static/js/lib/url.js';
+import { safeUrl, hostOf, splitScheme, buildServiceUrl, serviceFormUrl, withScheme, cssUrl, hasCredentials } from '../static/js/lib/url.js';
 
 test('safeUrl accepts only http(s)', () => {
   assert.equal(safeUrl('https://example.com/a?b=1'), 'https://example.com/a?b=1');
@@ -48,6 +48,17 @@ test('buildServiceUrl leaves real hosts alone', () => {
   assert.equal(buildServiceUrl('https://', '192.168.1.5:8080', 'home.arpa'), 'https://192.168.1.5:8080');
   assert.equal(buildServiceUrl('https://', 'localhost', 'home.arpa'), 'https://localhost');
   assert.equal(buildServiceUrl('https://', 'host:3000', 'home.arpa'), 'https://host:3000');
+});
+
+test('serviceFormUrl: saving an edit never rewrites an unchanged single-label address', () => {
+  // Editing only the name or description of "http://nas" used to save "http://nas.home.arpa".
+  assert.equal(serviceFormUrl('http://', 'nas', 'home.arpa', 'nas'), 'http://nas');
+  assert.equal(serviceFormUrl('https://', 'nas', 'home.arpa', 'nas'), 'https://nas', 'the scheme select still applies');
+  // A changed address is expanded as before, and so is a new form.
+  assert.equal(serviceFormUrl('http://', 'nas2', 'home.arpa', 'nas'), 'http://nas2.home.arpa');
+  assert.equal(serviceFormUrl('http://', 'nas', 'home.arpa', null), 'http://nas.home.arpa');
+  // A prefilled draft without an address: what the user types is expanded.
+  assert.equal(serviceFormUrl('http://', 'grafana', 'home.arpa', ''), 'http://grafana.home.arpa');
 });
 
 test('buildServiceUrl: a typed scheme beats the select', () => {

@@ -145,14 +145,16 @@ Returns the full merged `{"settings": Settings}`.
 
 ```jsonc
 Settings = {
-  "theme": "auto" | "light" | "dark",
+  "theme": "auto" | "light" | "dark",          // default "dark"
   "accent": "#5E6AD2",                 // #rrggbb
   "userName": "", "pageTitle": "", "subtitle": "", "defaultDomain": "",
-  "wallpaper": { "mode": "none" | "gradient" | "image", "gradient": "<id>", "url": "", "showGrid": true },
+  "wallpaper": { "mode": "none" | "gradient" | "image", "gradient": "<id>", "url": "", "showGrid": false },  // defaults: none, no grid
   "features": { "clock": true, "greeting": true, "stats": true, "search": true, "statusChecks": true },
   "search": { "provider": "google" | "duckduckgo" | "bing" | "startpage" | "searxng", "searxngUrl": "" }
 }
 ```
+
+The defaults give a plain black page: dark theme, `wallpaper.mode` `none` and no grid overlay. Values already stored for an account are never rewritten.
 
 Settings never contain secrets. 2FA and Beszel credentials live elsewhere.
 

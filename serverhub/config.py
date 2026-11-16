@@ -138,9 +138,29 @@ class Config(BaseSettings):
         if v is None or not v.strip():
             return None
         parts = urlsplit(v.strip())
-        if parts.scheme not in ("http", "https") or not parts.hostname:
+        scheme = parts.scheme.lower()
+        try:
+            port = parts.port
+        except ValueError:
+            port = -1
+        if scheme not in ("http", "https") or not parts.hostname or port == -1:
             raise ValueError("must be an absolute http:// or https:// URL")
-        return f"{parts.scheme}://{parts.netloc}".lower()
+        # The browser's Origin form: no user info, and no port when it is the
+        # scheme's default (an Origin never carries ":443"), else CSRF never matches.
+        host = parts.hostname.lower()
+        try:
+            ip = ipaddress.ip_address(host)
+        except ValueError:
+            # A name: browsers send the punycode (ASCII) form of an IDN host.
+            try:
+                host = host.encode("idna").decode("ascii")
+            except UnicodeError:
+                raise ValueError("host name cannot be encoded as an ASCII (IDNA) name") from None
+        else:
+            host = f"[{ip.compressed}]" if ip.version == 6 else ip.compressed
+        if port is not None and port != {"http": 80, "https": 443}[scheme]:
+            host = f"{host}:{port}"
+        return f"{scheme}://{host}"
 
     @field_validator("tls_cert_file", "tls_key_file", mode="before")
     @classmethod

@@ -10,9 +10,9 @@ import { ensureContrast, isHex, readableOn, rgba } from './lib/color.js';
 export const THEME_MODES = /** @type {const} */ (['auto', 'light', 'dark']);
 
 /** Surfaces text sits on; accent-coloured text must reach AA against these. */
-const BG = { dark: '#0b101a', light: '#f3f6fb' };
+const BG = { dark: '#0f0f10', light: '#f3f6fb' };
 /** Page background colours reported to the browser (theme-color). */
-const BROWSER_UI = { dark: '#080b12', light: '#f3f6fb' };
+const BROWSER_UI = { dark: '#000000', light: '#f3f6fb' };
 const DEFAULT_ACCENT = '#5E6AD2';
 
 /** @param {string} mode */
@@ -56,10 +56,14 @@ export function setThemeColor(dark) {
 /**
  * Applies theme + accent to the document and remembers them for the next
  * first paint (device-level, survives logout).
+ * Only values that came from the server (or an explicit user choice) may be
+ * remembered: the store starts from DEFAULT_SETTINGS before the first bootstrap
+ * answer, and persisting that would pass the default off as the device's theme.
  * @param {string} mode
  * @param {string} accent
+ * @param {{ persist?: boolean, grid?: boolean }} [opts] `grid`: the opt-in page grid is on and no wallpaper covers it (theme-boot repeats it before first paint)
  */
-export function applyTheme(mode, accent) {
+export function applyTheme(mode, accent, opts = {}) {
   const dark = isDark(mode);
   const root = document.documentElement;
   root.classList.toggle('dark', dark);
@@ -67,8 +71,10 @@ export function applyTheme(mode, accent) {
   setThemeColor(dark);
   const vars = accentVars(accent);
   for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
-  const prev = readJson(storage, UI_KEY) || {};
-  writeJson(storage, UI_KEY, { ...prev, theme: mode, accent, vars });
+  if (opts.persist !== false) {
+    const prev = readJson(storage, UI_KEY) || {};
+    writeJson(storage, UI_KEY, { ...prev, theme: mode, accent, vars, grid: !!opts.grid });
+  }
   return dark;
 }
 

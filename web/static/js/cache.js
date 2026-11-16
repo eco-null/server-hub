@@ -4,7 +4,7 @@
  * rendered immediately, then replaced by the fresh response.
  */
 
-import { KEY_PREFIX, readJson, writeJson, storage } from './storage.js';
+import { KEY_PREFIX, clearUserData, readJson, writeJson, storage } from './storage.js';
 
 const LAST_USER_KEY = KEY_PREFIX + 'last-user';
 const bootKey = (/** @type {string} */ uid) => KEY_PREFIX + 'boot:' + uid;
@@ -36,6 +36,17 @@ export function createBootCache(kv = storage, now = Date.now) {
       if (prev && prev !== data.user.id) kv.removeItem(bootKey(prev));
       kv.setItem(LAST_USER_KEY, data.user.id);
       writeJson(kv, bootKey(data.user.id), { t: now(), data });
+    },
+    /**
+     * Called right after a sign-in. `read()` cannot know who is signed in, so
+     * a payload left by someone else (their session ended without a 401 being
+     * seen here, e.g. it expired while the browser was closed) must go before
+     * the next page paints it.
+     * @param {string} uid the user who just signed in
+     */
+    forgetOthers(uid) {
+      const prev = kv.getItem(LAST_USER_KEY);
+      if (prev && prev !== uid) clearUserData(kv);
     },
   };
 }

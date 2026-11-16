@@ -21,15 +21,16 @@ body {
   line-height: 1.5;
   color: var(--fg);
   background-color: var(--bg-deep);
-  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 32px 32px;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: contain;
   transition: background-color var(--t-slow) var(--ease), color var(--t-slow) var(--ease);
 }
 
-html.no-grid body {
-  background-image: none;
+/* The page is a flat colour by default; the faint grid is opt-in (Settings > Grid overlay),
+   toggled on <html> by wallpaper.js. Over a wallpaper the grid is part of the wallpaper layer. */
+html.show-grid body {
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 html.has-wallpaper body {

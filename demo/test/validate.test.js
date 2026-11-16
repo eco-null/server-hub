@@ -15,13 +15,13 @@ const fields = (model, data) => {
 
 test('settings defaults match the backend', () => {
   assert.deepEqual(S.defaultSettings(), {
-    theme: 'auto',
+    theme: 'dark',
     accent: '#5E6AD2',
     userName: '',
     pageTitle: '',
     subtitle: '',
     defaultDomain: '',
-    wallpaper: { mode: 'none', gradient: 'default', url: '', showGrid: true },
+    wallpaper: { mode: 'none', gradient: 'default', url: '', showGrid: false },
     features: { clock: true, greeting: true, stats: true, search: true, statusChecks: true },
     search: { provider: 'duckduckgo', searxngUrl: '' },
   });
@@ -108,4 +108,12 @@ test('backup documents: version, list limits, extra keys ignored inside items', 
   assert.deepEqual(doc.services[0], { name: 'A', url: 'http://a.home.arpa', description: '', icon: 'box', category: null, check: true });
   assert.equal(fields(S.BackupDoc, { version: 1, bookmarks: [{ name: 'A', url: 'bad' }] })['bookmarks.0.url'], 'must be a valid http(s) URL');
   assert.match(fields(S.BackupDoc, { version: 1, services: new Array(501).fill({}) }).services, /at most 500 items/);
+});
+
+test('URLs without a host are refused like urlsplit does (WHATWG would read "https:///x" as host "x")', () => {
+  for (const url of ['https:///path', 'http:///', 'https://:8080/x', 'https://user@/x']) {
+    assert.equal(S.urlSyntaxOk(url), false, url);
+    assert.throws(() => S.validate(S.ServiceCreate, { name: 'a', url }), S.ValidationError, url);
+  }
+  for (const url of ['https://a.example.com', 'http://[::1]:8080/x', 'https://nas:8443/']) assert.equal(S.urlSyntaxOk(url), true, url);
 });

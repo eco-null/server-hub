@@ -46,7 +46,7 @@ test('normalizeSettings fills gaps with defaults', () => {
   const s = normalizeSettings({ theme: 'dark', wallpaper: { mode: 'none' } });
   assert.equal(s.theme, 'dark');
   assert.equal(s.wallpaper.mode, 'none');
-  assert.equal(s.wallpaper.showGrid, true);
+  assert.equal(s.wallpaper.showGrid, false);
   assert.equal(s.features.statusChecks, true);
   assert.equal(normalizeSettings(null).accent, '#5E6AD2');
 });
@@ -80,10 +80,10 @@ test('the debounce timer sends without an explicit flush, once', async () => {
 test('nested objects are sent whole, never half-filled', async () => {
   const { api, calls } = fakeApi();
   const store = createSettingsStore({ api, debounceMs: 5 });
-  store.update({ wallpaper: { showGrid: false } });
+  store.update({ wallpaper: { showGrid: true } });
   await store.flush();
-  assert.deepEqual(calls[0].body.wallpaper, { mode: 'gradient', gradient: 'grid', url: '', showGrid: false });
-  assert.equal(store.get().wallpaper.showGrid, false);
+  assert.deepEqual(calls[0].body.wallpaper, { mode: 'none', gradient: 'default', url: '', showGrid: true });
+  assert.equal(store.get().wallpaper.showGrid, true);
 });
 
 test('an edit made while a save is in flight is neither lost nor overwritten', async () => {
@@ -125,7 +125,7 @@ test('reset calls DELETE /api/settings and adopts the defaults', async () => {
   assert.equal(del[0].path, '/api/settings');
   assert.equal(calls.filter((c) => c.method === 'PATCH').length, 0, 'pending edit was dropped, not sent');
   assert.equal(store.get().userName, '');
-  assert.equal(store.get().theme, 'auto');
+  assert.equal(store.get().theme, 'dark');
 });
 
 test('replace() drops pending edits and notifies as remote', async () => {
@@ -149,4 +149,31 @@ test('update ignores non-objects and dangerous keys', () => {
   store.update(JSON.parse('{"__proto__": {"x": 1}}'));
   assert.equal({}.x, undefined);
   assert.equal(store.saveInfo().status, 'idle');
+});
+
+test('a fresh install defaults to the dark theme and a plain page: no wallpaper, no grid', () => {
+  const s = normalizeSettings(undefined);
+  assert.equal(s.theme, 'dark');
+  assert.equal(s.wallpaper.mode, 'none');
+  assert.equal(s.wallpaper.showGrid, false);
+  // an explicit earlier choice is kept
+  const kept = normalizeSettings({ theme: 'auto', wallpaper: { mode: 'gradient', gradient: 'ocean', showGrid: true } });
+  assert.equal(kept.theme, 'auto');
+  assert.deepEqual(kept.wallpaper, { mode: 'gradient', gradient: 'ocean', url: '', showGrid: true });
+});
+
+test('DEFAULT_SETTINGS mirrors the backend Settings model defaults', () => {
+  // Keep in sync with serverhub/api/schemas.py (Settings and its nested models).
+  assert.deepEqual(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), {
+    theme: 'dark',
+    accent: '#5E6AD2',
+    userName: '',
+    pageTitle: '',
+    subtitle: '',
+    defaultDomain: '',
+    wallpaper: { mode: 'none', gradient: 'default', url: '', showGrid: false },
+    features: { clock: true, greeting: true, stats: true, search: true, statusChecks: true },
+    search: { provider: 'duckduckgo', searxngUrl: '' },
+  });
+  assert.equal(normalizeSettings({}).search.provider, 'duckduckgo');
 });

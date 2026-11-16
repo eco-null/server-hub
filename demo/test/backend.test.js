@@ -78,14 +78,14 @@ test('bookmarks CRUD with validation', async () => {
 
 test('settings PATCH deep-merges, validates the result, DELETE resets', async () => {
   const { call } = setup();
-  const r = await call('PATCH', '/api/settings', { theme: 'dark', wallpaper: { gradient: 'forest' } });
+  const r = await call('PATCH', '/api/settings', { theme: 'dark', wallpaper: { mode: 'gradient', gradient: 'forest' } });
   assert.equal(r.body.settings.theme, 'dark');
-  assert.deepEqual(r.body.settings.wallpaper, { mode: 'gradient', gradient: 'forest', url: '', showGrid: true });
+  assert.deepEqual(r.body.settings.wallpaper, { mode: 'gradient', gradient: 'forest', url: '', showGrid: false });
   const bad = await call('PATCH', '/api/settings', { accent: 'red', features: { clock: 1 } });
   assert.deepEqual(bad.body.error.fields, { accent: "String should match pattern '^#[0-9a-fA-F]{6}$'", 'features.clock': 'Input should be a valid boolean' });
   assert.equal((await call('GET', '/api/settings')).body.settings.theme, 'dark', 'a failed PATCH changes nothing');
   const reset = await call('DELETE', '/api/settings');
-  assert.equal(reset.body.settings.theme, 'auto');
+  assert.equal(reset.body.settings.theme, 'dark');
   assert.equal(reset.body.settings.userName, '');
 });
 
