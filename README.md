@@ -16,9 +16,9 @@
 
 The real interface running entirely in your browser, with sample data. Nothing is sent to a server.
 
-<img src="docs/screenshots/dashboard-dark.png" alt="Server Hub dashboard in the dark theme: service tiles grouped by category, a bookmarks panel and system statistics" width="860">
+<a href="docs/screenshots/dashboard-dark.png"><img src="docs/screenshots/dashboard-dark.png" alt="Dark dashboard showing service categories, status indicators, bookmarks and system metrics" width="860"></a>
 
-[Demo](#live-demo) · [Quick start](#quick-start-docker-compose) · [Configuration](#configuration) · [HTTPS](#https) · [Backup](#backup-and-restore) · [Docs](#documentation)
+[Demo](#live-demo) · [Screenshots](#screenshots) · [Quick start](#quick-start-docker-compose) · [Configuration](#configuration) · [HTTPS](#https) · [Backup](#backup-and-restore) · [Docs](#documentation)
 
 </div>
 
@@ -77,27 +77,42 @@ The demo shows how the interface looks and behaves; it does not exercise the rea
 
 ## Screenshots
 
-The screenshots show the demo data.
-
-<details>
-<summary>Show all screenshots</summary>
+Screenshots use sample data from the live demo. Select a preview to open it at full size.
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/dashboard-light.png" alt="Dashboard in the light theme" width="420"><br><sub>Dashboard, light theme</sub></td>
-    <td align="center"><img src="docs/screenshots/search.png" alt="Search dialog with two matching services and a web search entry" width="420"><br><sub>Search: matching services, then a web search</sub></td>
+    <td align="center" valign="top">
+      <a href="docs/screenshots/search.png"><img src="docs/screenshots/search.png" alt="Search for movie shows Jellyfin and Radarr, followed by a DuckDuckGo option" width="420"></a><br>
+      <strong>Search</strong><br>
+      <sub>Press <kbd>/</kbd> to find a service or search the web.</sub>
+    </td>
+    <td align="center" valign="top">
+      <a href="docs/screenshots/settings.png"><img src="docs/screenshots/settings.png" alt="Appearance controls for theme, accent color, wallpaper and grid overlay" width="420"></a><br>
+      <strong>Appearance</strong><br>
+      <sub>Set the theme, accent color and wallpaper.</sub>
+    </td>
+  </tr>
+</table>
+
+<details>
+<summary>More screenshots</summary>
+
+<table>
+  <tr>
+    <td align="center"><a href="docs/screenshots/settings-controls.png"><img src="docs/screenshots/settings-controls.png" alt="Dashboard feature switches and search settings with SearXNG selected" width="420"></a><br><sub>Dashboard features and search provider</sub></td>
+    <td align="center"><a href="docs/screenshots/docker-discovery.png"><img src="docs/screenshots/docker-discovery.png" alt="Docker connection status, label reference, skipped containers and suggestions" width="420"></a><br><sub>Docker discovery</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/edit-service.png" alt="Edit service dialog with name, address, description, category, icon and status check" width="420"><br><sub>Edit a service</sub></td>
-    <td align="center"><img src="docs/screenshots/settings.png" alt="Settings page, appearance section: theme, accent color and wallpaper" width="420"><br><sub>Settings: appearance</sub></td>
+    <td align="center"><a href="docs/screenshots/edit-service.png"><img src="docs/screenshots/edit-service.png" alt="Service editor with category, icon and status check controls" width="420"></a><br><sub>Service editor</sub></td>
+    <td align="center"><a href="docs/screenshots/settings-admin.png"><img src="docs/screenshots/settings-admin.png" alt="Administration settings showing the registration switch and user list" width="420"></a><br><sub>Account administration</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/settings-admin.png" alt="Settings page, administration section with registration switch and user list, followed by the start of the Docker section" width="420"><br><sub>Settings: administration</sub></td>
-    <td align="center"><img src="docs/screenshots/login.png" alt="Sign-in page with username and password fields" width="420"><br><sub>Sign-in page</sub></td>
+    <td align="center"><a href="docs/screenshots/dashboard-light.png"><img src="docs/screenshots/dashboard-light.png" alt="Dashboard in the light theme" width="420"></a><br><sub>Light dashboard</sub></td>
+    <td align="center"><a href="docs/screenshots/login.png"><img src="docs/screenshots/login.png" alt="Sign-in page with username and password fields" width="420"></a><br><sub>Sign-in page</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/docker-discovery.png" alt="Settings page, Docker section: connection status, the switch to show discovered services to all users, the label reference, skipped containers and suggestions" width="420"><br><sub>Settings: Docker discovery</sub></td>
-    <td align="center"><img src="docs/screenshots/mobile.png" alt="Dashboard on a phone with the Add service button reduced to a plus icon" width="240"><br><sub>Dashboard on a phone</sub></td>
+    <td align="center"><a href="docs/screenshots/settings-beszel.png"><img src="docs/screenshots/settings-beszel.png" alt="Settings for the Rack and Edge Beszel hubs with connection test controls" width="360"></a><br><sub>Beszel hub settings</sub></td>
+    <td align="center"><a href="docs/screenshots/mobile.png"><img src="docs/screenshots/mobile.png" alt="Dashboard on a phone with the Add service button reduced to a plus icon" width="240"></a><br><sub>Mobile dashboard</sub></td>
   </tr>
 </table>
 
