@@ -4,10 +4,17 @@ from __future__ import annotations
 
 import sqlite3
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from serverhub.api.schemas import DEFAULT_SETTINGS, Settings, deep_merge
 from serverhub.db import repo
+
+
+def service_fields(model: BaseModel, *, exclude_unset: bool = False) -> dict:
+    fields = model.model_dump(exclude_unset=exclude_unset)
+    if "check" in fields:
+        fields["check_enabled"] = int(fields.pop("check"))
+    return fields
 
 
 def user_out(u: dict, *, with_created: bool = False) -> dict:

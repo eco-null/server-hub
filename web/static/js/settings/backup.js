@@ -9,6 +9,7 @@ import { downloadText } from '../lib/clipboard.js';
 import { isPlainObject } from '../lib/merge.js';
 import { toastSuccess, toastError } from '../toast.js';
 import { ApiError } from '../api.js';
+import { linkImportControls } from './link-import.js';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -85,10 +86,12 @@ export function mountBackup(root, env) {
     });
   });
 
+  const isDemo = document.body.hasAttribute('data-serverhub-demo');
   root.append(
     h('p', { class: 'muted panel-intro' }, 'Export your settings, services and bookmarks to a JSON file, or restore them from one. Beszel hubs, passwords and two-factor secrets are never included.'),
+    ...(isDemo ? [] : [h('p', { class: 'muted panel-intro' }, 'Use Import links to merge services and bookmarks from YAML or a JSON backup.')]),
     notice.el,
-    h('div', { class: 'form-actions' }, exportBtn, importBtn, fileInput),
+    h('div', { class: 'form-actions' }, exportBtn, importBtn, fileInput, ...(isDemo ? [] : linkImportControls(env, notice))),
   );
 }
 

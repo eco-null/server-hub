@@ -2,10 +2,13 @@
 
 All notable changes to this project are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.1.0] - 2026-11-16
 
 ### Added
 
+- Bulk link import from YAML and Server Hub JSON backups. Preview additions, updates and conflicts in Settings before applying a merge.
+- On GitHub releases, test and publish version-tagged Linux AMD64 and ARM64 images to GHCR. Existing deployments can select an image through `SERVERHUB_IMAGE`.
+- `verify-backup` checks a standalone SQLite snapshot. `restore` verifies it before replacing the database of a stopped server.
 - Docker auto-discovery (optional, off by default). Containers labeled `serverhub.enable=true` with a `serverhub.url` appear as read-only service cards, with optional `serverhub.name`, `serverhub.description`, `serverhub.icon`, `serverhub.category` and `serverhub.check` labels; admins get suggestions for running containers that publish a port, and a Settings page section with the connection status, label reference, skipped containers and warnings. An admin switch, "Show discovered services to all users", controls who sees them (default: admins only). Discovered services get status checks too: stopped containers show `down`, and running ones are requested at their `serverhub.url`.
 - Server Hub reads the container list through a socket proxy (`docker-proxy` in `compose.yaml`, profile `docker`) that allows exactly `GET /containers/json` and only from the `server-hub` container; Server Hub never mounts the Docker socket. New settings: `SERVERHUB_DOCKER_HOST`, `SERVERHUB_DOCKER_PUBLIC_HOST`, and the Compose variables `COMPOSE_PROFILES` and `DOCKER_GID`. API: `GET /api/docker`, `GET /api/admin/docker/suggestions`, `docker_visible_to_users` in `GET`/`PUT /api/admin/config`, and `docker` in `GET /api/bootstrap`. Setup, labels, security considerations and troubleshooting are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#docker-discovery).
 - CI starts the proxy on a real Docker engine and checks that it answers the container list and refuses inspect, logs, stats, attach, exec and write requests, and clients other than Server Hub.

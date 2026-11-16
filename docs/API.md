@@ -27,7 +27,7 @@ errors as `{"error": {"code": "<machine_code>", "message": "<human text>"}}`
     non-browser clients need nothing extra.
 - **Bodies:** unsafe `/api/*` requests that have a body (or a `Content-Type`) must use
   `application/json`, else `415 unsupported_media_type`. Bodies are capped at 64 KiB
-  (4 MiB for `POST /api/backup`), else `413 payload_too_large`. JSON nested deeper than
+  (4 MiB for `POST /api/backup` and `POST /api/import-links`), else `413 payload_too_large`. JSON nested deeper than
   32 levels, or not valid JSON, is `400 invalid_json`.
 - **No state change on GET.**
 - **Roles:** `admin` and `user`. The first account created through setup is the admin.
@@ -398,6 +398,31 @@ Discovered services are read-only: `PATCH`/`DELETE /api/services/docker:…` ans
 `GET /api/backup` → `{"version": 1, "exported_at", "settings", "services", "bookmarks"}` (no secrets).
 `POST /api/backup` body: the same document (≤ 4 MiB). Replaces the caller's settings,
 services and bookmarks in one transaction. Returns the same shape as `/api/bootstrap`.
+
+### Bulk link import
+
+`POST /api/import-links` takes `{"format": "yaml" | "json", "content": "..."}` where `content` is the file text (up to 1 MiB of UTF-8). A preview returns `{"revision", "services", "bookmarks"}`. Each row has `name`, `url` and `action` (`add`, `update`, `unchanged` or `conflict`). Updates include `fields` and `previous_name`; conflicts include `reason`.
+
+Resend the same body with the returned `revision` to apply. This merges both collections in one transaction and returns the updated `{"services", "bookmarks"}` lists. A changed document or catalog gives `409 stale_preview`; a conflicting plan gives `409 import_conflict`.
+
+An exact URL match within its own collection updates the existing link in place. Include optional fields only where you want to set them. Duplicate URLs in the input or ambiguous matches in the current collection block the import. The merge leaves unmatched links and the user's settings in place.
+
+YAML uses the same link fields as the API:
+
+```yaml
+version: 1
+services:
+  - name: Jellyfin
+    url: https://jellyfin.home.arpa
+    category: Media
+    check: true
+bookmarks:
+  - name: Server Hub docs
+    url: https://github.com/eco-null/server-hub
+    color: "#5E6AD2"
+```
+
+JSON accepts the same document and exports from both Server Hub v2 and the legacy dashboard, using only their service and bookmark fields. The existing `POST /api/backup` remains the full per-user restore endpoint.
 
 ## Admin (role `admin`)
 

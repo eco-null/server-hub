@@ -13,7 +13,14 @@ from starlette.routing import Route
 
 from serverhub.api import schemas as s
 from serverhub.api.docker import discovered_statuses
-from serverhub.api.serialize import bookmark_out, bootstrap, load_settings, service_out
+from serverhub.api.link_import import import_links
+from serverhub.api.serialize import (
+    bookmark_out,
+    bootstrap,
+    load_settings,
+    service_fields,
+    service_out,
+)
 from serverhub.auth.sessions import require_user
 from serverhub.db import repo
 from serverhub.errors import not_found, validation
@@ -87,13 +94,6 @@ async def reset_settings(request: Request) -> Response:
 # ---- services -------------------------------------------------------------------
 
 
-def _service_fields(m: BaseModel) -> dict:
-    data = m.model_dump(exclude_unset=isinstance(m, s.ServicePatch))
-    if "check" in data:
-        data["check_enabled"] = 1 if data.pop("check") else 0
-    return data
-
-
 async def list_services(request: Request) -> Response:
     user = await require_user(request)
     rows = await hub(request).db.run(repo.list_owned, "services", user["id"])
@@ -104,7 +104,7 @@ async def create_service(request: Request) -> Response:
     user = await require_user(request)
     body = await parse(request, s.ServiceCreate)
     row = await hub(request).db.run(
-        repo.insert_owned, "services", user["id"], _service_fields(body), s.MAX_SERVICES
+        repo.insert_owned, "services", user["id"], service_fields(body), s.MAX_SERVICES
     )
     return json_response({"service": service_out(row)}, 201)
 
@@ -115,7 +115,7 @@ async def update_service(request: Request) -> Response:
     body = await parse(request, s.ServicePatch)
     reject_nulls(body, frozenset({"category"}))
     row = await hub(request).db.run(
-        repo.update_owned, "services", user["id"], sid, _service_fields(body)
+        repo.update_owned, "services", user["id"], sid, service_fields(body, exclude_unset=True)
     )
     if row is None:
         raise not_found()
@@ -230,7 +230,7 @@ async def import_backup(request: Request) -> Response:
         raise validation(
             {f"settings.{k}": v for k, v in validation_from(exc).fields.items()}  # type: ignore[union-attr]
         ) from None
-    services = [_service_fields(x) for x in doc.services]
+    services = [service_fields(x) for x in doc.services]
     bookmarks = [x.model_dump() for x in doc.bookmarks]
 
     h = hub(request)
@@ -258,4 +258,5 @@ routes = [
     Route("/api/status", get_status, methods=["GET"]),
     Route("/api/backup", export_backup, methods=["GET"]),
     Route("/api/backup", import_backup, methods=["POST"]),
+    Route("/api/import-links", import_links, methods=["POST"]),
 ]

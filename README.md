@@ -18,7 +18,7 @@ The real interface running entirely in your browser, with sample data. Nothing i
 
 <a href="docs/screenshots/dashboard-dark.png"><img src="docs/screenshots/dashboard-dark.png" alt="Dark dashboard showing service categories, status indicators, bookmarks and system metrics" width="860"></a>
 
-[Demo](#live-demo) · [Screenshots](#screenshots) · [Quick start](#quick-start-docker-compose) · [Configuration](#configuration) · [HTTPS](#https) · [Backup](#backup-and-restore) · [Docs](#documentation)
+[Demo](#live-demo) · [Screenshots](#screenshots) · [Quick start](#quick-start-docker-compose) · [Releases](https://github.com/eco-null/server-hub/releases) · [Configuration](#configuration) · [Backup](#backup-and-restore) · [Docs](#documentation)
 
 </div>
 
@@ -26,7 +26,7 @@ The real interface running entirely in your browser, with sample data. Nothing i
 
 Server Hub is one page that lists the web apps and services you run, shows whether each one is up, and optionally shows CPU, memory and disk figures from the host and from your [Beszel](https://beszel.dev) hubs. It runs as a single container with a SQLite database. There is no external database, identity provider or reverse proxy: accounts, sessions and two-factor authentication are built in, and the app can serve HTTPS itself.
 
-Version 2 is a rewrite. It does not read data from the previous Supabase/Vercel version; see [CHANGELOG.md](CHANGELOG.md).
+Use **Settings → Backup → Import links** to preview and merge services and bookmarks from YAML or a JSON export, including [exports from the old Supabase/Vercel version](docs/DEPLOYMENT.md#moving-links-from-the-previous-version).
 
 ## Features
 
@@ -46,6 +46,7 @@ Version 2 is a rewrite. It does not read data from the previous Supabase/Vercel 
 - Dark (default, plain black), light or automatic theme, accent color, wallpaper (gradient presets or an image URL), optional grid overlay.
 - Page title, subtitle and your name for the greeting; each dashboard feature can be switched off.
 - Settings, services and bookmarks are stored per user. Export and import them as a JSON file (no secrets included).
+- Bulk link import previews additions, updates and conflicts before merging services and bookmarks from YAML or a JSON backup.
 
 **Accounts and security**
 - First-run setup protected by a setup token; the first account is the admin. Registration is closed by default and an admin can open it.
@@ -71,6 +72,7 @@ What is simulated, and how the demo differs from a real install:
 - Changing your own password is checked but not applied, so the demo credentials keep working. Resetting the demo account's password is ignored for the same reason.
 - There is no rate limiting, only one demo session per browser, and the first-run setup is never shown.
 - Wallpaper images from other sites are blocked by the demo's Content Security Policy.
+- Bulk link import is available on a running Server Hub installation.
 - Two-factor authentication works with a real authenticator app. Use the "Reset demo" button in the demo banner if you lose the codes.
 
 The demo shows how the interface looks and behaves; it does not exercise the real server, so it says nothing about how an installation is secured or deployed. To build and preview it locally, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#the-demo-github-pages).
@@ -120,14 +122,16 @@ Screenshots use sample data from the live demo. Select a preview to open it at f
 
 ## Quick start (Docker Compose)
 
-You need a Linux host with Docker, the Compose plugin and Git.
+You need a Linux host with Docker, the Compose plugin, Git and OpenSSL. The published image runs on AMD64 and ARM64.
 
 ```bash
-git clone https://github.com/eco-null/server-hub.git
+git clone --branch v2.1.0 https://github.com/eco-null/server-hub.git
 cd server-hub
 cp .env.example .env
 sed -i "s|^SERVERHUB_SECRET_KEY=.*|SERVERHUB_SECRET_KEY=$(openssl rand -hex 24)|" .env
-docker compose up -d --build
+printf '\nSERVERHUB_IMAGE=ghcr.io/eco-null/server-hub:v2.1.0\n' >> .env
+docker compose pull server-hub
+docker compose up -d --no-build --wait
 ```
 
 The `sed` line writes a random 48-character secret key into `.env`. Keep a copy of it with your backups; see [Backup and restore](#backup-and-restore) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#secret-key).
@@ -150,6 +154,7 @@ Settings are environment variables, read at startup. With Docker Compose, put th
 |---|---|---|
 | `SERVERHUB_SECRET_KEY` | none, **required** | At least 32 characters. Encrypts 2FA secrets and stored Beszel passwords and keys the recovery-code hashes. Passwords and sessions do not depend on it. |
 | `SERVERHUB_PUBLISH_PORT` | `8642` | Host port published by `compose.yaml`. Read by Compose only; the container always listens on 8642. |
+| `SERVERHUB_IMAGE` | `server-hub:latest` | Compose image reference. Set it to a versioned GHCR image for a prebuilt installation. |
 | `SERVERHUB_DATA_DIR` | `./data` | Directory that holds the SQLite database `serverhub.db`. Under Compose, `compose.yaml` fixes it to `/data`. |
 | `SERVERHUB_HOST` | `0.0.0.0` | Address to listen on. Fixed to `0.0.0.0` by `compose.yaml`. |
 | `SERVERHUB_PORT` | `8642` | Port to listen on (1-65535). Fixed to `8642` by `compose.yaml`; change `SERVERHUB_PUBLISH_PORT` instead. |
@@ -279,6 +284,10 @@ docker compose exec server-hub rm /data/backup-$(date +%F).db
 Keep the backup together with the value of `SERVERHUB_SECRET_KEY`: without the key, accounts that use 2FA and stored Beszel passwords cannot be read after a restore. Restore steps and a cron example are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#restoring-a-backup). Users can also export their own settings, services and bookmarks as JSON from the settings page.
 
 ## Upgrade
+
+Pick a version from [GitHub Releases](https://github.com/eco-null/server-hub/releases) and follow the [prebuilt image upgrade and rollback procedure](docs/DEPLOYMENT.md#prebuilt-images). It verifies a pre-upgrade SQLite backup before replacing the running container.
+
+If you installed from a source checkout on `main`:
 
 ```bash
 git pull

@@ -138,6 +138,7 @@ function injectDemo(html, base, name) {
       <a class="demo-banner-link" href="${REPO_URL}" rel="noopener noreferrer">Server Hub on GitHub</a>
     </div>
   </div>`;
+  html = html.replace(/<body(?=[\s>])/i, '<body data-serverhub-demo');
   const body = /<body[^>]*>/i.exec(html);
   must(!!body, '<body>');
   let at = /** @type {RegExpExecArray} */ (body).index + /** @type {RegExpExecArray} */ (body)[0].length;

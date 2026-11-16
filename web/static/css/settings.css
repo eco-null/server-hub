@@ -80,6 +80,16 @@
   gap: 1rem;
 }
 
+.import-rows {
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding-inline-start: 1.4rem;
+}
+
+.import-rows > li + li {
+  margin-block-start: 0.6rem;
+}
+
 .card-title-sm {
   min-width: 0;
   font-size: 0.9375rem;
