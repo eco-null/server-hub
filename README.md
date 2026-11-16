@@ -43,7 +43,7 @@ Version 2 is a rewrite. It does not read data from the previous Supabase/Vercel 
 - Docker discovery (optional, off by default): containers you label become service cards, and admins get one-click suggestions for other containers that publish a port. Server Hub never mounts the Docker socket; it reads the container list through a proxy that allows nothing else. See [Docker discovery](#docker-discovery).
 
 **Personalization**
-- Dark, light or automatic theme, accent color, wallpaper (gradient presets or an image URL), optional grid overlay.
+- Dark (default, plain black), light or automatic theme, accent color, wallpaper (gradient presets or an image URL), optional grid overlay.
 - Page title, subtitle and your name for the greeting; each dashboard feature can be switched off.
 - Settings, services and bookmarks are stored per user. Export and import them as a JSON file (no secrets included).
 
@@ -92,7 +92,7 @@ The screenshots show the demo data.
     <td align="center"><img src="docs/screenshots/settings.png" alt="Settings page, appearance section: theme, accent color and wallpaper" width="420"><br><sub>Settings: appearance</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/screenshots/settings-admin.png" alt="Settings page, administration section with registration switch and user list, followed by backup and reset" width="420"><br><sub>Settings: administration, backup and reset</sub></td>
+    <td align="center"><img src="docs/screenshots/settings-admin.png" alt="Settings page, administration section with registration switch and user list, followed by the start of the Docker section" width="420"><br><sub>Settings: administration</sub></td>
     <td align="center"><img src="docs/screenshots/login.png" alt="Sign-in page with username and password fields" width="420"><br><sub>Sign-in page</sub></td>
   </tr>
   <tr>

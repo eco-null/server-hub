@@ -139,7 +139,7 @@ class Wallpaper(Strict):
     mode: Literal["none", "gradient", "image"] = "none"
     gradient: Annotated[str, StringConstraints(pattern=r"^[a-z0-9-]{0,40}$")] = "default"
     url: Annotated[str, StringConstraints(max_length=2000), AfterValidator(_image_url)] = ""
-    showGrid: bool = True
+    showGrid: bool = False
 
 
 class Features(Strict):
@@ -156,7 +156,7 @@ class Search(Strict):
 
 
 class Settings(Strict):
-    theme: Literal["auto", "light", "dark"] = "auto"
+    theme: Literal["auto", "light", "dark"] = "dark"
     accent: Color = "#5E6AD2"
     userName: Annotated[str, StringConstraints(max_length=100)] = ""
     pageTitle: Annotated[str, StringConstraints(max_length=100)] = ""

@@ -84,6 +84,22 @@ export function buildServiceUrl(scheme, hostInput, defaultDomain = '') {
 }
 
 /**
+ * The address a service form saves. The default domain is only added to an
+ * address the user typed: when editing (or adding from a prefilled draft) and
+ * the address field still holds `originalRest`, a single-label host such as
+ * "http://nas" is kept as it is, so saving another field never rewrites it.
+ * @param {string} scheme
+ * @param {string} hostInput
+ * @param {string} [defaultDomain]
+ * @param {string | null} [originalRest] the address field's initial value, or null for a new, empty form
+ * @returns {string}
+ */
+export function serviceFormUrl(scheme, hostInput, defaultDomain = '', originalRest = null) {
+  const untouched = originalRest !== null && hostInput.trim() === originalRest.trim();
+  return buildServiceUrl(scheme, hostInput, untouched ? '' : defaultDomain);
+}
+
+/**
  * Adds https:// to a URL typed without a scheme. Other schemes are left alone
  * (the server rejects them).
  * @param {string} raw

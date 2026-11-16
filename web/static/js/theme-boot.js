@@ -4,15 +4,17 @@
 (function () {
   try {
     var ui = JSON.parse(localStorage.getItem('serverhub:ui') || '{}');
-    var mode = ui.theme;
+    var mode = ui.theme || 'dark';
     var dark = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     var root = document.documentElement;
     root.classList.add(dark ? 'dark' : 'light');
     var metas = document.querySelectorAll('meta[name="theme-color"]');
     for (var i = 0; i < metas.length; i++) {
       metas[i].removeAttribute('media');
-      metas[i].setAttribute('content', dark ? '#080b12' : '#f3f6fb');
+      metas[i].setAttribute('content', dark ? '#000000' : '#f3f6fb');
     }
+    /* the opt-in page grid, remembered only when no wallpaper covers it */
+    if (ui.grid === true) root.classList.add('show-grid');
     var vars = ui.vars;
     if (vars) {
       for (var k in vars) {
@@ -22,6 +24,6 @@
       }
     }
   } catch (e) {
-    /* storage unavailable: CSS defaults (dark) apply */
+    /* storage unavailable: CSS defaults (dark, flat black) apply */
   }
 })();

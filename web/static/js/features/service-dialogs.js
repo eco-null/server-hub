@@ -8,7 +8,7 @@ import { openDialog, confirmDialog } from '../dialog.js';
 import { createField, createSelect, createNotice, createSwitch, showFormError, whileBusy } from '../ui.js';
 import { icon, ICON_IDS, ICON_SET, knownIcon } from '../icons.js';
 import { CATEGORIES, autoCategorize, resolveCategory, suggestIcon } from '../categorize.js';
-import { buildServiceUrl, hasCredentials, safeUrl, splitScheme } from '../lib/url.js';
+import { hasCredentials, safeUrl, serviceFormUrl, splitScheme } from '../lib/url.js';
 import { toastSuccess, toastError } from '../toast.js';
 
 /** @typedef {import('../types.js').Service} Service */
@@ -70,7 +70,8 @@ function buildForm(o) {
     options: [{ value: 'auto', label: 'Auto (detect from name and address)' }, ...CATEGORIES.map((c) => ({ value: c, label: c }))],
   });
   const preview = h('p', { class: 'field-hint category-preview', 'aria-live': 'polite' });
-  const currentUrl = () => buildServiceUrl(scheme.input.value, host.input.value, o.defaultDomain);
+  // An unchanged stored (or prefilled) address is saved as it is: the default domain only expands what the user types.
+  const currentUrl = () => serviceFormUrl(scheme.input.value, host.input.value, o.defaultDomain, svc ? initial.rest : null);
   const updatePreview = () => {
     const url = currentUrl();
     const chosen = o.full || o.withCategory ? catSelect.input.value : 'auto';

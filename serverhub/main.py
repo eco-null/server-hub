@@ -17,7 +17,7 @@ from starlette.exceptions import HTTPException
 from starlette.middleware import Middleware
 from starlette.requests import ClientDisconnect, Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Route
+from starlette.routing import Match, Route
 
 from serverhub.api import admin as admin_api
 from serverhub.api import auth as auth_api
@@ -78,6 +78,26 @@ async def _server_error(request: Request, exc: Exception) -> Response:
 
 
 async def _api_fallback(request: Request) -> Response:
+    """Unknown /api path: 404. A known path with the wrong method: 405 (this
+    catch-all would otherwise win over Starlette's own 405 for every method it
+    lists). OPTIONS on a known path answers 204 with the complete Allow list; left to
+    Starlette, the first partial match would report only its own methods."""
+    allowed: set[str] = set()
+    for route in request.app.router.routes:
+        if isinstance(route, Route) and route.endpoint is not _api_fallback:
+            match, _ = route.matches(request.scope)
+            if match is Match.PARTIAL and route.methods:
+                allowed |= route.methods
+    if allowed and request.method == "OPTIONS":
+        allow = ", ".join(sorted(allowed | {"OPTIONS"}))
+        return Response(status_code=204, headers={"Allow": allow})
+    if allowed:
+        raise ApiError(
+            405,
+            "method_not_allowed",
+            "Method not allowed",
+            headers={"Allow": ", ".join(sorted(allowed))},
+        )
     raise ApiError(404, "not_found", "Not found")
 
 
@@ -200,7 +220,7 @@ def create_app(
         Route(
             "/api/{rest:path}",
             _api_fallback,
-            methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         ),
     ]
     return Starlette(

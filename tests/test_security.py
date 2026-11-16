@@ -50,6 +50,56 @@ async def test_public_url_origin_is_accepted(tmp_path):
         assert r.status_code == 401  # passed CSRF, failed credentials
 
 
+@pytest.mark.parametrize(
+    ("public_url", "origin"),
+    [
+        ("https://hub.example.org:443", "https://hub.example.org"),
+        ("http://hub.example.org:80/", "http://hub.example.org"),
+        ("HTTPS://Hub.Example.org:8443/path", "https://hub.example.org:8443"),
+        ("https://[0:0::1]:8443", "https://[::1]:8443"),
+        ("https://[2001:DB8:0:0:0:0:0:1]", "https://[2001:db8::1]"),
+        ("https://Bücher.example", "https://xn--bcher-kva.example"),
+        ("https://Bücher.example:8443/x", "https://xn--bcher-kva.example:8443"),
+    ],
+)
+async def test_public_url_with_default_port_matches_browser_origin(tmp_path, public_url, origin):
+    # Browsers never put the scheme's default port in Origin; a public URL written
+    # with it (behind a plain-HTTP tunnel, where only this check can pass) used to
+    # turn every write, sign-in included, into 403 csrf.
+    from tests.conftest import running
+
+    async with running(tmp_path, public_url=public_url) as c:
+        r = await c.post(
+            "/api/auth/login",
+            json={"identifier": "a", "password": "b"},
+            headers={"Origin": origin},
+        )
+        assert r.status_code == 401, r.text  # passed CSRF, failed credentials
+
+
+@pytest.mark.parametrize("public_url", ["https://a..example", f"https://{'a' * 70}.example"])
+def test_public_url_host_that_cannot_be_encoded_is_a_config_error(public_url):
+    from pydantic import ValidationError
+
+    from serverhub.config import Config
+
+    with pytest.raises(ValidationError, match="public_url"):
+        Config(secret_key="x" * 64, public_url=public_url)
+
+
+async def test_options_on_known_api_path_lists_every_method(client):
+    r = await client.options("/api/settings")
+    assert r.status_code == 204
+    assert {m.strip() for m in r.headers["allow"].split(",")} == {
+        "GET",
+        "HEAD",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    }
+    assert (await client.options("/api/does-not-exist")).status_code == 404
+
+
 async def test_json_content_type_enforced(client):
     await setup_admin(client)
     r = await client.post(
@@ -179,9 +229,24 @@ async def test_static_traversal_and_hidden(client):
 async def test_unknown_api_route_is_json_404(client):
     r = await client.get("/api/does-not-exist")
     assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
-    r = await client.put("/api/services", json={})
-    assert r.status_code in (404, 405)
-    assert "error" in r.json()
+    r = await client.post("/api/services/x/y", json={})
+    assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
+
+
+async def test_wrong_method_on_known_api_path_is_405(client):
+    # docs/API.md: "405 method_not_allowed - Known path, wrong method". The /api
+    # catch-all used to answer 404 for every method it lists.
+    for method, path, allow in (
+        ("PUT", "/api/services", {"GET", "POST"}),
+        ("GET", "/api/services/00000000-0000-0000-0000-000000000000", {"PATCH", "DELETE"}),
+        ("GET", "/api/auth/login", {"POST"}),
+        ("POST", "/api/me", {"GET"}),
+        ("PUT", "/api/settings", {"GET", "PATCH", "DELETE"}),
+    ):
+        r = await client.request(method, path, json={} if method != "GET" else None)
+        assert r.status_code == 405, (method, path)
+        assert r.json()["error"]["code"] == "method_not_allowed"
+        assert allow <= {m.strip() for m in r.headers["allow"].split(",")}, (method, path)
 
 
 def test_trusted_proxy_resolution():

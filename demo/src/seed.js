@@ -165,13 +165,13 @@ export function seedState(uuid) {
   });
 
   const settings = {
-    theme: 'auto',
+    theme: 'dark',
     accent: '#5E6AD2',
     userName: 'Alex',
     pageTitle: 'Homelab',
     subtitle: 'Everything running at home, in one place.',
     defaultDomain: 'home.arpa',
-    wallpaper: { mode: 'gradient', gradient: 'ocean', url: '', showGrid: true },
+    wallpaper: { mode: 'none', gradient: 'default', url: '', showGrid: false },
     features: { clock: true, greeting: true, stats: true, search: true, statusChecks: true },
     search: { provider: 'duckduckgo', searxngUrl: '' },
   };

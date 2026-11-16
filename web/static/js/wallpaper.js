@@ -65,17 +65,20 @@ export const GRADIENT_SWATCH = Object.freeze({
  */
 export function wallpaperSpec(w, dark) {
   const mode = (w && w.mode) || 'none';
-  const showGrid = !w || w.showGrid !== false;
+  const showGrid = !!(w && w.showGrid);
   const grid = dark ? GRID_DARK : GRID_LIGHT;
-  const gridSize = w && w.gradient === 'grid' && mode === 'gradient' ? '44px 44px' : '32px 32px';
+  // The preset named "grid" is its grid: it draws it whatever the overlay switch says.
+  const gridPreset = mode === 'gradient' && !!w && w.gradient === 'grid';
+  const drawGrid = showGrid || gridPreset;
+  const gridSize = gridPreset ? '44px 44px' : '32px 32px';
   /**
    * @param {string} base
    * @param {string} [scrim] extra layer between the grid and the base
    */
   const build = (base, scrim) => {
-    const layers = [...(showGrid ? [grid] : []), ...(scrim ? [scrim] : []), base];
-    const sizes = [...(showGrid ? [gridSize, gridSize] : []), ...(scrim ? ['cover'] : []), 'cover'];
-    const repeats = [...(showGrid ? ['repeat', 'repeat'] : []), ...(scrim ? ['no-repeat'] : []), 'no-repeat'];
+    const layers = [...(drawGrid ? [grid] : []), ...(scrim ? [scrim] : []), base];
+    const sizes = [...(drawGrid ? [gridSize, gridSize] : []), ...(scrim ? ['cover'] : []), 'cover'];
+    const repeats = [...(drawGrid ? ['repeat', 'repeat'] : []), ...(scrim ? ['no-repeat'] : []), 'no-repeat'];
     return { image: layers.join(', '), size: sizes.join(', '), repeat: repeats.join(', ') };
   };
 
@@ -83,7 +86,7 @@ export function wallpaperSpec(w, dark) {
     const palette = dark ? DARK : LIGHT;
     const id = w && w.gradient && Object.hasOwn(palette, w.gradient) ? w.gradient : 'mono';
     const b = build(palette[id]);
-    return { kind: 'gradient', ...b, key: `g|${id}|${dark}|${showGrid}`, showGrid };
+    return { kind: 'gradient', ...b, key: `g|${id}|${dark}|${drawGrid}`, showGrid };
   }
   if (mode === 'image') {
     const url = cssUrl(w && w.url);
@@ -141,7 +144,10 @@ export function createWallpaper(container, hooks = {}) {
      */
     apply(w, dark) {
       const spec = wallpaperSpec(w, dark);
-      root.classList.toggle('no-grid', spec.kind === 'none' && !spec.showGrid);
+      // The grid the user enabled stays on the page until a wallpaper layer that draws its
+      // own grid is showing (base.css hides the page grid under `.has-wallpaper`), so a slow
+      // or broken image never costs the grid.
+      root.classList.toggle('show-grid', spec.showGrid);
       if (spec.key === currentKey) return;
       currentKey = spec.key;
       const mine = ++seq;

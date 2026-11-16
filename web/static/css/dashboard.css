@@ -653,15 +653,9 @@ a.bookmark:hover {
     font-size: 0.625rem;
   }
 
-  /* Two lines for the name instead of an early ellipsis in the narrow cards. */
-  .card-link {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
+  /* No override for .card-link: a two-line clamp with `overflow-wrap: anywhere` split a long
+     single word mid-word ("Audiobooksh / elf"). The name keeps its one-line ellipsis, like the
+     description and host lines; the full name is the tooltip. */
 }
 
 @media (max-width: 320px) {

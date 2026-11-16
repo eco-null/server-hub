@@ -146,6 +146,21 @@ test('boot cache is keyed by user id and never serves another user', () => {
   assert.equal(cache.read(), null);
 });
 
+test('signing in as someone else drops the previous user\'s cached dashboard', () => {
+  // read() cannot know who is signed in: a session that ended without a 401 in
+  // this browser (expired while it was closed) left user a's payload behind.
+  const kv = memoryStorage();
+  kv.setItem(UI_KEY, '{"theme":"dark"}');
+  const cache = createBootCache(kv, () => 1000);
+  cache.write({ user: { id: 'a' }, settings: {}, services: [{ id: 's', name: 'private' }], bookmarks: [] });
+  cache.forgetOthers('a');
+  assert.equal(cache.read().user.id, 'a', 'the same user keeps the instant first paint');
+  cache.forgetOthers('b');
+  assert.equal(cache.read(), null, "b never gets a's services");
+  assert.equal(kv.getItem(KEY_PREFIX + 'boot:a'), null);
+  assert.equal(kv.getItem(UI_KEY), '{"theme":"dark"}', 'the device look survives');
+});
+
 test('onWrite fires after successful writes only (so other tabs can refresh)', async () => {
   let writes = 0;
   let status = 200;

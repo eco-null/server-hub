@@ -1,6 +1,6 @@
 /* ==========================================================================
    Design tokens, shared by every page.
-   Dark is the default; `html.light` swaps the same token names.
+   Dark is the default (a flat #000 page); `html.light` swaps the same token names.
    The accent tokens (--accent, --accent-fg, --accent-text, --accent-glow) are
    overridden at runtime from the user's accent colour (theme.js).
    ========================================================================== */
@@ -28,13 +28,13 @@
   --font-mono: 'Fira Code', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   /* surfaces */
-  --bg-deep: #080b12;
-  --bg-base: #0b101a;
-  --bg-elev: #111827;
-  --dialog-bg: #111827;
-  --surface: rgba(255, 255, 255, 0.05);
+  --bg-deep: #000000;
+  --bg-base: #050505;
+  --bg-elev: #0f0f10;
+  --dialog-bg: #0f0f10;
+  --surface: rgba(255, 255, 255, 0.06);
   --surface-hi: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.12);
   --border-hi: rgba(255, 255, 255, 0.18);
   --grid-line: rgba(255, 255, 255, 0.03);
   --scrim: rgba(0, 0, 0, 0.55);

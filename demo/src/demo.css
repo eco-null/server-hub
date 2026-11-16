@@ -12,7 +12,7 @@
   gap: 0.375rem 1rem;
   padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.25));
-  background: var(--bg-elev, #111827);
+  background: var(--bg-elev, #0f0f10);
   color: var(--fg-muted, #9096a0);
   font-family: var(--font-sans, system-ui, sans-serif);
   font-size: 0.8125rem;

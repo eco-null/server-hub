@@ -23,12 +23,22 @@ export function createPageContext() {
     onImageError: () => toastError("The wallpaper image couldn't be loaded, so it isn't shown."),
   });
 
+  // Settings that came from the server (cache or bootstrap) or from the user are the
+  // device's real theme; the built-in defaults before the first answer are not.
+  let authoritative = !!cached;
+
   function paintVisuals() {
     const s = store.get();
-    const dark = applyTheme(s.theme, s.accent);
+    const dark = applyTheme(s.theme, s.accent, {
+      persist: authoritative,
+      grid: s.wallpaper.mode === 'none' && s.wallpaper.showGrid,
+    });
     wallpaper.apply(s.wallpaper, dark);
   }
-  store.subscribe(paintVisuals);
+  store.subscribe((_s, source) => {
+    if (source === 'local') authoritative = true;
+    paintVisuals();
+  });
   watchSystemTheme(() => {
     if (store.get().theme === 'auto') paintVisuals();
   });
@@ -52,6 +62,7 @@ export function createPageContext() {
     async fetchFresh() {
       /** @type {Bootstrap} */
       const data = await api.get('/api/bootstrap');
+      authoritative = true;
       if (store.isClean()) store.replace(data.settings);
       bootCache.write({ ...data, settings: store.get() });
       return data;

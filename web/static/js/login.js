@@ -11,6 +11,7 @@ import { h, byId } from './dom.js';
 import { createField, createNotice, showFormError, whileBusy } from './ui.js';
 import { applyTheme, watchSystemTheme } from './theme.js';
 import { storage, readJson, UI_KEY } from './storage.js';
+import { bootCache } from './cache.js';
 
 const root = byId('auth-root');
 
@@ -18,7 +19,7 @@ const root = byId('auth-root');
 {
   const paint = () => {
     const ui = readJson(storage, UI_KEY) || {};
-    applyTheme(ui.theme || 'auto', ui.accent || '#5E6AD2');
+    applyTheme(ui.theme || 'dark', ui.accent || '#5E6AD2', { persist: false });
   };
   paint();
   watchSystemTheme(paint);
@@ -32,8 +33,14 @@ const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
  * @typedef {{ setup_required: boolean, registration_open: boolean, authenticated: boolean }} AuthState
  */
 
-/** Leaves the login page. */
-function done() {
+/**
+ * Leaves the login page. After a sign-in, `res` is the server's `{ user }`:
+ * another account's cached dashboard is dropped so it is never painted for this one.
+ * @param {unknown} [res]
+ */
+function done(res) {
+  const user = res && typeof res === 'object' ? /** @type {any} */ (res).user : null;
+  if (user && typeof user.id === 'string') bootCache.forgetOthers(user.id);
   location.assign('/');
 }
 
@@ -114,7 +121,7 @@ function viewSignIn(state) {
     run: async () => {
       const res = await api.post('/api/auth/login', { identifier: identifier.input.value.trim(), password: password.input.value }, { silent401: true });
       if (res && res.twofa_required) showTwoFactor(state);
-      else done();
+      else done(res);
     },
   });
   return f;
@@ -159,15 +166,16 @@ function accountForm(o) {
       /** @type {Record<string, string>} */
       const body = { email: o.email.input.value.trim(), username: o.username.input.value.trim(), password: o.password.input.value };
       if (token) body.setup_token = token.input.value.trim();
+      let res;
       try {
-        await api.post(o.endpoint, body, { silent401: true });
+        res = await api.post(o.endpoint, body, { silent401: true });
       } catch (err) {
         if (err instanceof ApiError && err.code === 'invalid_setup_token') {
           throw new ApiError({ status: err.status, code: err.code, message: 'The setup token is not correct.', fields: { setup_token: 'This token is not correct. Check the server log.' } });
         }
         throw err;
       }
-      done();
+      done(res);
     },
   });
 }
@@ -209,8 +217,9 @@ function showTwoFactor(state) {
       return true;
     },
     run: async () => {
+      let res;
       try {
-        await api.post('/api/auth/2fa', { code: code.input.value.replace(/\s+/g, '') }, { silent401: true });
+        res = await api.post('/api/auth/2fa', { code: code.input.value.replace(/\s+/g, '') }, { silent401: true });
       } catch (err) {
         if (err && err.code === 'login_expired') {
           showSignIn(state, 'Your sign-in timed out. Please enter your password again.');
@@ -218,7 +227,7 @@ function showTwoFactor(state) {
         }
         throw err;
       }
-      done();
+      done(res);
     },
     extra: [h('div', { class: 'auth-links' }, toggle, back)],
   });

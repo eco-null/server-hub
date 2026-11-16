@@ -50,6 +50,10 @@ const BAD_CHAR = /[\s\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}]/u;
 export function urlSyntaxOk(url) {
   if (!url || url.length > 2000 || BAD_CHAR.test(url)) return false;
   if (!/^https?:\/\//i.test(url)) return false;
+  // urlsplit takes the host from the text between "//" and the next / ? #; WHATWG URL skips
+  // extra slashes instead ("https:///path" gets the host "path"), so check the raw text.
+  const hostPort = /** @type {RegExpExecArray} */ (/^https?:\/\/([^/?#]*)/i.exec(url))[1].replace(/^.*@/, '');
+  if (!hostPort.startsWith('[') && !hostPort.split(':')[0]) return false;
   let u;
   try {
     u = new URL(url);
@@ -296,7 +300,7 @@ export const Wallpaper = {
     mode: { t: 'literal', values: ['none', 'gradient', 'image'], def: 'none' },
     gradient: { t: 'str', pattern: '^[a-z0-9-]{0,40}$', def: 'default' },
     url: { t: 'str', max: 2000, after: imageUrl, def: '' },
-    showGrid: { t: 'bool', def: true },
+    showGrid: { t: 'bool', def: false },
   },
 };
 
@@ -325,7 +329,7 @@ export const Search = {
 export const Settings = {
   name: 'Settings',
   fields: {
-    theme: { t: 'literal', values: ['auto', 'light', 'dark'], def: 'auto' },
+    theme: { t: 'literal', values: ['auto', 'light', 'dark'], def: 'dark' },
     accent: { ...COLOR, def: '#5E6AD2' },
     userName: { t: 'str', max: 100, def: '' },
     pageTitle: { t: 'str', max: 100, def: '' },

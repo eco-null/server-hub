@@ -177,7 +177,7 @@
 }
 
 .swatch-none {
-  background: repeating-linear-gradient(45deg, transparent 0 6px, var(--border) 6px 7px);
+  background: var(--bg-deep);
 }
 
 @media (pointer: coarse) {

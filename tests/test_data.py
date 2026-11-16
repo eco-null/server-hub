@@ -21,7 +21,7 @@ async def test_settings_defaults_merge_and_reset(client):
     s = r.json()["settings"]
     assert s["theme"] == "dark"
     assert s["wallpaper"]["mode"] == "gradient"
-    assert s["wallpaper"]["showGrid"] is True  # untouched nested keys survive
+    assert s["wallpaper"]["showGrid"] is False  # untouched nested keys survive
     assert s["features"] == {**DEFAULT_SETTINGS["features"], "clock": False}
 
     r = await client.patch("/api/settings", json={"accent": "#ABCDEF"})
@@ -177,3 +177,18 @@ async def test_backup_import_is_all_or_nothing(client):
         assert r.status_code == 400, doc
     names = [s["name"] for s in (await client.get("/api/services")).json()["services"]]
     assert names == ["keep"]
+
+
+async def test_default_look_is_flat_black(client):
+    """A fresh account is dark with no wallpaper and no grid: a plain #000 page."""
+    await setup_admin(client)
+    s = (await client.get("/api/settings")).json()["settings"]
+    assert s["theme"] == "dark"
+    assert s["wallpaper"] == {"mode": "none", "gradient": "default", "url": "", "showGrid": False}
+    # a stored explicit choice is not rewritten by the new defaults
+    r = await client.patch(
+        "/api/settings",
+        json={"theme": "auto", "wallpaper": {"mode": "gradient", "gradient": "ocean"}},
+    )
+    s = r.json()["settings"]
+    assert s["theme"] == "auto" and s["wallpaper"]["gradient"] == "ocean"

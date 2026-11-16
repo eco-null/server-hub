@@ -8,15 +8,15 @@ import { clone, deepMerge, isPlainObject } from './lib/merge.js';
 
 /** @type {import('./types.js').Settings} */
 export const DEFAULT_SETTINGS = Object.freeze({
-  theme: 'auto',
+  theme: 'dark',
   accent: '#5E6AD2',
   userName: '',
   pageTitle: '',
   subtitle: '',
   defaultDomain: '',
-  wallpaper: Object.freeze({ mode: 'gradient', gradient: 'grid', url: '', showGrid: true }),
+  wallpaper: Object.freeze({ mode: 'none', gradient: 'default', url: '', showGrid: false }),
   features: Object.freeze({ clock: true, greeting: true, stats: true, search: true, statusChecks: true }),
-  search: Object.freeze({ provider: 'google', searxngUrl: '' }),
+  search: Object.freeze({ provider: 'duckduckgo', searxngUrl: '' }),
 });
 
 /**
