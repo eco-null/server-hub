@@ -10,6 +10,8 @@ All notable changes to this project are documented in this file. The format foll
 - Reject SQLite backups with missing tables or columns before restoring them.
 - Reject the live database as a backup destination, even with `--force`.
 - Prioritize unchecked services and older results when scheduling status checks.
+- On narrow screens the dashboard footer sits at the bottom of the page instead of between the services and the sidebar widgets.
+- The dashboard date follows the page language, so it no longer mixes the browser's language with the English greeting.
 
 ## [2.1.0] - 2026-11-16
 
