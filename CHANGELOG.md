@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-18
+
 ### Changed
 
 - Phone layout (up to 640px wide): a compact header with the clock beside the title and icon-only theme, settings and sign-out buttons; each category is a full-width grouped list so service names are no longer cut off; bookmarks sit in an even two-column grid. Tablet and desktop layouts are unchanged.
