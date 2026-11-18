@@ -21,6 +21,7 @@ import logging
 import time
 from collections import OrderedDict
 from datetime import UTC, datetime
+from operator import itemgetter
 
 import anyio
 
@@ -130,6 +131,18 @@ class StatusChecker:
         return result
 
     async def _sweep(self, identity: str, targets: list[tuple[str, str]], out: dict) -> None:
+        due = []
+        for sid, url in targets:
+            key = (identity, url)
+            cached = self._cached(key)
+            if cached is not None:
+                out[sid] = cached
+            else:
+                last = self._cache.get(key)
+                due.append((last[0] if last else float("-inf"), sid, url))
+        if not due:
+            return
+
         limiter = anyio.Semaphore(SWEEP_CONCURRENCY)
 
         async def run(sid: str, url: str) -> None:
@@ -142,7 +155,8 @@ class StatusChecker:
 
         with anyio.move_on_after(SWEEP_DEADLINE):
             async with anyio.create_task_group() as tg:
-                for sid, url in targets:
+                # Under load, give unchecked and oldest targets the first available slots.
+                for _, sid, url in sorted(due, key=itemgetter(0)):
                     tg.start_soon(run, sid, url)
 
     async def check_many(self, user_id: str, targets: list[tuple[str, str]]) -> dict[str, dict]:

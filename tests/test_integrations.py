@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 
+import httpx
 import pytest
 
 from serverhub.integrations.beszel import BeszelClient, Target, normalize_system
-from serverhub.integrations.fetcher import SafeFetcher
+from serverhub.integrations.fetcher import FetchError, FetchResult, SafeFetcher
+from serverhub.integrations.status import StatusChecker
 from tests.conftest import LOCAL_OK, running, setup_admin
 
 pytestmark = pytest.mark.anyio
@@ -62,6 +64,31 @@ async def test_status_unreachable_is_down(client):
     sid = r.json()["service"]["id"]
     st = (await client.get("/api/status")).json()["statuses"]
     assert st[sid]["state"] == "down"
+
+
+async def test_status_checks_rotate_when_the_budget_cannot_cover_all_targets(monkeypatch):
+    checked = []
+    remaining = 0
+
+    async def check(_method, url, **_options):
+        nonlocal remaining
+        if not remaining:
+            raise FetchError("busy")
+        remaining -= 1
+        checked.append(url)
+        return FetchResult(200, httpx.Headers(), b"")
+
+    targets = [(name, f"https://{name}.example") for name in ("a", "b", "c")]
+    f = SafeFetcher(allow_private=True)
+    monkeypatch.setattr(f, "request", check)
+    checker = StatusChecker(f, ttl=0)
+    try:
+        for _ in range(len(targets) + 1):
+            remaining = 1
+            await checker.check_many("user", targets)
+    finally:
+        await f.aclose()
+    assert checked == [url for _, url in targets] + [targets[0][1]]
 
 
 async def test_status_loopback_blocked_in_default_config(tmp_path, stub):

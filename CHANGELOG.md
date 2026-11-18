@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Preserve independent settings edits made in different browser tabs.
+- Reject SQLite backups with missing tables or columns before restoring them.
+- Reject the live database as a backup destination, even with `--force`.
+- Prioritize unchecked services and older results when scheduling status checks.
+
 ## [2.1.0] - 2026-11-16
 
 ### Added

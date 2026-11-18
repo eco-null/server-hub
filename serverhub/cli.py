@@ -79,7 +79,10 @@ def cmd_backup(args: argparse.Namespace) -> int:
     dest = Path(args.output)
     if dest.exists() and not args.force:
         raise SystemExit(f"{dest} exists (use --force to overwrite)")
-    backup_to(cfg.db_path, dest)
+    try:
+        backup_to(cfg.db_path, dest)
+    except (ValueError, OSError, sqlite3.Error) as exc:
+        raise SystemExit(f"Backup failed: {exc}") from None
     print(f"Wrote consistent database copy to {dest}")
     return 0
 

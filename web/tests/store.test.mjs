@@ -77,13 +77,16 @@ test('the debounce timer sends without an explicit flush, once', async () => {
   assert.equal(calls[0].body.subtitle, 'ab');
 });
 
-test('nested objects are sent whole, never half-filled', async () => {
+test('nested patches from two tabs preserve changes to different fields', async () => {
   const { api, calls } = fakeApi();
-  const store = createSettingsStore({ api, debounceMs: 5 });
+  const store = createSettingsStore({ api, debounceMs: 1000 });
+  const otherTab = createSettingsStore({ api, debounceMs: 1000 });
   store.update({ wallpaper: { showGrid: true } });
+  otherTab.update({ wallpaper: { mode: 'gradient', gradient: 'ocean' } });
   await store.flush();
-  assert.deepEqual(calls[0].body.wallpaper, { mode: 'none', gradient: 'default', url: '', showGrid: true });
-  assert.equal(store.get().wallpaper.showGrid, true);
+  await otherTab.flush();
+  assert.deepEqual(calls[0].body.wallpaper, { showGrid: true });
+  assert.deepEqual(otherTab.get().wallpaper, { mode: 'gradient', gradient: 'ocean', url: '', showGrid: true });
 });
 
 test('an edit made while a save is in flight is neither lost nor overwritten', async () => {
@@ -113,6 +116,25 @@ test('a rejected patch rolls the keys back and reports the error', async () => {
   assert.equal(store.saveInfo().status, 'error');
   assert.equal(store.saveInfo().error.fields.accent, 'must be #rrggbb');
   assert.deepEqual(seen, ['saving', 'saving', 'error']);
+});
+
+test('a rejected nested edit is discarded while a newer sibling edit is kept', async () => {
+  const err = new ApiError({ status: 400, code: 'validation', message: 'bad wallpaper' });
+  const { api, calls } = fakeApi();
+  const patch = api.patch;
+  let rejectFirst;
+  api.patch = () => new Promise((_, reject) => { rejectFirst = reject; });
+  const store = createSettingsStore({ api, debounceMs: 1000 });
+  store.update({ wallpaper: { url: 'bad-url' } });
+  const saving = store.flush();
+  await Promise.resolve();
+  store.update({ wallpaper: { showGrid: true } });
+  rejectFirst(err);
+  await saving;
+  assert.deepEqual(store.get().wallpaper, { ...DEFAULT_SETTINGS.wallpaper, showGrid: true });
+  api.patch = patch;
+  await store.flush();
+  assert.deepEqual(calls[0].body, { wallpaper: { showGrid: true } });
 });
 
 test('reset calls DELETE /api/settings and adopts the defaults', async () => {
