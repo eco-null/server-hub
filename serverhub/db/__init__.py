@@ -112,6 +112,8 @@ class Database:
 
 def backup_to(src: Path, dest: Path) -> None:
     """Write a consistent copy of the database at ``src`` to ``dest``."""
+    if dest.exists() and src.samefile(dest):
+        raise ValueError("Back up to a file separate from the live database")
     dest.parent.mkdir(parents=True, exist_ok=True)
     source = sqlite3.connect(src)
     try:
@@ -130,6 +132,16 @@ def _has_sidecars(path: Path) -> bool:
     )
 
 
+def _table_columns(conn: sqlite3.Connection) -> set[tuple[str, str]]:
+    return {
+        (table, column)
+        for table, column in conn.execute(
+            "SELECT s.name, c.name FROM sqlite_schema AS s"
+            " JOIN pragma_table_info(s.name) AS c WHERE s.type = 'table'"
+        )
+    }
+
+
 def verify_backup(path: Path) -> int:
     """Check a standalone Server Hub SQLite snapshot without writing to it."""
     if not path.is_file():
@@ -142,14 +154,16 @@ def verify_backup(path: Path) -> int:
         if conn.execute("PRAGMA integrity_check(1)").fetchone() != ("ok",):
             raise ValueError("SQLite integrity check failed")
         version = conn.execute("PRAGMA user_version").fetchone()[0]
-        required = {"users", "user_settings", "services", "bookmarks", "app_config"}
-        tables = {
-            name for (name,) in conn.execute("SELECT name FROM sqlite_schema WHERE type = 'table'")
-        }
-        if version < 1 or not required.issubset(tables):
+        if version < 1:
             raise ValueError("This file is not a Server Hub backup")
-        if version > len(_migrations()):
+        migrations = _migrations()
+        if version > len(migrations):
             raise ValueError(f"Backup schema version {version} requires a newer Server Hub")
+        with contextlib.closing(sqlite3.connect(":memory:")) as expected:
+            for _, _, sql in migrations[:version]:
+                expected.executescript(sql)
+            if not _table_columns(expected).issubset(_table_columns(conn)):
+                raise ValueError("Server Hub backup has an incomplete schema")
         if conn.execute("PRAGMA foreign_key_check").fetchone() is not None:
             raise ValueError("SQLite foreign-key check failed")
     return version

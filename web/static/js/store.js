@@ -43,8 +43,9 @@ export function normalizeSettings(raw) {
 export function createSettingsStore({ api, initial, debounceMs = 400 }) {
   let confirmed = normalizeSettings(initial);
   let current = clone(confirmed);
-  /** Top-level keys changed locally and not yet sent. */
-  const dirty = new Set();
+  /** @type {Record<string, any>} Fields changed locally and not yet sent. */
+  let pending = {};
+  const hasPending = () => Object.keys(pending).length > 0;
   /** @type {ReturnType<typeof setTimeout> | null} */
   let timer = null;
   /** @type {Promise<void>} */
@@ -85,30 +86,23 @@ export function createSettingsStore({ api, initial, debounceMs = 400 }) {
 
   /** @param {{ keepalive?: boolean }} opts */
   async function send(opts) {
-    if (dirty.size === 0) return;
-    const keys = [...dirty];
-    dirty.clear();
-    /** Whole top-level values, so nested objects are never sent half-filled. */
-    /** @type {Record<string, any>} */
-    const body = {};
-    for (const k of keys) body[k] = clone(/** @type {any} */ (current)[k]);
+    if (!hasPending()) return;
+    const body = pending;
+    pending = {};
     setInfo('saving');
+    /** @type {import('./api.js').ApiError | null} */
+    let error = null;
     try {
       const res = await api.patch('/api/settings', body, { keepalive: opts.keepalive });
       confirmed = normalizeSettings(res && res.settings);
-      const next = clone(confirmed);
-      // Keep edits made while the request was in flight.
-      for (const k of dirty) /** @type {any} */ (next)[k] = /** @type {any} */ (current)[k];
-      current = next;
-      setInfo(dirty.size ? 'saving' : 'saved');
-      emit('remote');
     } catch (e) {
-      const err = /** @type {import('./api.js').ApiError} */ (e);
-      // Roll the rejected keys back to what the server holds, unless edited again since.
-      for (const k of keys) if (!dirty.has(k)) /** @type {any} */ (current)[k] = clone(/** @type {any} */ (confirmed)[k]);
-      setInfo('error', err);
-      emit('remote');
+      error = /** @type {import('./api.js').ApiError} */ (e);
     }
+    // Replay only edits made while the request was in flight.
+    current = /** @type {typeof current} */ (deepMerge(confirmed, pending));
+    if (error) setInfo('error', error);
+    else setInfo(hasPending() ? 'saving' : 'saved');
+    emit('remote');
   }
 
   /** @type {any} */
@@ -123,23 +117,17 @@ export function createSettingsStore({ api, initial, debounceMs = 400 }) {
      */
     update(partial) {
       if (!isPlainObject(partial)) return;
-      let changed = false;
-      for (const key of Object.keys(partial)) {
-        const value = /** @type {any} */ (partial)[key];
-        if (value === undefined || key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-        const cur = /** @type {any} */ (current)[key];
-        /** @type {any} */ (current)[key] = isPlainObject(value) && isPlainObject(cur) ? deepMerge(cur, value) : clone(value);
-        dirty.add(key);
-        changed = true;
-      }
-      if (!changed) return;
+      const patch = deepMerge({}, partial);
+      if (Object.keys(patch).length === 0) return;
+      pending = deepMerge(pending, patch);
+      current = /** @type {typeof current} */ (deepMerge(current, patch));
       setInfo('saving');
       emit('local');
       schedule();
     },
     flush,
     /** True when nothing is waiting to be sent or in flight. */
-    isClean: () => dirty.size === 0 && info.status !== 'saving',
+    isClean: () => !hasPending() && info.status !== 'saving',
     /** Sends pending changes on page hide; uses keepalive so the browser finishes it. */
     flushOnHide() {
       return flush({ keepalive: true });
@@ -152,7 +140,7 @@ export function createSettingsStore({ api, initial, debounceMs = 400 }) {
     replace(settings) {
       if (timer) clearTimeout(timer);
       timer = null;
-      dirty.clear();
+      pending = {};
       confirmed = normalizeSettings(settings);
       current = clone(confirmed);
       setInfo('idle');
@@ -162,7 +150,7 @@ export function createSettingsStore({ api, initial, debounceMs = 400 }) {
     async reset() {
       if (timer) clearTimeout(timer);
       timer = null;
-      dirty.clear();
+      pending = {};
       await chain;
       const res = await api.del('/api/settings');
       store.replace(res && res.settings);
