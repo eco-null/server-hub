@@ -4,12 +4,20 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-18
+
+### Changed
+
+- Phone layout (up to 640px wide): a compact header with the clock beside the title and icon-only theme, settings and sign-out buttons; each category is a full-width grouped list so service names are no longer cut off; bookmarks sit in an even two-column grid. Tablet and desktop layouts are unchanged.
+
 ### Fixed
 
 - Preserve independent settings edits made in different browser tabs.
 - Reject SQLite backups with missing tables or columns before restoring them.
 - Reject the live database as a backup destination, even with `--force`.
 - Prioritize unchecked services and older results when scheduling status checks.
+- On narrow screens the dashboard footer sits at the bottom of the page instead of between the services and the sidebar widgets.
+- The dashboard date follows the page language, so it no longer mixes the browser's language with the English greeting.
 
 ## [2.1.0] - 2026-11-16
 

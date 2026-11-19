@@ -39,15 +39,15 @@
             <p class="subtitle" id="page-subtitle">Your apps and services, reachable from one place.</p>
             <div class="chips">
               <span class="chip chip-user" id="user-chip" hidden></span>
-              <button type="button" class="chip" id="logout-btn">
+              <button type="button" class="chip chip-act" id="logout-btn">
                 <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-logout"/></svg>
                 <span>Sign out</span>
               </button>
-              <button type="button" class="chip" id="theme-btn" aria-label="Switch theme">
+              <button type="button" class="chip chip-act" id="theme-btn" aria-label="Switch theme">
                 <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-theme-auto"/></svg>
                 <span>Theme</span>
               </button>
-              <a class="chip" href="/settings" id="settings-link">
+              <a class="chip chip-act" href="/settings" id="settings-link">
                 <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-settings"/></svg>
                 <span>Settings</span>
               </a>
@@ -112,10 +112,6 @@
           <button type="button" class="btn btn-primary" id="retry-load">Try again</button>
         </div>
       </section>
-
-      <footer class="page-foot">
-        <p class="mono">Server Hub</p>
-      </footer>
     </main>
 
     <aside class="page-aside" aria-label="Overview">
@@ -136,6 +132,10 @@
         <div id="stats-body" class="stats-body"></div>
       </section>
     </aside>
+
+    <footer class="page-foot">
+      <p class="mono">Server Hub</p>
+    </footer>
   </div>
 </body>
 </html>

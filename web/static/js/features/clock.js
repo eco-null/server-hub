@@ -12,7 +12,8 @@ import { createPoller } from '../poller.js';
  * }} o
  */
 export function createClock(o) {
-  const long = new Intl.DateTimeFormat(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+  // The page's language, not the browser's: the greeting next to it is English.
+  const long = new Intl.DateTimeFormat(document.documentElement.lang || undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
   let lastDay = '';
   let lastGreet = '';
 

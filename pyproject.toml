@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "serverhub"
-version = "2.1.0"
+version = "2.1.1"
 description = "Self-hosted dashboard for your apps and services"
 readme = "README.md"
 license = "MIT"
