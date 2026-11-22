@@ -15,7 +15,7 @@
  *
  * @typedef {{ id: string, name: string, url: string, description: string, icon: string, category: string | null, check: boolean, created_at?: string }} Service
  * @typedef {{ id: string, name: string, url: string, color: string, created_at?: string }} Bookmark
- * @typedef {{ user: User, settings: Settings, services: Service[], bookmarks: Bookmark[], docker?: { enabled: boolean } }} Bootstrap
+ * @typedef {{ user: User, settings: Settings, services: Service[], bookmarks: Bookmark[], layout?: import('./lib/grid.js').Layout, docker?: { enabled: boolean } }} Bootstrap
  *
  * @typedef {{ state: 'up' | 'down' | 'unknown', http_status: number | null, latency_ms: number | null, checked_at: string | null }} ServiceStatus
  * @typedef {'running' | 'exited' | 'paused' | 'restarting' | 'created' | 'dead' | 'removing'} ContainerState

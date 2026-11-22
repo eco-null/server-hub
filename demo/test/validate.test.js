@@ -117,3 +117,21 @@ test('URLs without a host are refused like urlsplit does (WHATWG would read "htt
   }
   for (const url of ['https://a.example.com', 'http://[::1]:8080/x', 'https://nas:8443/']) assert.equal(S.urlSyntaxOk(url), true, url);
 });
+
+test('layout: defaults, tile ids, sizes, uniqueness, limits, strict keys', () => {
+  assert.deepEqual(S.defaultLayout(), { enabled: false, items: [] });
+  assert.deepEqual(S.validate(S.Layout, { items: [{ id: 'group:Media' }] }), { enabled: false, items: [{ id: 'group:Media', size: 's', hidden: false }] });
+  assert.equal(S.MAX_TILES, 2 + S.KNOWN_CATEGORIES.size);
+  assert.deepEqual(fields(S.Layout, { enabled: 1, items: [{ id: 'group:' }, { id: 'x', size: 'S' }], more: 1 }), {
+    enabled: 'Input should be a valid boolean',
+    'items.0.id': 'unknown tile id',
+    'items.1.id': 'unknown tile id',
+    'items.1.size': "Input should be 's', 'm' or 'l'",
+    more: 'unknown field',
+  });
+  assert.deepEqual(fields(S.Layout, { items: [{ id: 'bookmarks' }, { id: 'bookmarks' }] }), { items: 'tile ids must be unique' });
+  assert.equal(fields(S.Layout, { items: Array.from({ length: S.MAX_TILES + 1 }, () => ({ id: 'stats' })) }).items, `List should have at most ${S.MAX_TILES} items after validation, not ${S.MAX_TILES + 1}`);
+  assert.equal(fields(S.LayoutPatch, { enabled: null, items: null }), null, 'null means not sent');
+  assert.deepEqual(fields(S.BackupDoc, { version: 1, layout: { items: [{ id: 'nope' }] } }), { 'layout.items.0.id': 'unknown tile id' });
+  assert.equal(fields(S.BackupDoc, { version: 1, layout: null }), null);
+});

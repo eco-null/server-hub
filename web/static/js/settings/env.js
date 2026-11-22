@@ -12,6 +12,7 @@
  */
 
 import { createState } from '../state.js';
+import { normalizeLayout } from '../lib/grid.js';
 
 export function createSettingsState() {
   return createState({
@@ -21,6 +22,7 @@ export function createSettingsState() {
     services: [],
     /** @type {import('../types.js').Bookmark[]} */
     bookmarks: [],
+    layout: normalizeLayout(null),
     loaded: false,
   });
 }

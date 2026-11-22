@@ -1,5 +1,5 @@
 // @ts-check
-/** Settings: theme, accent color, wallpaper, grid overlay. */
+/** Settings: theme, accent color, wallpaper, grid overlay, customizable layout. */
 
 import { h } from '../dom.js';
 import { createField, createRadioGroup, createSwitch } from '../ui.js';
@@ -7,6 +7,8 @@ import { GRADIENT_IDS, GRADIENT_SWATCH } from '../wallpaper.js';
 import { safeUrl } from '../lib/url.js';
 import { isHex } from '../lib/color.js';
 import { isDark } from '../theme.js';
+import { normalizeLayout } from '../lib/grid.js';
+import { toastError, toastSuccess } from '../toast.js';
 
 const ACCENTS = [
   ['#5E6AD2', 'Indigo'],
@@ -116,8 +118,37 @@ export function mountAppearance(root, env) {
     onChange: (checked) => store.update({ wallpaper: { showGrid: checked } }),
   });
 
+  // Customizable layout: stored apart from the settings (PATCH /api/layout).
+  const layout = createSwitch({
+    label: 'Customizable layout',
+    description: 'Show service groups, bookmarks and system stats as tiles you can reorder, resize and hide with "Edit layout" on the dashboard.',
+    checked: env.state.get().layout.enabled,
+    onChange: (enabled) => void saveLayout({ enabled }),
+  });
+  const resetLayout = h('button', { type: 'button', class: 'btn btn-sm', onclick: () => void saveLayout({ items: [] }) }, 'Reset tile order and sizes');
+
+  /** @param {{ enabled?: boolean, items?: [] }} patch */
+  async function saveLayout(patch) {
+    try {
+      const res = await env.api.patch('/api/layout', patch);
+      env.state.set({ layout: normalizeLayout(res && res.layout) });
+      if (patch.items) toastSuccess('Tile order and sizes reset.');
+    } catch (err) {
+      layout.input.checked = env.state.get().layout.enabled;
+      toastError(`Couldn't save the layout: ${err instanceof Error ? err.message : 'unknown error'}`);
+    }
+  }
+  const syncLayout = (/** @type {{ enabled: boolean }} */ l) => {
+    layout.input.checked = l.enabled;
+    resetLayout.hidden = !l.enabled;
+  };
+  env.state.subscribe((s, prev) => {
+    if (s.layout !== prev.layout) syncLayout(s.layout);
+  });
+  syncLayout(env.state.get().layout);
+
   root.append(
-    h('div', { class: 'stack' }, theme.root, accent.root, custom.root, wallpaper.root, h('div', { class: 'field-with-action' }, image.root, apply), grid.root),
+    h('div', { class: 'stack' }, theme.root, accent.root, custom.root, wallpaper.root, h('div', { class: 'field-with-action' }, image.root, apply), grid.root, layout.root, h('div', null, resetLayout)),
   );
 
   function sync(/** @type {import('../types.js').Settings} */ s) {

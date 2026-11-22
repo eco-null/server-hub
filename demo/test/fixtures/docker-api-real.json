@@ -4,6 +4,7 @@
   "keys": [
    "user",
    "settings",
+   "layout",
    "services",
    "bookmarks",
    "docker"
@@ -185,6 +186,7 @@
   "keys": [
    "user",
    "settings",
+   "layout",
    "services",
    "bookmarks",
    "docker"
@@ -357,6 +359,7 @@
   "keys": [
    "user",
    "settings",
+   "layout",
    "services",
    "bookmarks",
    "docker"
@@ -370,6 +373,7 @@
   "keys": [
    "user",
    "settings",
+   "layout",
    "services",
    "bookmarks",
    "docker"
@@ -654,6 +658,7 @@
   "keys": [
    "user",
    "settings",
+   "layout",
    "services",
    "bookmarks",
    "docker"

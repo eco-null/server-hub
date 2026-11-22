@@ -22,7 +22,7 @@ test('starts signed in as the demo admin with the seeded homelab', async () => {
   assert.deepEqual(st.body, { setup_required: false, registration_open: false, authenticated: true });
   const boot = await call('GET', '/api/bootstrap');
   assert.equal(boot.status, 200);
-  assert.deepEqual(Object.keys(boot.body).sort(), ['bookmarks', 'docker', 'services', 'settings', 'user']);
+  assert.deepEqual(Object.keys(boot.body).sort(), ['bookmarks', 'docker', 'layout', 'services', 'settings', 'user']);
   assert.deepEqual(boot.body.docker, { enabled: true });
   assert.equal(boot.body.user.username, 'demo');
   assert.equal(boot.body.user.role, 'admin');
@@ -227,6 +227,56 @@ test('host stats are admin only', async () => {
   assert.deepEqual(Object.keys(s).sort(), ['cpu', 'disk', 'hostname', 'memory']);
 });
 
+test('layout: default, PATCH replaces sent keys, validation, DELETE resets', async () => {
+  const { call } = setup();
+  const def = { enabled: false, items: [] };
+  assert.deepEqual((await call('GET', '/api/layout')).body, { layout: def });
+  assert.deepEqual((await call('GET', '/api/bootstrap')).body.layout, def);
+  const items = [{ id: 'stats', size: 'm' }, { id: 'group:Media', size: 'l', hidden: true }, { id: 'bookmarks' }];
+  const r = await call('PATCH', '/api/layout', { enabled: true, items });
+  assert.equal(r.status, 200);
+  const full = [{ id: 'stats', size: 'm', hidden: false }, { id: 'group:Media', size: 'l', hidden: true }, { id: 'bookmarks', size: 's', hidden: false }];
+  assert.deepEqual(r.body.layout, { enabled: true, items: full });
+  // only the sent top-level keys change; null counts as not sent
+  assert.deepEqual((await call('PATCH', '/api/layout', { enabled: false })).body.layout, { enabled: false, items: full });
+  assert.deepEqual((await call('PATCH', '/api/layout', { items: null })).body.layout, { enabled: false, items: full });
+  assert.deepEqual((await call('PATCH', '/api/layout', { items: [] })).body.layout, { enabled: false, items: [] });
+  assert.deepEqual((await call('PATCH', '/api/layout', {})).body.layout, { enabled: false, items: [] });
+  await call('PATCH', '/api/layout', { enabled: true, items });
+
+  const bad = async (body) => {
+    const x = await call('PATCH', '/api/layout', body);
+    assert.equal(x.status, 400);
+    assert.equal(x.body.error.code, 'validation');
+    return x.body.error.fields;
+  };
+  assert.deepEqual(await bad({ items: [{ id: 'nope' }, { id: 'group:Nope' }, { id: 'stats', size: 'xl', hidden: 1, extra: 1 }], extra: 1 }), {
+    'items.0.id': 'unknown tile id',
+    'items.1.id': 'unknown tile id',
+    'items.2.size': "Input should be 's', 'm' or 'l'",
+    'items.2.hidden': 'Input should be a valid boolean',
+    'items.2.extra': 'unknown field',
+    extra: 'unknown field',
+  });
+  assert.deepEqual(await bad({ items: [{ id: 'stats' }, { id: 'stats' }] }), { items: 'tile ids must be unique' });
+  assert.deepEqual(await bad({ items: [{}] }), { 'items.0.id': 'required' });
+  assert.deepEqual(await bad({ enabled: 'yes', items: {} }), { enabled: 'Input should be a valid boolean', items: 'Input should be a valid list' });
+  const many = Array.from({ length: 22 }, (_, i) => ({ id: 'stats' + i }));
+  assert.match((await bad({ items: many })).items, /^List should have at most 21 items/);
+  assert.deepEqual(await bad([]), { body: 'must be a JSON object' });
+  assert.deepEqual((await call('GET', '/api/layout')).body.layout, { enabled: true, items: full }, 'a failed PATCH changes nothing');
+
+  assert.deepEqual((await call('DELETE', '/api/layout')).body, { layout: def });
+  assert.deepEqual((await call('GET', '/api/layout')).body, { layout: def });
+});
+
+test('layout needs a session', async () => {
+  const { call } = setup();
+  await call('POST', '/api/auth/logout');
+  assert.equal((await call('GET', '/api/layout')).status, 401);
+  assert.equal((await call('PATCH', '/api/layout', { enabled: true })).status, 401);
+});
+
 test('backup export and import', async () => {
   const { call } = setup();
   const doc = (await call('GET', '/api/backup')).body;
@@ -240,6 +290,32 @@ test('backup export and import', async () => {
   assert.equal(res.body.settings.userName, '', 'settings merge onto defaults, not the current values');
   assert.equal(res.body.services.length, 2);
   assert.equal(res.body.bookmarks.length, 0);
+});
+
+test('backup carries the layout: export, import, missing resets, invalid changes nothing', async () => {
+  const { call } = setup();
+  const layout = { enabled: true, items: [{ id: 'group:Dev', size: 'm', hidden: false }] };
+  await call('PATCH', '/api/layout', layout);
+  const doc = (await call('GET', '/api/backup')).body;
+  assert.deepEqual(doc.layout, layout);
+  await call('DELETE', '/api/layout');
+  const res = await call('POST', '/api/backup', doc);
+  assert.deepEqual(res.body.layout, layout);
+  assert.deepEqual((await call('GET', '/api/layout')).body.layout, layout);
+  // fields are filled with defaults on import
+  const short = await call('POST', '/api/backup', { ...doc, layout: { items: [{ id: 'stats' }] } });
+  assert.deepEqual(short.body.layout, { enabled: false, items: [{ id: 'stats', size: 's', hidden: false }] });
+  // an older backup without a layout resets it
+  await call('PATCH', '/api/layout', layout);
+  const { layout: _drop, ...old } = doc;
+  assert.deepEqual((await call('POST', '/api/backup', old)).body.layout, { enabled: false, items: [] });
+  // invalid layout: validation error, nothing changed
+  await call('PATCH', '/api/layout', layout);
+  const before = (await call('GET', '/api/bootstrap')).body;
+  const bad = await call('POST', '/api/backup', { ...doc, layout: { items: [{ id: 'nope' }] }, settings: { pageTitle: 'X' }, services: [], bookmarks: [] });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.body.error.fields['layout.items.0.id'], 'unknown tile id');
+  assert.deepEqual((await call('GET', '/api/bootstrap')).body, before);
 });
 
 test('admin: users, conflicts, last admin, roles, registration switch', async () => {

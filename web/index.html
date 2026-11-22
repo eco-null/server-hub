@@ -66,6 +66,10 @@
           <span class="search-trigger-text">Search services or the web…</span>
           <kbd aria-hidden="true">/</kbd>
         </button>
+        <button type="button" class="btn btn-add btn-layout" id="layout-edit" aria-pressed="false" title="Edit layout" hidden>
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-layout"/></svg>
+          <span>Edit layout</span>
+        </button>
         <button type="button" class="btn btn-primary btn-add" id="add-service" aria-label="Add service" title="Add service">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="/static/img/icons.svg#ui-plus"/></svg>
           <span>Add service</span>
@@ -112,10 +116,20 @@
           <button type="button" class="btn btn-primary" id="retry-load">Try again</button>
         </div>
       </section>
+
+      <div class="board-bar glass glass-blur" id="board-bar" hidden>
+        <p class="board-hint" id="board-hint">Drag a tile by its handle, or focus the handle and use the arrow keys.</p>
+        <div class="board-bar-actions">
+          <button type="button" class="btn btn-sm btn-ghost" id="board-reset">Reset layout</button>
+          <button type="button" class="btn btn-sm btn-primary" id="board-done">Done</button>
+        </div>
+      </div>
+      <div id="board" class="board" hidden></div>
+      <p class="sr-only" id="board-live" role="status" aria-live="polite"></p>
     </main>
 
     <aside class="page-aside" aria-label="Overview">
-      <section class="glass glass-blur widget" aria-labelledby="bookmarks-title">
+      <section class="glass glass-blur widget" id="bookmarks-card" aria-labelledby="bookmarks-title">
         <div class="widget-head">
           <h2 class="eyebrow" id="bookmarks-title">Bookmarks</h2>
           <button type="button" class="btn btn-sm" id="bookmarks-add" aria-expanded="false" aria-controls="bookmarks-form-host">

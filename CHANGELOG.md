@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-23
+
+### Added
+
+- Customizable layout (optional, off by default). The "Customizable layout" switch in Settings > Appearance turns the dashboard into one grid of tiles: each service category group, Bookmarks and System stats; the side column goes away. An "Edit layout" button on the dashboard opens edit mode: drag a tile by its handle, or focus the handle and use the arrow keys, Home and End (moves are announced to screen readers); set a tile to S, M or L (one column, two columns or a full row on a four-column board); hide or show a tile; "Reset layout". Done or Escape leaves edit mode, and changes save automatically. The board has two columns on medium widths and one on phones, where every tile is full width. Categories that were never arranged appear after the arranged tiles (groups with four or more services large, others small). Settings has "Reset tile order and sizes". The live demo supports it too.
+- The layout is stored per user on the server in a new `user_layouts` table (migration `0002_layouts.sql`), not in settings, so it follows the account across devices. API: `GET`, `PATCH` and `DELETE /api/layout`; see [docs/API.md](docs/API.md#layout).
+
+### Changed
+
+- `GET /api/bootstrap` and `GET /api/backup` include `layout`. `POST /api/backup` accepts an optional `layout`; a backup without one resets the layout to the default.
+- Upgrade note: migration 0002 adds a table, so after upgrading, a 2.1.x build refuses to start on that database. To roll back, restore a backup taken before the upgrade ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#upgrades-and-rollback)).
+
 ## [2.1.1] - 2026-11-18
 
 ### Changed

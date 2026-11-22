@@ -222,6 +222,8 @@ docker compose logs --tail 50 server-hub
 
 Schema migrations are numbered SQL files applied automatically at start; each one runs in a transaction. Read [CHANGELOG.md](../CHANGELOG.md) before upgrading.
 
+Migration `0002_layouts.sql` (the optional customizable dashboard layout) adds the `user_layouts` table, so after upgrading to that release a 2.1.x build refuses to start on the database ("schema version is newer"). Take the pre-upgrade backup above and use it for a rollback.
+
 If the upgrade applied a migration, an older build refuses to open that database. To roll back, stop the app and restore the pre-upgrade snapshot using the current build as described in [Restoring a backup](#restoring-a-backup). Run the stop and restore commands, then check out the previous version and rebuild:
 
 ```bash

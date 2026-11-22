@@ -17,6 +17,7 @@ from serverhub.api.link_import import import_links
 from serverhub.api.serialize import (
     bookmark_out,
     bootstrap,
+    load_layout,
     load_settings,
     service_fields,
     service_out,
@@ -83,6 +84,29 @@ async def patch_settings(request: Request) -> Response:
         return merged
 
     return json_response({"settings": await hub(request).db.run(_merge)})
+
+
+async def get_layout(request: Request) -> Response:
+    user = await require_user(request)
+    return json_response({"layout": await hub(request).db.run(load_layout, user["id"])})
+
+
+async def patch_layout(request: Request) -> Response:
+    user = await require_user(request)
+    patch = await parse(request, s.LayoutPatch)
+
+    def _merge(conn):
+        merged = {**load_layout(conn, user["id"]), **patch.model_dump(exclude_none=True)}
+        repo.put_layout(conn, user["id"], merged)
+        return merged
+
+    return json_response({"layout": await hub(request).db.run(_merge)})
+
+
+async def reset_layout(request: Request) -> Response:
+    user = await require_user(request)
+    await hub(request).db.run(repo.delete_layout, user["id"])
+    return json_response({"layout": dict(s.DEFAULT_LAYOUT)})
 
 
 async def reset_settings(request: Request) -> Response:
@@ -213,6 +237,7 @@ async def export_backup(request: Request) -> Response:
             "version": 1,
             "exported_at": repo.iso_now(),
             "settings": data["settings"],
+            "layout": data["layout"],
             "services": [{k: r[k] for k in keep_service} for r in data["services"]],
             "bookmarks": [{k: r[k] for k in ("name", "url", "color")} for r in data["bookmarks"]],
         }
@@ -232,11 +257,12 @@ async def import_backup(request: Request) -> Response:
         ) from None
     services = [service_fields(x) for x in doc.services]
     bookmarks = [x.model_dump() for x in doc.bookmarks]
+    layout = doc.layout.model_dump() if doc.layout else None
 
     h = hub(request)
 
     def _replace(conn):
-        repo.replace_user_data(conn, user["id"], settings, services, bookmarks)
+        repo.replace_user_data(conn, user["id"], settings, services, bookmarks, layout)
         return bootstrap(conn, user, docker_configured=h.docker is not None)
 
     return json_response(await h.db.run(_replace))
@@ -247,6 +273,9 @@ routes = [
     Route("/api/settings", get_settings, methods=["GET"]),
     Route("/api/settings", patch_settings, methods=["PATCH"]),
     Route("/api/settings", reset_settings, methods=["DELETE"]),
+    Route("/api/layout", get_layout, methods=["GET"]),
+    Route("/api/layout", patch_layout, methods=["PATCH"]),
+    Route("/api/layout", reset_layout, methods=["DELETE"]),
     Route("/api/services", list_services, methods=["GET"]),
     Route("/api/services", create_service, methods=["POST"]),
     Route("/api/services/{id}", update_service, methods=["PATCH"]),

@@ -6,7 +6,13 @@ import sqlite3
 
 from pydantic import BaseModel, ValidationError
 
-from serverhub.api.schemas import DEFAULT_SETTINGS, Settings, deep_merge
+from serverhub.api.schemas import (
+    DEFAULT_LAYOUT,
+    DEFAULT_SETTINGS,
+    Layout,
+    Settings,
+    deep_merge,
+)
 from serverhub.db import repo
 
 
@@ -71,6 +77,14 @@ def load_settings(conn: sqlite3.Connection, user_id: str) -> dict:
         return dict(DEFAULT_SETTINGS)
 
 
+def load_layout(conn: sqlite3.Connection, user_id: str) -> dict:
+    stored = repo.get_layout(conn, user_id) or {}
+    try:
+        return Layout.model_validate({**DEFAULT_LAYOUT, **stored}).model_dump()
+    except ValidationError:
+        return dict(DEFAULT_LAYOUT)
+
+
 DOCKER_VISIBLE_KEY = "docker_visible_to_users"
 
 
@@ -86,6 +100,7 @@ def bootstrap(conn: sqlite3.Connection, user: dict, *, docker_configured: bool =
     return {
         "user": user_out(user),
         "settings": load_settings(conn, uid),
+        "layout": load_layout(conn, uid),
         "services": [service_out(r) for r in repo.list_owned(conn, "services", uid)],
         "bookmarks": [bookmark_out(r) for r in repo.list_owned(conn, "bookmarks", uid)],
         "docker": {"enabled": docker_configured and docker_visible(conn, user)},

@@ -5,6 +5,7 @@ import { api } from './client.js';
 import { createPageContext } from './page.js';
 import { byId } from './dom.js';
 import { createSettingsState } from './settings/env.js';
+import { normalizeLayout } from './lib/grid.js';
 import { mountAppearance } from './settings/appearance.js';
 import { mountPersonalization, mountFeatures, mountSearch } from './settings/simple.js';
 import { mountBeszel } from './settings/beszel.js';
@@ -34,7 +35,7 @@ const env = {
   },
   applyBootstrap(data) {
     store.replace(data.settings);
-    state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, loaded: true });
+    state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, layout: normalizeLayout(data.layout), loaded: true });
   },
 };
 
@@ -91,15 +92,15 @@ state.subscribe((s, prev) => {
     dockerNav.hidden = !isAdmin;
     if (isAdmin) admin.start();
   }
-  if (s.user && (s.services !== prev.services || s.bookmarks !== prev.bookmarks || s.user !== prev.user)) {
-    ctx.cache({ user: s.user, settings: store.get(), services: s.services, bookmarks: s.bookmarks });
+  if (s.user && (s.services !== prev.services || s.bookmarks !== prev.bookmarks || s.layout !== prev.layout || s.user !== prev.user)) {
+    ctx.cache({ user: s.user, settings: store.get(), services: s.services, bookmarks: s.bookmarks, layout: s.layout });
   }
 });
 
 if (ctx.cached) env.applyBootstrap(ctx.cached);
 try {
   const data = await ctx.fetchFresh();
-  state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, loaded: true });
+  state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, layout: normalizeLayout(data.layout), loaded: true });
   byId('load-error').hidden = true;
   if (data.user.role === 'admin') docker.start(!!(data.docker && data.docker.enabled === true));
   // The admin sections were hidden when the browser first resolved the #hash.

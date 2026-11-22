@@ -187,7 +187,10 @@ function checkField(f, v, loc, errors) {
     case 'list': {
       if (!Array.isArray(v)) return fail('Input should be a valid list');
       if (f.maxItems !== undefined && v.length > f.maxItems) return fail(`List should have at most ${f.maxItems} items after validation, not ${v.length}`);
-      return v.map((item, i) => checkField(/** @type {Field} */ (f.items), item, `${loc}.${i}`, errors));
+      const out = v.map((item, i) => checkField(/** @type {Field} */ (f.items), item, `${loc}.${i}`, errors));
+      // Like pydantic's AfterValidator: only runs when every item was valid.
+      const itemsOk = !Object.keys(errors).some((k) => k.startsWith(loc + '.'));
+      return f.after && itemsOk ? runAfter(f, out, fail) : out;
     }
     case 'str': {
       if (typeof v !== 'string') return fail('Input should be a valid string');
@@ -341,6 +344,56 @@ export const Settings = {
   },
 };
 
+// ---------- dashboard layout ----------
+
+export const LAYOUT_WIDGETS = new Set(['bookmarks', 'stats']);
+export const MAX_TILES = LAYOUT_WIDGETS.size + KNOWN_CATEGORIES.size;
+
+/** @param {string} v */
+function tileId(v) {
+  if (LAYOUT_WIDGETS.has(v) || (v.startsWith('group:') && KNOWN_CATEGORIES.has(v.slice(6)))) return v;
+  throw new ValueErr('unknown tile id');
+}
+
+/** @param {{ id: string }[]} v */
+function uniqueTiles(v) {
+  if (new Set(v.map((t) => t.id)).size !== v.length) throw new ValueErr('tile ids must be unique');
+  return v;
+}
+
+/** @type {Model} */
+export const Tile = {
+  name: 'Tile',
+  fields: {
+    id: { t: 'str', after: tileId, required: true },
+    size: { t: 'literal', values: ['s', 'm', 'l'], def: 's' },
+    hidden: { t: 'bool', def: false },
+  },
+};
+
+const TILES = /** @type {Field} */ ({ t: 'list', items: { t: 'model', model: Tile }, maxItems: MAX_TILES, after: uniqueTiles });
+
+/** @type {Model} */
+export const Layout = {
+  name: 'Layout',
+  fields: {
+    enabled: { t: 'bool', def: false },
+    items: { ...TILES, def: () => [] },
+  },
+};
+
+/** Sent top-level keys replace the stored ones; null means "not sent". @type {Model} */
+export const LayoutPatch = {
+  name: 'LayoutPatch',
+  fields: {
+    enabled: { t: 'bool', nullable: true },
+    items: { ...TILES, nullable: true },
+  },
+};
+
+/** @returns {Record<string, any>} */
+export const defaultLayout = () => validate(Layout, {});
+
 /** @returns {Record<string, any>} */
 export const defaultSettings = () => validate(Settings, {});
 
@@ -452,6 +505,7 @@ export const BackupDoc = {
     version: { t: 'literal', values: [1], required: true },
     exported_at: { t: 'str', nullable: true, def: null },
     settings: { t: 'dict', def: () => ({}) },
+    layout: { t: 'model', model: Layout, nullable: true, def: null },
     services: { t: 'list', items: { t: 'model', model: BackupService }, maxItems: MAX_SERVICES, def: () => [] },
     bookmarks: { t: 'list', items: { t: 'model', model: BackupBookmark }, maxItems: MAX_BOOKMARKS, def: () => [] },
   },

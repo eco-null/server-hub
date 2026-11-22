@@ -129,7 +129,7 @@ budget of 8 failures / 15 min per account (`429 rate_limited` beyond it).
 ## Bootstrap
 
 `GET /api/bootstrap` →
-`{"user": User, "settings": Settings, "services": [Service], "bookmarks": [Bookmark], "docker": {"enabled": bool}}`
+`{"user": User, "settings": Settings, "services": [Service], "bookmarks": [Bookmark], "docker": {"enabled": bool}, "layout": Layout}`
 
 `docker.enabled` is true only when Docker discovery is configured (`SERVERHUB_DOCKER_HOST`)
 **and** this user may see discovered services (admins always; other users only while
@@ -157,6 +157,28 @@ Settings = {
 The defaults give a plain black page: dark theme, `wallpaper.mode` `none` and no grid overlay. Values already stored for an account are never rewritten.
 
 Settings never contain secrets. 2FA and Beszel credentials live elsewhere.
+
+## Layout
+
+Optional grid dashboard, stored per user apart from settings.
+
+`GET /api/layout` → `{"layout": Layout}`
+`PATCH /api/layout` body: `{"enabled"?: bool, "items"?: [Tile]}`. Replaces only the top-level keys that are sent (a sent `items` replaces the whole list). Unknown keys are rejected. Returns the full `{"layout": Layout}`.
+`DELETE /api/layout` → resets to the default, returns `{"layout": Layout}`.
+
+```jsonc
+Layout = {
+  "enabled": false,                    // default false
+  "items": [Tile]                      // default []; at most 21, ids unique
+}
+Tile = {
+  "id": "bookmarks" | "stats" | "group:<Category>",   // <Category> is a known category id
+  "size": "s" | "m" | "l",             // default "s"
+  "hidden": false                      // default false
+}
+```
+
+Sizes are 1 column, 2 columns and a full row on a four-column board; the board has two columns on medium widths and one on phones. `items` holds the tiles the user arranged, in order. A tile that is not listed (for example a new category) is placed after the listed ones with a default size: large for a group with 4 or more services, small otherwise. An entry for a category that is temporarily empty is kept. Validation is strict: an unknown id, a duplicate id, an unknown size or a 22nd item gives `400 validation`.
 
 ## Services
 
@@ -395,8 +417,9 @@ Discovered services are read-only: `PATCH`/`DELETE /api/services/docker:…` ans
 
 ## Backup
 
-`GET /api/backup` → `{"version": 1, "exported_at", "settings", "services", "bookmarks"}` (no secrets).
-`POST /api/backup` body: the same document (≤ 4 MiB). Replaces the caller's settings,
+`GET /api/backup` → `{"version": 1, "exported_at", "settings", "layout", "services", "bookmarks"}` (no secrets).
+`POST /api/backup` body: the same document (≤ 4 MiB); `layout` is optional, and a backup
+without it resets the layout to the default. Replaces the caller's settings, layout,
 services and bookmarks in one transaction. Returns the same shape as `/api/bootstrap`.
 
 ### Bulk link import

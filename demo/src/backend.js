@@ -163,7 +163,7 @@ export function createBackend(opts = {}) {
 
   /** @param {any} st @param {string} uid */
   function userData(st, uid) {
-    if (!st.data[uid]) st.data[uid] = { settings: null, services: [], bookmarks: [], beszel: [] };
+    if (!st.data[uid]) st.data[uid] = { settings: null, layout: null, services: [], bookmarks: [], beszel: [] };
     return st.data[uid];
   }
 
@@ -177,10 +177,20 @@ export function createBackend(opts = {}) {
     }
   }
 
+  /** @param {any} st @param {string} uid */
+  function loadLayout(st, uid) {
+    const stored = userData(st, uid).layout || {};
+    try {
+      return S.validate(S.Layout, { ...S.defaultLayout(), ...stored });
+    } catch {
+      return S.defaultLayout();
+    }
+  }
+
   /** @param {any} st @param {any} user */
   function bootstrap(st, user) {
     const d = userData(st, user.id);
-    return { user: userOut(user), settings: loadSettings(st, user.id), services: d.services, bookmarks: d.bookmarks, docker: { enabled: dockerVisible(st, user) } };
+    return { user: userOut(user), settings: loadSettings(st, user.id), layout: loadLayout(st, user.id), services: d.services, bookmarks: d.bookmarks, docker: { enabled: dockerVisible(st, user) } };
   }
 
   // ---------- Docker discovery (simulated host, see seed.js / sim.js) ----------
@@ -387,6 +397,21 @@ export function createBackend(opts = {}) {
     return { settings: S.defaultSettings() };
   });
 
+  // dashboard layout
+  route('GET', '/api/layout', ({ st }) => ({ layout: loadLayout(st, requireUser(st).id) }));
+  route('PATCH', '/api/layout', ({ st, body }) => {
+    const user = requireUser(st);
+    const patch = parse(() => S.validate(S.LayoutPatch, body));
+    for (const k of Object.keys(patch)) if (patch[k] === null) delete patch[k];
+    const merged = { ...loadLayout(st, user.id), ...patch };
+    userData(st, user.id).layout = merged;
+    return { layout: merged };
+  });
+  route('DELETE', '/api/layout', ({ st }) => {
+    userData(st, requireUser(st).id).layout = null;
+    return { layout: S.defaultLayout() };
+  });
+
   // services
   route('GET', '/api/services', ({ st }) => ({ services: userData(st, requireUser(st).id).services }));
   route('POST', '/api/services', ({ st, body }) => {
@@ -504,6 +529,7 @@ export function createBackend(opts = {}) {
       version: 1,
       exported_at: iso(),
       settings: data.settings,
+      layout: data.layout,
       services: data.services.map((/** @type {any} */ r) => ({ name: r.name, url: r.url, description: r.description, icon: r.icon, category: r.category, check: r.check })),
       bookmarks: data.bookmarks.map((/** @type {any} */ r) => ({ name: r.name, url: r.url, color: r.color })),
     };
@@ -521,6 +547,7 @@ export function createBackend(opts = {}) {
     const d = userData(st, user.id);
     for (const s of d.services) delete st.health[s.id];
     d.settings = settings;
+    d.layout = doc.layout ?? null;
     d.services = doc.services.map((/** @type {any} */ s) => ({ id: uuid(), name: s.name, url: s.url, description: s.description, icon: s.icon, category: s.category, check: s.check, created_at: iso() }));
     d.bookmarks = doc.bookmarks.map((/** @type {any} */ b) => ({ id: uuid(), name: b.name, url: b.url, color: b.color, created_at: iso() }));
     return bootstrap(st, user);

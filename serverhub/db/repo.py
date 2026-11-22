@@ -428,6 +428,27 @@ def delete_settings(conn: sqlite3.Connection, user_id: str) -> None:
     conn.execute("DELETE FROM user_settings WHERE user_id = ?", (user_id,))
 
 
+# ---- dashboard layout ----------------------------------------------------------
+
+
+def get_layout(conn: sqlite3.Connection, user_id: str) -> dict | None:
+    row = conn.execute("SELECT data FROM user_layouts WHERE user_id = ?", (user_id,)).fetchone()
+    return json.loads(row["data"]) if row else None
+
+
+def put_layout(conn: sqlite3.Connection, user_id: str, data: dict) -> None:
+    conn.execute(
+        "INSERT INTO user_layouts (user_id, data, updated_at) VALUES (?, ?, ?)"
+        " ON CONFLICT(user_id) DO UPDATE SET"
+        " data = excluded.data, updated_at = excluded.updated_at",
+        (user_id, json.dumps(data, separators=(",", ":")), iso_now()),
+    )
+
+
+def delete_layout(conn: sqlite3.Connection, user_id: str) -> None:
+    conn.execute("DELETE FROM user_layouts WHERE user_id = ?", (user_id,))
+
+
 # ---- generic owned-row helpers (services, bookmarks, beszel) -------------------
 
 _OWNED = {
@@ -540,12 +561,18 @@ def replace_user_data(
     settings: dict,
     services: list[dict],
     bookmarks: list[dict],
+    layout: dict | None = None,
 ) -> None:
-    """Backup import: swap settings, services and bookmarks in one transaction."""
+    """Backup import: swap settings, layout, services and bookmarks in one
+    transaction. A backup without a layout resets it to the default."""
     with transaction(conn):
         conn.execute("DELETE FROM services WHERE user_id = ?", (user_id,))
         conn.execute("DELETE FROM bookmarks WHERE user_id = ?", (user_id,))
         put_settings(conn, user_id, settings)
+        if layout is None:
+            delete_layout(conn, user_id)
+        else:
+            put_layout(conn, user_id, layout)
         for s in services:
             _insert_owned(conn, "services", user_id, s)
         for b in bookmarks:

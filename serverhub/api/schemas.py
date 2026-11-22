@@ -170,6 +170,52 @@ class Settings(Strict):
 DEFAULT_SETTINGS = Settings().model_dump()
 
 
+# ---- dashboard layout -----------------------------------------------------------
+
+LAYOUT_WIDGETS = frozenset({"bookmarks", "stats"})
+
+
+def _tile_id(v: str) -> str:
+    # A widget, or one service category group ("group:Media").
+    if v in LAYOUT_WIDGETS or (v.startswith("group:") and v[6:] in KNOWN_CATEGORIES):
+        return v
+    raise ValueError("unknown tile id")
+
+
+class Tile(Strict):
+    id: Annotated[str, AfterValidator(_tile_id)]
+    size: Literal["s", "m", "l"] = "s"
+    hidden: bool = False
+
+
+def _unique_tiles(v: list[Tile]) -> list[Tile]:
+    if len({t.id for t in v}) != len(v):
+        raise ValueError("tile ids must be unique")
+    return v
+
+
+MAX_TILES = len(LAYOUT_WIDGETS) + len(KNOWN_CATEGORIES)
+Tiles = Annotated[list[Tile], Field(max_length=MAX_TILES), AfterValidator(_unique_tiles)]
+
+
+class Layout(Strict):
+    """Optional grid dashboard. ``items`` holds the tiles the user arranged;
+    the dashboard places any other tile after them with its default size."""
+
+    enabled: bool = False
+    items: Tiles = []
+
+
+class LayoutPatch(Strict):
+    """Replaces the top-level keys that are sent."""
+
+    enabled: bool | None = None
+    items: Tiles | None = None
+
+
+DEFAULT_LAYOUT = Layout().model_dump()
+
+
 def deep_merge(base: dict, patch: dict) -> dict:
     out = dict(base)
     for k, v in patch.items():
@@ -321,5 +367,6 @@ class BackupDoc(BaseModel):
     version: Literal[1]
     exported_at: str | None = None
     settings: dict = Field(default_factory=dict)
+    layout: Layout | None = None
     services: Annotated[list[BackupService], Field(max_length=MAX_SERVICES)] = []
     bookmarks: Annotated[list[BackupBookmark], Field(max_length=MAX_BOOKMARKS)] = []

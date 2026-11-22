@@ -73,7 +73,7 @@ serverhub/
   hub.py               Container for application services (db, keys, limiter, fetcher, ...)
   errors.py            ApiError and its helpers
   web.py               Page routes, /static, /healthz
-  api/                 auth.py, data.py (settings, services, bookmarks, status, backup),
+  api/                 auth.py, data.py (settings, layout, services, bookmarks, status, backup),
                        beszel.py, docker.py, admin.py; schemas.py holds request models and limits
   auth/                crypto.py (HKDF keys, Fernet, Argon2id), sessions.py, totp.py, ratelimit.py
   db/                  __init__.py (connection, migrations, backup), repo.py (queries), migrations/
@@ -105,7 +105,7 @@ The frontend is plain HTML, CSS and ES modules served as they are. There is no b
 
 - Pages: `index.html` (dashboard), `login.html` (sign in, 2FA, first-run setup, sign up), `settings.html`. Each loads one module: `dashboard.js`, `login.js` or `settings.js`.
 - `static/js/api.js` is the API client (it reaches `fetch` through `client.js`). It sends `X-ServerHub-Client: web` on every request and turns error bodies into `ApiError`. Add new calls there rather than calling `fetch` elsewhere.
-- `store.js` is the settings store (optimistic updates, one debounced save), `state.js` a small observable container, `cache.js` the per-user first-paint cache; `features/` has the dashboard parts (services, bookmarks, search, status, stats, clock, dialogs); `settings/` has one module per settings section; `lib/` has pure helpers with unit tests (search ranking, column layout, cross-tab change notification); `categorize.js` is the automatic categorization.
+- `store.js` is the settings store (optimistic updates, one debounced save), `state.js` a small observable container, `cache.js` the per-user first-paint cache; `features/` has the dashboard parts (services, bookmarks, search, status, stats, clock, dialogs, and `board.js`, the optional tile grid with its edit mode); `settings/` has one module per settings section; `lib/` has pure helpers with unit tests (search ranking, column layout, tile grid ordering and moves in `grid.js`, cross-tab change notification); `categorize.js` is the automatic categorization.
 - `dom.js` provides `h()`, which builds elements with `createElement` and `textContent`. Build all dynamic DOM through it; do not build HTML from strings.
 - Modules carry `// @ts-check` and JSDoc types.
 - Theme variables are in `css/tokens.css`. `theme-boot.js` is a small blocking script in `<head>` that applies the saved theme before first paint.

@@ -11,7 +11,9 @@ import { isModalOpen } from './dialog.js';
 import { toastError } from './toast.js';
 import { createHeader } from './features/header.js';
 import { createClock } from './features/clock.js';
-import { createServicesView } from './features/services.js';
+import { createServicesView, groupServices, BIG_GROUP } from './features/services.js';
+import { createBoard } from './features/board.js';
+import { groupTileId, normalizeLayout, resolveTiles, tilesToSave } from './lib/grid.js';
 import { createBookmarksWidget } from './features/bookmarks.js';
 import { createStatsWidget } from './features/stats.js';
 import { createStatusPoller } from './features/status.js';
@@ -38,6 +40,8 @@ const state = createState({
   /** Docker discovery is on for this user (from the bootstrap). */
   dockerOn: false,
   docker: emptyDockerView(),
+  /** Optional grid dashboard (Settings > Appearance). */
+  layout: normalizeLayout(null),
   loaded: false,
 });
 
@@ -52,6 +56,14 @@ const loadError = $('load-error');
 const offline = $('offline-banner');
 const dockerNotice = $('docker-notice');
 const groupsEl = $('groups');
+const groupsWrap = /** @type {HTMLElement} */ (groupsEl.parentElement);
+const aside = /** @type {HTMLElement} */ (document.querySelector('.page-aside'));
+const bookmarksCard = $('bookmarks-card');
+const statsCard = $('stats-card');
+const boardEl = $('board');
+const boardBar = $('board-bar');
+const boardLive = $('board-live');
+const layoutEditBtn = $('layout-edit');
 
 // ---------- feature modules ----------
 const header = createHeader({ store, api });
@@ -106,6 +118,45 @@ const stats = createStatsWidget({
   isEnabled: () => store.get().features.stats,
 });
 
+/** @param {string} id */
+const tileTitle = (id) => (id === 'bookmarks' ? 'Bookmarks' : id === 'stats' ? 'System' : id.slice('group:'.length));
+
+const board = createBoard({
+  root: boardEl,
+  live: boardLive,
+  hintId: 'board-hint',
+  titleOf: tileTitle,
+  onChange: (shown) => {
+    const items = tilesToSave(shown, state.get().layout.items);
+    state.set({ layout: { ...state.get().layout, items } });
+    saveLayout({ items });
+  },
+});
+
+// ---------- layout saving: one debounced PATCH with every edit since the last one ----------
+/** @type {Partial<import('./lib/grid.js').Layout> | null} */
+let layoutPending = null;
+/** @type {ReturnType<typeof setTimeout> | undefined} */
+let layoutTimer;
+/** @param {Partial<import('./lib/grid.js').Layout>} patch */
+function saveLayout(patch) {
+  layoutPending = { ...layoutPending, ...patch };
+  clearTimeout(layoutTimer);
+  layoutTimer = setTimeout(() => void flushLayout(), 400);
+}
+async function flushLayout(keepalive = false) {
+  clearTimeout(layoutTimer);
+  if (!layoutPending) return;
+  const body = layoutPending;
+  layoutPending = null;
+  try {
+    await api.patch('/api/layout', body, { keepalive });
+  } catch (err) {
+    toastError(`Couldn't save the layout: ${err instanceof Error ? err.message : 'unknown error'}`);
+  }
+}
+window.addEventListener('pagehide', () => void flushLayout(true));
+
 const status = createStatusPoller({
   api,
   isEnabled: () => store.get().features.statusChecks && allServices().some((s) => s.check),
@@ -140,11 +191,55 @@ function renderServices() {
   // Visible before rendering so the grid can measure its width and pick balanced columns at once.
   groupsEl.hidden = shown.length === 0;
   services.render(shown, { showStatus, stale: s.docker.stale });
+  groupEls = new Map([...groupsEl.children].map((el) => [groupTileId(/** @type {HTMLElement} */ (el).dataset.category || ''), /** @type {HTMLElement} */ (el)]));
+  renderBoard();
   services.applyStatuses(s.statuses);
   if (focusedId) services.focusCard(focusedId);
   skeletons.hidden = true;
   emptyState.hidden = !(s.loaded && shown.length === 0);
   void status.refresh();
+}
+
+/** The service group sections of the last render, by tile id. @type {Map<string, HTMLElement>} */
+let groupEls = new Map();
+let editing = false;
+
+/**
+ * Classic layout: groups in the main column, widgets in the aside. Grid layout:
+ * the same elements become tiles on one board, in the user's order and sizes.
+ */
+function renderBoard() {
+  const on = state.get().layout.enabled;
+  document.body.classList.toggle('layout-grid', on);
+  boardEl.hidden = !on;
+  groupsWrap.hidden = on;
+  layoutEditBtn.hidden = !on;
+  if (!on) {
+    if (editing) setEditing(false);
+    board.clear();
+    if (bookmarksCard.parentElement !== aside) aside.append(bookmarksCard, statsCard);
+    return;
+  }
+  /** @type {Array<{ id: string, size: import('./lib/grid.js').TileSize }>} */
+  const available = groupServices(allServices()).map(({ category, items }) => ({ id: groupTileId(category), size: items.length >= BIG_GROUP ? 'l' : 's' }));
+  available.push({ id: 'bookmarks', size: 's' }, { id: 'stats', size: 's' });
+  const elements = new Map(groupEls);
+  elements.set('bookmarks', bookmarksCard);
+  elements.set('stats', statsCard);
+  board.render(resolveTiles(state.get().layout.items, available), elements);
+}
+
+/** @param {boolean} on */
+function setEditing(on) {
+  editing = on;
+  board.setEditing(on);
+  boardBar.hidden = !on;
+  layoutEditBtn.setAttribute('aria-pressed', String(on));
+  if (on) board.focusFirst();
+  else {
+    void flushLayout();
+    if (!layoutEditBtn.hidden) layoutEditBtn.focus();
+  }
 }
 
 /** One quiet line for admins when Docker cannot be read; non-admins never see it. */
@@ -168,8 +263,11 @@ state.subscribe((s, prev) => {
   if (s.docker !== prev.docker || s.user !== prev.user) renderDockerNotice();
   if (s.dockerOn !== prev.dockerOn && s.dockerOn) void docker.refresh();
   if (s.bookmarks !== prev.bookmarks) bookmarks.render();
-  if (s.user !== prev.user || s.services !== prev.services || s.bookmarks !== prev.bookmarks) {
-    if (s.user) ctx.cache({ user: s.user, settings: store.get(), services: s.services, bookmarks: s.bookmarks });
+  // Turning the grid off puts the groups back in the main column, which needs a fresh render.
+  if (s.layout.enabled !== prev.layout.enabled) renderServices();
+  else if (s.layout !== prev.layout) renderBoard();
+  if (s.user !== prev.user || s.services !== prev.services || s.bookmarks !== prev.bookmarks || s.layout !== prev.layout) {
+    if (s.user) ctx.cache({ user: s.user, settings: store.get(), services: s.services, bookmarks: s.bookmarks, layout: s.layout });
   }
 });
 
@@ -192,7 +290,9 @@ store.subscribe((s) => {
 /** @param {Bootstrap} data */
 function apply(data) {
   const dockerOn = !!(data.docker && data.docker.enabled === true);
-  state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, loaded: true, dockerOn, ...(dockerOn ? {} : { docker: emptyDockerView() }) });
+  // Unsaved or in-progress layout edits win over what the server sent.
+  const layout = layoutPending || editing ? state.get().layout : normalizeLayout(data.layout);
+  state.set({ user: data.user, services: data.services, bookmarks: data.bookmarks, layout, loaded: true, dockerOn, ...(dockerOn ? {} : { docker: emptyDockerView() }) });
 }
 
 async function load() {
@@ -243,8 +343,21 @@ byId('add-service').addEventListener('click', () =>
   }),
 );
 byId('empty-add').addEventListener('click', () => byId('add-service').click());
+layoutEditBtn.addEventListener('click', () => setEditing(!editing));
+byId('board-done').addEventListener('click', () => setEditing(false));
+byId('board-reset').addEventListener('click', () => {
+  state.set({ layout: { ...state.get().layout, items: [] } });
+  saveLayout({ items: [] });
+  boardLive.textContent = 'Layout reset to the default order and sizes.';
+  board.focusFirst();
+});
 
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && editing && !isModalOpen()) {
+    e.preventDefault();
+    setEditing(false);
+    return;
+  }
   if (e.key === '/' && canUseShortcut(e, { modalOpen: isModalOpen() })) {
     e.preventDefault();
     openSearch();

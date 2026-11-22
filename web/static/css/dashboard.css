@@ -1129,3 +1129,228 @@ dialog.dlg-palette {
     display: none;
   }
 }
+
+/* ---------- optional grid layout (Settings > Appearance) ---------- */
+/* One column for the whole page: the aside widgets become tiles on the board. */
+.layout-grid .page {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'head'
+    'main'
+    'foot';
+}
+
+.layout-grid .page-aside {
+  display: none;
+}
+
+.layout-grid .page-main {
+  container: board / inline-size;
+}
+
+.btn-layout {
+  background: var(--surface);
+}
+
+.btn-layout[aria-pressed='true'] {
+  border-color: var(--border-hi);
+  background: var(--surface-hi);
+}
+
+/* Four columns on wide screens, two on medium, one on phones. Tiles keep the
+   order the user chose (no dense packing), so keyboard and screen reader order
+   match what is on screen. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2rem 1.5rem;
+  align-items: start;
+}
+
+.tile {
+  min-width: 0;
+  grid-column: span 1;
+}
+
+.tile-m {
+  grid-column: span 2;
+}
+
+.tile-l {
+  grid-column: 1 / -1;
+}
+
+/* A widget that is switched off (System stats) takes no room. */
+.tile:has(> .tile-body > [hidden]) {
+  display: none;
+}
+
+.board .group .group-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+}
+
+@container board (max-width: 56rem) {
+  .board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container board (max-width: 36rem) {
+  .board {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .tile-m {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- edit mode ---------- */
+.board-bar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem 0.625rem 1rem;
+}
+
+.board-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+}
+
+.board-bar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tile-bar {
+  display: none;
+}
+
+.board.is-editing .tile {
+  padding: 0.5rem;
+  border: 1px dashed var(--border-hi);
+  border-radius: var(--radius-md);
+  transition: opacity var(--t) var(--ease), border-color var(--t) var(--ease);
+}
+
+.board.is-editing .tile-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  min-width: 0;
+}
+
+.tile-handle {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--fg-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.tile-handle:hover {
+  color: var(--fg);
+  border-color: var(--border-hi);
+}
+
+.tile-handle svg.icon {
+  stroke-width: 3;
+}
+
+.tile.is-dragging {
+  opacity: 0.55;
+}
+
+.tile.is-dragging .tile-handle {
+  cursor: grabbing;
+}
+
+.tile-sizes {
+  display: inline-flex;
+  flex: none;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.tile-size {
+  min-width: 1.75rem;
+  height: 1.875rem;
+  padding: 0 0.375rem;
+  border: 0;
+  background: transparent;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.tile-size + .tile-size {
+  border-left: 1px solid var(--border);
+}
+
+.tile-size:hover {
+  color: var(--fg);
+}
+
+.tile-size[aria-pressed='true'] {
+  background: var(--surface-hi);
+  color: var(--fg);
+}
+
+.tile-hide {
+  flex: none;
+}
+
+.board.is-editing .tile-hidden {
+  border-style: dotted;
+}
+
+.board.is-editing .tile-hidden .tile-body {
+  opacity: 0.4;
+}
+
+/* The board widgets are full tiles: no extra outer margin. */
+.board .widget {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .head-actions .btn-layout {
+    width: 3.25rem;
+    padding-inline: 0;
+  }
+
+  .head-actions .btn-layout span {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .tile-handle,
+  .tile-size {
+    min-width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board.is-editing .tile {
+    transition: none;
+  }
+}
