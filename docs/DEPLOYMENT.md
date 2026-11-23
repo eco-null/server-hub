@@ -235,7 +235,7 @@ If a release has no schema change, you can roll back the code alone without rest
 
 ### Prebuilt images
 
-Publishing a GitHub release with a tag such as `v2.1.0` builds and tests AMD64 and ARM64 images before publishing to `ghcr.io/eco-null/server-hub:<tag>`. The image uses the exact version tag. On the first release, confirm that the GHCR package is public before advertising anonymous pulls.
+Publishing a GitHub release with a tag such as `v2.1.0` builds and tests AMD64 and ARM64 images before publishing to `ghcr.io/eco-null/server-hub:<tag>`. A stable release (not a pre-release such as `v2.2.0-rc.1`) also moves `latest`; pinning the exact version tag is still the recommended setup. An existing release can be built and published again from the Actions tab (`Docker images`, Run workflow, with its tag). On the first release, confirm that the GHCR package is public before advertising anonymous pulls.
 
 Use the current `compose.yaml` and keep your existing Compose project, data volume, and secret key. Record the old `SERVERHUB_IMAGE` value (or `server-hub:latest` for a local build). Set `SERVERHUB_IMAGE` in `.env` to the new tag, then run:
 

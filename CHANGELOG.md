@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Changed
+
+- Stable releases also publish `ghcr.io/eco-null/server-hub:latest`. An existing release tag can be published again by running the `Docker images` workflow by hand.
+
 ## [2.2.0] - 2026-11-23
 
 ### Added
