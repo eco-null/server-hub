@@ -19,6 +19,7 @@ import { createStatsWidget } from './features/stats.js';
 import { createStatusPoller } from './features/status.js';
 import { createDockerPoller } from './features/docker.js';
 import { openDiscoveredDetails } from './features/docker-dialogs.js';
+import { openMonitoring } from './features/monitoring.js';
 import { emptyDockerView, nextDockerView, mergeServices, unavailableNotice } from './lib/docker.js';
 import { openSearchPalette } from './features/search.js';
 import { openAddService, openEditService, removeService } from './features/service-dialogs.js';
@@ -93,6 +94,7 @@ const services = createServicesView({
       },
     }),
   onDetails: (s) => openDiscoveredDetails(s, { stale: state.get().docker.stale, updatedAt: state.get().docker.updatedAt }),
+  onMonitoring: (s) => openMonitoring({ api, service: s, onChanged: () => void status.refresh() }),
   onDelete: async (s) => {
     if (await removeService(api, s)) {
       state.set({ services: state.get().services.filter((x) => x.id !== s.id) });

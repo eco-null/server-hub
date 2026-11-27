@@ -53,10 +53,11 @@ export function groupServices(services) {
  *   root: HTMLElement,
  *   onEdit: (s: import('../types.js').Service) => void,
  *   onDelete: (s: import('../types.js').Service) => void,
+ *   onMonitoring: (s: import('../types.js').Service) => void,
  *   onDetails: (s: import('../types.js').DiscoveredService) => void,
  * }} o
  */
-export function createServicesView({ root, onEdit, onDelete, onDetails }) {
+export function createServicesView({ root, onEdit, onDelete, onMonitoring, onDetails }) {
   /** @type {Map<string, { el: HTMLElement, text: HTMLElement, forceDown: boolean }>} service id -> status elements */
   let statusEls = new Map();
   /** @type {Map<string, HTMLElement>} */
@@ -113,6 +114,7 @@ export function createServicesView({ root, onEdit, onDelete, onDetails }) {
     const actions = found
       ? h('button', { type: 'button', class: 'card-action', 'aria-label': `Details for ${s.name}`, title: 'Details', onclick: () => onDetails(found) }, icon('ui-info'))
       : [
+          h('button', { type: 'button', class: 'card-action', 'aria-label': `Monitoring for ${s.name}`, 'aria-haspopup': 'dialog', title: 'Monitoring', onclick: () => onMonitoring(/** @type {import('../types.js').Service} */ (s)) }, icon('pulse')),
           h('button', { type: 'button', class: 'card-action', 'aria-label': `Edit ${s.name}`, title: 'Edit', onclick: () => onEdit(/** @type {import('../types.js').Service} */ (s)) }, icon('ui-edit')),
           h('button', { type: 'button', class: 'card-action card-action-danger', 'aria-label': `Delete ${s.name}`, title: 'Delete', onclick: () => onDelete(/** @type {import('../types.js').Service} */ (s)) }, icon('ui-trash')),
         ];

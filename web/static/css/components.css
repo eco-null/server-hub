@@ -745,6 +745,49 @@ dialog.dlg-lg {
   text-underline-offset: 2px;
 }
 
+.monitor-history {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.monitor-dialog .btn-primary {
+  background: var(--fg);
+  color: var(--dialog-bg);
+}
+
+.monitor-dialog .btn-primary:hover {
+  background: color-mix(in srgb, var(--fg) 90%, var(--dialog-bg));
+}
+
+.monitor-dialog .btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.monitor-history h3 {
+  font-size: 0.875rem;
+}
+
+.monitor-incidents {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.monitor-incidents > li {
+  display: grid;
+  gap: 0.25rem;
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0;
+}
+
+.monitor-incident-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
 @media (max-width: 480px) {
   .detail-row {
     grid-template-columns: minmax(0, 1fr);

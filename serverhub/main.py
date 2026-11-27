@@ -24,6 +24,7 @@ from serverhub.api import auth as auth_api
 from serverhub.api import beszel as beszel_api
 from serverhub.api import data as data_api
 from serverhub.api import docker as docker_api
+from serverhub.api import monitoring as monitoring_api
 from serverhub.auth.crypto import Keys, Passwords
 from serverhub.auth.ratelimit import LONGEST_WINDOW, RateLimiter
 from serverhub.config import Config, load_config
@@ -218,6 +219,7 @@ def create_app(
         *data_api.routes,
         *beszel_api.routes,
         *docker_api.routes,
+        *monitoring_api.routes,
         *admin_api.routes,
         Route(
             "/api/{rest:path}",

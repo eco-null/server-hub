@@ -20,6 +20,13 @@ export const STATE_KEY = 'serverhub-demo:v1';
 const PENDING_TTL_MS = 5 * 60 * 1000;
 const PENDING_MAX_ATTEMPTS = 5;
 const TOTP_SETUP_TTL_MS = 10 * 60 * 1000;
+const MONITOR_INTERVAL = 60;
+const MONITOR_RETENTION = 7 * 86400;
+const MAX_MONITORS = 50;
+const MAX_USER_MONITORS = 10;
+const INCIDENT_PAGE_SIZE = 20;
+/** @type {S.Model} */
+const MONITORING_TOGGLE = { name: 'MonitoringToggle', fields: { enabled: { t: 'bool', required: true } } };
 const GENERIC_BESZEL_ERROR = 'Could not reach Beszel or sign in; check the URL and credentials';
 
 export class HttpError extends Error {
@@ -99,12 +106,12 @@ export function createBackend(opts = {}) {
       const raw = storage.getItem(key);
       if (raw) {
         const st = JSON.parse(raw);
-        if (st && st.v === 1 && Array.isArray(st.users) && st.data) return withDocker(st);
+        if (st && st.v === 1 && Array.isArray(st.users) && st.data) return withMonitoring(withDocker(st));
       }
     } catch {
       /* corrupt or unavailable: start over */
     }
-    const st = withDocker(seedState(uuid));
+    const st = withMonitoring(withDocker(seedState(uuid)));
     save(st);
     return st;
   }
@@ -121,6 +128,26 @@ export function createBackend(opts = {}) {
     return st;
   }
 
+  // The public demo is preconfigured with one synthetic history. Old storage
+  // documents gain it only if they still contain the original seeded service.
+  /** @param {any} st */
+  function withMonitoring(st) {
+    if (typeof st.monitoring?.enabled === 'boolean' && st.monitoring.services) return st;
+    const demo = st.users.find((/** @type {any} */ u) => u.username === DEMO_USERNAME && u.fixed_password);
+    const jellyfin = st.data[demo?.id]?.services.find(
+      (/** @type {any} */ s) => s.name === 'Jellyfin' && s.url === 'https://jellyfin.home.arpa' && s.check,
+    );
+    st.monitoring = { enabled: true, services: {} };
+    if (jellyfin) {
+      const seed = monitorSlot();
+      const start = seed - MONITOR_RETENTION;
+      st.monitoring.services[jellyfin.id] = {
+        enabled: true, started_at: start, simulated_at: seed, periods: [{ start, end: null }],
+      };
+    }
+    return st;
+  }
+
   /** @param {any} st */
   function save(st) {
     try {
@@ -131,6 +158,126 @@ export function createBackend(opts = {}) {
   }
 
   const iso = () => new Date(now()).toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+  const monitorSlot = () => Math.floor(now() / (MONITOR_INTERVAL * 1000)) * MONITOR_INTERVAL;
+
+  // Save active periods so the computed mock checks survive browser reloads
+  // without a real scheduler or thousands of samples in localStorage.
+  /** @param {any} monitor @param {boolean} active @param {number} slot */
+  function updateMonitorPeriod(monitor, active, slot) {
+    const last = monitor.periods.at(-1);
+    if (active && last?.end !== null) {
+      if (last?.end === slot) last.end = null;
+      else monitor.periods.push({ start: slot + MONITOR_INTERVAL, end: null });
+    } else if (!active && last?.end === null) {
+      if (last.start > slot) monitor.periods.pop();
+      else last.end = slot;
+    }
+    monitor.periods = monitor.periods.filter(
+      (/** @type {{end: number | null}} */ period) => period.end === null || period.end >= slot - MONITOR_RETENTION,
+    );
+  }
+
+  /** @param {any} monitor */
+  function sampleIncidents(monitor) {
+    if (monitor?.simulated_at == null) return [];
+    return [2 * 86400, 5 * 86400].map((age, i) => {
+      const started_at = monitor.simulated_at - age;
+      return { id: String(i + 1).padStart(32, '0'), started_at, ended_at: started_at + (11 - 4 * i) * MONITOR_INTERVAL, end_reason: 'recovered' };
+    });
+  }
+
+  /** @param {number} slot @param {ReturnType<typeof sampleIncidents>} incidents */
+  function inSimulatedOutage(slot, incidents) {
+    return incidents.some((i) => slot >= i.started_at && slot < i.ended_at);
+  }
+
+  /** @param {URLSearchParams} query */
+  function monitoringBefore(query) {
+    const values = query.getAll('before');
+    if (!values.length) return null;
+    if (values.length === 1 && /^[0-9]{1,19}$/.test(values[0])) {
+      const before = BigInt(values[0]);
+      if (before > 0n && before <= (1n << 63n) - 1n) return Number(before);
+    }
+    throw validationError(new S.ValidationError({ before: 'must be a positive integer timestamp' }));
+  }
+
+  /** @param {any} st @param {any} user @param {any} service @param {number | null} before */
+  function monitorHistory(st, user, service, before) {
+    const slot = monitorSlot();
+    const cutoff = slot - MONITOR_RETENTION;
+    const monitor = st.monitoring.services[service.id];
+    const first = Math.max(cutoff, monitor?.started_at ?? slot);
+    const fixtures = sampleIncidents(monitor);
+    const health = st.health[service.id] || 'up';
+    let observed = 0;
+    let down = 0;
+    let latest = null;
+    for (const period of monitor?.periods ?? []) {
+      const start = Math.max(first, period.start);
+      const end = Math.min(slot, period.end ?? slot);
+      if (start > end) continue;
+      observed += (end - start) / MONITOR_INTERVAL + 1;
+      latest = end;
+      for (const incident of fixtures) {
+        const from = Math.max(start, incident.started_at);
+        const until = Math.min(end + MONITOR_INTERVAL, incident.ended_at);
+        down += Math.max(0, (until - from) / MONITOR_INTERVAL);
+      }
+    }
+    const checked = health === 'unknown' ? 0 : observed;
+    const good = health === 'up' ? checked - down : 0;
+    const unknown = observed - checked;
+    const expected = (slot - first) / MONITOR_INTERVAL + Number(latest === slot);
+    const matches = fixtures.filter((i) => i.started_at <= slot && i.ended_at >= cutoff && (before === null || i.started_at < before));
+    const incidents = matches.slice(0, INCIDENT_PAGE_SIZE);
+    let lastCheck = latest === null ? null : serviceStatus(service, inSimulatedOutage(latest, fixtures) ? 'down' : health, latest * 1000);
+    if (lastCheck && user.role !== 'admin') lastCheck = { ...lastCheck, http_status: null, latency_ms: null };
+    return {
+      available: st.monitoring.enabled,
+      enabled: monitor?.enabled === true,
+      check_enabled: service.check,
+      last_check: lastCheck,
+      summary: {
+        uptime_pct: checked ? Math.round(good * 10000 / checked) / 100 : null,
+        checked, expected, unknown, missing: Math.max(0, expected - observed),
+      },
+      incidents,
+      next_before: matches.length > INCIDENT_PAGE_SIZE ? incidents.at(-1)?.started_at : null,
+    };
+  }
+
+  /** @param {any} st @param {any} user @param {any} service @param {boolean} enabled */
+  function setServiceMonitoring(st, user, service, enabled) {
+    if (enabled && !st.monitoring.enabled) {
+      throw new HttpError(409, 'monitoring_disabled', 'An admin must enable background monitoring first.');
+    }
+    if (enabled && !service.check) {
+      throw new HttpError(409, 'checks_disabled', 'Enable status checks for this service first.');
+    }
+    const stored = st.monitoring.services[service.id];
+    if ((stored?.enabled === true) === enabled) return;
+    const slot = monitorSlot();
+    if (enabled) {
+      const own = userData(st, user.id).services.filter(
+        (/** @type {any} */ item) => st.monitoring.services[item.id]?.enabled === true,
+      ).length;
+      if (own >= MAX_USER_MONITORS) {
+        throw new HttpError(409, 'owner_limit', 'You can monitor at most 10 services.');
+      }
+      if (Object.values(st.monitoring.services).filter((item) => item.enabled).length >= MAX_MONITORS) {
+        throw new HttpError(409, 'monitor_limit', 'This installation can monitor at most 50 services.');
+      }
+      const monitor = stored ?? { started_at: slot, periods: [] };
+      monitor.enabled = true;
+      updateMonitorPeriod(monitor, true, slot);
+      st.monitoring.services[service.id] = monitor;
+    } else {
+      stored.enabled = false;
+      updateMonitorPeriod(stored, false, slot);
+    }
+  }
 
   // ---------- helpers on the state document ----------
 
@@ -280,7 +427,7 @@ export function createBackend(opts = {}) {
 
   // ---------- routes ----------
 
-  /** @typedef {{ st: any, body: any, params: Record<string, string> }} Ctx */
+  /** @typedef {{ st: any, body: any, params: Record<string, string>, query: URLSearchParams }} Ctx */
   /** @type {Array<[string, RegExp, (c: Ctx) => any]>} */
   const routes = [];
   const route = (/** @type {string} */ method, /** @type {string} */ path, /** @type {(c: Ctx) => any} */ fn) => {
@@ -428,6 +575,8 @@ export function createBackend(opts = {}) {
     const id = canonicalId(params.id);
     const b = parse(() => S.validatePatch(S.ServicePatch, body, ['category']));
     const row = findOwned(st, user.id, 'services', id);
+    if (b.url !== undefined && b.url !== row.url) delete st.monitoring.services[id];
+    if (b.check === false) setServiceMonitoring(st, user, row, false);
     Object.assign(row, b);
     return { service: row };
   });
@@ -438,7 +587,23 @@ export function createBackend(opts = {}) {
     findOwned(st, user.id, 'services', id);
     d.services = d.services.filter((/** @type {any} */ r) => r.id !== id);
     delete st.health[id];
+    delete st.monitoring.services[id];
     return null;
+  });
+  route('GET', '/api/services/{id}/monitoring', ({ st, params, query }) => {
+    const user = requireUser(st);
+    const id = canonicalId(params.id);
+    const before = monitoringBefore(query);
+    const service = findOwned(st, user.id, 'services', id);
+    return monitorHistory(st, user, service, before);
+  });
+  route('PUT', '/api/services/{id}/monitoring', ({ st, body, params }) => {
+    const user = requireUser(st);
+    const id = canonicalId(params.id);
+    const b = parse(() => S.validate(MONITORING_TOGGLE, body));
+    const service = findOwned(st, user.id, 'services', id);
+    setServiceMonitoring(st, user, service, b.enabled);
+    return monitorHistory(st, user, service, null);
   });
 
   // bookmarks
@@ -474,9 +639,21 @@ export function createBackend(opts = {}) {
     const user = requireUser(st);
     /** @type {Record<string, any>} */
     const statuses = {};
+    const slot = monitorSlot();
     for (const s of userData(st, user.id).services) {
       if (!s.check) continue;
-      let entry = serviceStatus(s, st.health[s.id] || 'up', now());
+      const monitor = st.monitoring.services[s.id];
+      const health = st.health[s.id] || 'up';
+      let entry;
+      if (st.monitoring.enabled && monitor?.enabled) {
+        const period = monitor.periods.at(-1);
+        const last = period && Math.min(period.end ?? slot, slot);
+        entry = period && last >= period.start && slot - last <= MONITOR_INTERVAL
+          ? serviceStatus(s, inSimulatedOutage(last, sampleIncidents(monitor)) ? 'down' : health, last * 1000)
+          : serviceStatus(s, 'unknown', now());
+      } else {
+        entry = serviceStatus(s, health, now());
+      }
       if (user.role !== 'admin') entry = { ...entry, http_status: null, latency_ms: null };
       statuses[s.id] = entry;
     }
@@ -545,7 +722,10 @@ export function createBackend(opts = {}) {
       throw new HttpError(400, 'validation', 'Invalid input', Object.fromEntries(Object.entries(e.fields).map(([k, v]) => ['settings.' + k, v])));
     }
     const d = userData(st, user.id);
-    for (const s of d.services) delete st.health[s.id];
+    for (const s of d.services) {
+      delete st.health[s.id];
+      delete st.monitoring.services[s.id];
+    }
     d.settings = settings;
     d.layout = doc.layout ?? null;
     d.services = doc.services.map((/** @type {any} */ s) => ({ id: uuid(), name: s.name, url: s.url, description: s.description, icon: s.icon, category: s.category, check: s.check, created_at: iso() }));
@@ -647,7 +827,10 @@ export function createBackend(opts = {}) {
     if (!u) throw notFound();
     if (u.role === 'admin' && adminCount(st) <= 1) throw new HttpError(409, 'last_admin', 'The last admin cannot be removed');
     st.users = st.users.filter((/** @type {any} */ x) => x.id !== id);
-    for (const s of userData(st, id).services) delete st.health[s.id];
+    for (const s of userData(st, id).services) {
+      delete st.health[s.id];
+      delete st.monitoring.services[s.id];
+    }
     for (const i of userData(st, id).beszel) delete st.beszelSystems[i.id];
     delete st.data[id];
     if (st.session === id) st.session = null;
@@ -666,6 +849,22 @@ export function createBackend(opts = {}) {
     if ('docker_visible_to_users' in b) st.docker.visible_to_users = b.docker_visible_to_users;
     return readConfig(st);
   });
+  route('GET', '/api/admin/monitoring', ({ st }) => {
+    requireAdmin(st);
+    return { enabled: st.monitoring.enabled };
+  });
+  route('PUT', '/api/admin/monitoring', ({ st, body }) => {
+    requireAdmin(st);
+    const { enabled } = parse(() => S.validate(MONITORING_TOGGLE, body));
+    if (st.monitoring.enabled !== enabled) {
+      const slot = monitorSlot();
+      for (const monitor of Object.values(st.monitoring.services)) {
+        if (monitor.enabled) updateMonitorPeriod(monitor, enabled, slot);
+      }
+      st.monitoring.enabled = enabled;
+    }
+    return { enabled };
+  });
   route('GET', '/api/stats', ({ st }) => {
     requireAdmin(st);
     return hostStats(now());
@@ -680,7 +879,8 @@ export function createBackend(opts = {}) {
    */
   async function handle(method, path, rawBody) {
     method = method.toUpperCase();
-    const pathname = path.split(/[?#]/)[0];
+    const [pathname, ...queryParts] = path.split('#', 1)[0].split('?');
+    const query = new URLSearchParams(queryParts.join('?'));
     const st = load();
     try {
       let body = {};
@@ -698,7 +898,7 @@ export function createBackend(opts = {}) {
         pathMatched = true;
         if (m !== method) continue;
         const params = /** @type {Record<string, string>} */ ({ ...match.groups });
-        const out = await fn({ st, body, params });
+        const out = await fn({ st, body, params, query });
         save(st);
         if (out === null) return { status: 204 };
         if (out && typeof out === 'object' && 'status' in out && 'body' in out && Object.keys(out).length === 2) return out;

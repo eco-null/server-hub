@@ -192,6 +192,119 @@ test('status: deterministic states, admin-only details, values drift over time',
   assert.ok(!((await call('GET', '/api/status')).body.statuses[svc.id]));
 });
 
+test('monitoring demo seed uses retained history and recovers old storage without changing bootstrap', async () => {
+  const { call, storage } = setup();
+  const boot = (await call('GET', '/api/bootstrap')).body;
+  const { id } = boot.services.find((service) => service.name === 'Jellyfin');
+  const path = '/api/services/' + id + '/monitoring';
+  const { status, body } = await call('GET', path);
+  assert.equal(status, 200);
+  assert.deepEqual(Object.keys(body).sort(), ['available', 'check_enabled', 'enabled', 'incidents', 'last_check', 'next_before', 'summary']);
+  assert.equal(body.available, true);
+  assert.equal(body.enabled, true);
+  assert.equal(body.check_enabled, true);
+  assert.equal(body.last_check.state, 'up');
+  assert.ok(body.last_check.http_status < 500 && body.last_check.latency_ms > 0);
+  assert.deepEqual(body.summary, { uptime_pct: 99.82, checked: 10081, expected: 10081, unknown: 0, missing: 0 });
+  assert.equal(body.incidents.length, 2);
+  assert.equal(body.incidents[0].end_reason, 'recovered');
+  assert.ok(body.incidents[0].started_at > body.incidents[1].started_at);
+  assert.equal(body.next_before, null);
+  const older = await call('GET', path + '?before=' + body.incidents[0].started_at);
+  assert.deepEqual(older.body.incidents, body.incidents.slice(1));
+  const upperBound = await call('GET', path + '?before=9223372036854775807');
+  assert.deepEqual(upperBound.body.incidents, body.incidents);
+  for (const cursor of ['before=0', 'before=3.5', 'before=-100', 'before=9223372036854775808', 'before=42&before=52']) {
+    const invalid = await call('GET', path + '?' + cursor);
+    assert.equal(invalid.status, 400);
+    assert.deepEqual(invalid.body.error.fields, { before: 'must be a positive integer timestamp' });
+  }
+
+  const stored = JSON.parse(storage.getItem(STATE_KEY));
+  delete stored.monitoring;
+  storage.setItem(STATE_KEY, JSON.stringify(stored));
+  const reloaded = setup(storage).call;
+  assert.deepEqual((await reloaded('GET', '/api/bootstrap')).body, boot);
+  assert.deepEqual((await reloaded('GET', path)).body, body);
+});
+
+test('monitoring settings enforce ownership, admin access and a strict toggle', async () => {
+  const { call, storage } = setup();
+  const admin = '/api/admin/monitoring';
+  const { id } = (await call('GET', '/api/services')).body.services[0];
+  const path = '/api/services/' + id + '/monitoring';
+  assert.deepEqual((await call('GET', admin)).body, { enabled: true });
+  for (const bad of [{}, { enabled: 'true' }, { enabled: null }, { enabled: true, extra: false }]) {
+    assert.equal((await call('PUT', admin, bad)).status, 400);
+    assert.equal((await call('PUT', path, bad)).status, 400);
+  }
+  assert.equal((await call('GET', '/api/services/invalid/monitoring')).status, 404);
+  assert.equal((await call('PUT', '/api/services/invalid/monitoring', { enabled: true })).status, 404);
+  assert.deepEqual((await call('PUT', admin, { enabled: false })).body, { enabled: false });
+  assert.equal((await call('PUT', path, { enabled: true })).body.error.code, 'monitoring_disabled');
+  assert.equal((await call('GET', path)).body.enabled, true);
+  assert.deepEqual((await setup(storage).call('GET', admin)).body, { enabled: false });
+  await call('PUT', admin, { enabled: true });
+  assert.equal((await call('POST', '/api/auth/login', { identifier: 'jordan', password: 'jordan-password-1' })).status, 200);
+  assert.equal((await call('GET', admin)).status, 403);
+  assert.equal((await call('PUT', admin, { enabled: false })).status, 403);
+  assert.equal((await call('GET', path)).status, 404);
+  assert.equal((await call('PUT', path, { enabled: false })).status, 404);
+  const created = await call('POST', '/api/services', { name: 'Owner service', url: 'https://owner.home.arpa', check: false });
+  const own = '/api/services/' + created.body.service.id;
+  assert.equal((await call('PUT', own + '/monitoring', { enabled: true })).body.error.code, 'checks_disabled');
+  await call('PATCH', own, { check: true });
+  const enabled = await call('PUT', own + '/monitoring', { enabled: true });
+  assert.equal(enabled.body.enabled, true);
+  assert.equal(enabled.body.last_check, null);
+  assert.equal((await call('GET', '/api/status')).body.statuses[created.body.service.id].state, 'unknown');
+  const original = clock;
+  try {
+    clock += 60000;
+    const { last_check: check } = (await call('GET', own + '/monitoring')).body;
+    assert.equal(check.state, 'up');
+    assert.ok(check.checked_at);
+    assert.equal(check.http_status, null);
+    assert.equal(check.latency_ms, null);
+  } finally {
+    clock = original;
+  }
+});
+
+test('monitoring limit and cleanup follow pause, edit, delete, and JSON restore', async () => {
+  const { call, storage } = setup();
+  const services = (await call('GET', '/api/services')).body.services;
+  const { id } = services[0];
+  const servicePath = '/api/services/' + id;
+  const path = servicePath + '/monitoring';
+  const original = (await call('GET', path)).body;
+  for (const svc of services.slice(1, 10)) {
+    assert.equal((await call('PUT', '/api/services/' + svc.id + '/monitoring', { enabled: true })).status, 200);
+  }
+  assert.equal((await call('PUT', '/api/services/' + services[10].id + '/monitoring', { enabled: true })).body.error.code, 'owner_limit');
+
+  await call('PATCH', servicePath, { check: false });
+  const paused = (await call('GET', path)).body;
+  assert.equal(paused.enabled, false);
+  assert.equal(paused.check_enabled, false);
+  assert.deepEqual(paused.incidents, original.incidents);
+  assert.deepEqual(paused.summary, original.summary);
+  await call('PATCH', servicePath, { check: true, url: 'https://changed.home.arpa' });
+  const updated = (await call('GET', path)).body;
+  assert.equal(updated.enabled, false);
+  assert.equal(updated.last_check, null);
+  assert.deepEqual(updated.incidents, []);
+
+  const removed = services[1].id;
+  assert.equal((await call('DELETE', '/api/services/' + removed)).status, 204);
+  assert.equal((await call('GET', '/api/services/' + removed + '/monitoring')).status, 404);
+  assert.equal(JSON.parse(storage.getItem(STATE_KEY)).monitoring.services[removed], undefined);
+  const doc = (await call('GET', '/api/backup')).body;
+  assert.equal((await call('POST', '/api/backup', doc)).status, 200);
+  assert.deepEqual(JSON.parse(storage.getItem(STATE_KEY)).monitoring.services, {});
+  assert.equal((await call('GET', path)).status, 404);
+});
+
 test('beszel: two hubs with three systems, drifting within bounds, CRUD and test', async () => {
   const { call } = setup();
   const sys1 = (await call('GET', '/api/beszel/systems')).body.instances;

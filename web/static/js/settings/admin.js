@@ -1,5 +1,5 @@
 // @ts-check
-/** Settings: administration (admin role only): users and self-registration. */
+/** Settings: administration (admin role only): users, registration, and monitoring. */
 
 import { h } from '../dom.js';
 import { createField, createSelect, createNotice, createSwitch, showFormError, whileBusy } from '../ui.js';
@@ -40,10 +40,45 @@ export function mountAdmin(root, env) {
     },
   });
 
+  const monitorNote = h('p', { class: 'field-hint', role: 'status' }, 'Loading monitoring settings…');
+  const monitorRetry = h('button', { type: 'button', class: 'btn btn-sm', hidden: true, onclick: () => void loadMonitoring() }, 'Retry');
+  const monitor = createSwitch({
+    label: 'Allow background checks',
+    description: 'Lets users monitor selected services while the dashboard is closed.',
+    checked: false,
+    onChange: async (checked) => {
+      monitor.input.disabled = true;
+      monitorNote.textContent = 'Saving…';
+      try {
+        const res = await api.put('/api/admin/monitoring', { enabled: checked });
+        monitor.input.checked = res.enabled;
+        monitorNote.textContent = 'Monitoring settings saved.';
+      } catch {
+        monitor.input.checked = !checked;
+        monitorNote.textContent = "Couldn't save monitoring settings. Try again.";
+      } finally {
+        monitor.input.disabled = false;
+      }
+    },
+  });
+  monitor.root.hidden = true;
+  monitor.input.disabled = true;
+
   const list = h('ul', { class: 'list', 'aria-label': 'Users' });
   const loadNote = h('p', { class: 'muted', role: 'status' }, 'Loading users…');
   const addBtn = h('button', { type: 'button', class: 'btn btn-primary', onclick: () => openCreate() }, icon('ui-plus'), h('span', null, 'Create user'));
-  root.append(reg.root, regNote, h('h3', { class: 'card-title-sm' }, 'Users'), loadNote, list, h('div', null, addBtn));
+  root.append(
+    reg.root,
+    regNote,
+    h('div', { class: 'stack' },
+      h('h3', { class: 'card-title-sm' }, 'Service monitoring'),
+      h('div', null, monitor.root, monitorNote, monitorRetry),
+    ),
+    h('h3', { class: 'card-title-sm' }, 'Users'),
+    loadNote,
+    list,
+    h('div', null, addBtn),
+  );
 
   const me = () => state.get().user;
 
@@ -204,6 +239,26 @@ export function mountAdmin(root, env) {
     });
   }
 
+  async function loadMonitoring() {
+    if (monitorRetry.getAttribute('aria-disabled') === 'true') return;
+    monitorRetry.setAttribute('aria-disabled', 'true');
+    monitorNote.textContent = 'Loading monitoring settings…';
+    try {
+      const res = await api.get('/api/admin/monitoring');
+      monitor.input.checked = res.enabled;
+      monitor.input.disabled = false;
+      monitor.root.hidden = false;
+      monitorNote.textContent = '';
+      if (document.activeElement === monitorRetry) monitor.input.focus();
+      monitorRetry.hidden = true;
+    } catch {
+      monitorNote.textContent = "Couldn't load monitoring settings.";
+      monitorRetry.hidden = false;
+    } finally {
+      monitorRetry.removeAttribute('aria-disabled');
+    }
+  }
+
   async function load() {
     try {
       const [cfg, res] = await Promise.all([api.get('/api/admin/config'), api.get('/api/admin/users')]);
@@ -224,6 +279,7 @@ export function mountAdmin(root, env) {
       if (started) return;
       started = true;
       void load();
+      void loadMonitoring();
     },
   };
 }
