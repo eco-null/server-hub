@@ -287,7 +287,7 @@ If you change or lose the key:
   ```
 
   An admin can also clear another user's 2FA in the settings page;
-- Beszel instances show "Stored password cannot be decrypted"; re-enter their passwords in the Beszel settings;
+- Beszel instances show "Stored password cannot be decrypted". Re-enter their passwords in the Beszel settings.
 - the stored webhook URL also becomes unreadable. Save the destination again in **Settings → Administration → Service monitoring**.
 
 To rotate the key, change the value in `.env`, run `docker compose up -d`, then repair 2FA, Beszel and the webhook destination as above.
@@ -335,7 +335,7 @@ and shows only configuration and delivery status after saving. The destination
 receives the service's ID and name, transition and timestamp, incident ID and
 delivery ID.
 
-Inspect **Refresh status** after an event to check its latest delivery outcome.
+Use **Refresh status** to read the latest delivery outcome.
 Failures retry after 15 seconds, 60 seconds and 5 minutes, up to four attempts
 within an hour. A recovery waits while the corresponding outage is pending.
 Receivers can use the `Idempotency-Key` header to deduplicate attempts.

@@ -247,11 +247,10 @@ in the same map, keyed by their `docker:<name>` id, with the same per-role detai
   once it is too old to be served (`GET /api/docker` then says `available: false`).
   Treat a missing id as `unknown`.
 
-Outbound targets: status checks, Beszel and monitoring webhooks never contact loopback, link-local /
-metadata, multicast or reserved addresses, private ranges only while
-`SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS` is on, and never the Docker API endpoint of
-`SERVERHUB_DOCKER_HOST` (its host name and every address it resolves to, on any port),
-whatever that setting says.
+Status checks, Beszel and monitoring webhooks block loopback, link-local / metadata,
+multicast and reserved addresses. Private ranges are allowed while
+`SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS` is on. The server also blocks the
+`SERVERHUB_DOCKER_HOST` endpoint by host name and resolved address on every port.
 
 ## Service monitoring
 
@@ -351,7 +350,7 @@ as `timeout`, `http_503` or `invalid_destination`. Replacing or removing the des
 discards pending deliveries.
 
 With a destination set, the server queues each outage and recovery transition
-with the incident update and sends an HTTPS POST:
+with the incident update. The HTTPS POST has this body.
 
 ```jsonc
 {
@@ -367,7 +366,8 @@ Receivers can deduplicate retries using `id`, also sent as the `Idempotency-Key`
 header. A 2xx status marks delivery successful. Failed attempts are retried after
 15, 60 and 300 seconds, up to four attempts total and within a one-hour delivery
 window. Recovery waits while the outage for the same incident is pending. Requests
-use the same outbound target policy as status checks and redirects are ignored.
+use the same outbound target policy as status checks. Redirect responses count as
+failed attempts.
 
 ## Beszel
 
@@ -591,9 +591,10 @@ user, not only admins. It has no effect while Docker discovery is not configured
 
 ## Secret key changes
 
-`SERVERHUB_SECRET_KEY` encrypts TOTP secrets, Beszel passwords and the webhook URL and keys the
-recovery-code hashes; passwords (argon2id) and sessions do not depend on it. After a
-key change, accounts with 2FA cannot finish signing in (`/api/auth/2fa` answers
+`SERVERHUB_SECRET_KEY` encrypts TOTP secrets, Beszel passwords and the webhook URL.
+It also keys the recovery-code hashes. Passwords use Argon2id hashes and sessions
+use opaque tokens. After a key change, accounts with 2FA cannot finish signing in
+(`/api/auth/2fa` answers
 `401 invalid_code`) and Beszel instances report "Stored password cannot be decrypted"
 (admins; generic message for others). Recovery: `python -m serverhub reset-password
 --user NAME --disable-2fa` (new password, 2FA off, sessions revoked), or an admin
