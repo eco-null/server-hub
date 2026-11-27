@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from serverhub.db import repo, transaction
+from serverhub.db.monitor_webhooks import enqueue
 from serverhub.integrations.monitor_state import INTERVAL_SECONDS, transition
 from serverhub.integrations.status import unknown
 
@@ -175,15 +176,18 @@ def record_result(
             (slot, change.down_streak, change.first_down_at, target.service_id),
         )
         if change.event == "down":
+            incident_id = uuid4().hex
             conn.execute(
                 "INSERT INTO monitor_incidents (id, service_id, started_at) VALUES (?, ?, ?)",
-                (uuid4().hex, target.service_id, change.started_at),
+                (incident_id, target.service_id, change.started_at),
             )
+            enqueue(conn, target.service_id, incident_id, "down", slot)
         if change.event == "recovered":
             conn.execute(
                 "UPDATE monitor_incidents SET ended_at = ?, end_reason = 'recovered' WHERE id = ?",
                 (slot, incident["id"]),
             )
+            enqueue(conn, target.service_id, incident["id"], "recovered", slot)
     return True
 
 

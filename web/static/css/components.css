@@ -750,12 +750,14 @@ dialog.dlg-lg {
   gap: 0.5rem;
 }
 
-.monitor-dialog .btn-primary {
+.monitor-dialog .btn-primary,
+.monitor-webhook .btn-primary {
   background: var(--fg);
   color: var(--dialog-bg);
 }
 
-.monitor-dialog .btn-primary:hover {
+.monitor-dialog .btn-primary:hover,
+.monitor-webhook .btn-primary:hover {
   background: color-mix(in srgb, var(--fg) 90%, var(--dialog-bg));
 }
 

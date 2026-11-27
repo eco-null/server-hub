@@ -34,6 +34,7 @@ import time
 import unicodedata
 from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable, Iterable
+from contextvars import ContextVar
 from dataclasses import dataclass
 from urllib.parse import SplitResult, urlsplit
 
@@ -42,6 +43,27 @@ import httpcore
 import httpx
 
 log = logging.getLogger(__name__)
+
+_QUIET_HTTP_LOGS: ContextVar[bool] = ContextVar("quiet_outbound_http_logs", default=False)
+
+
+class _SensitiveUrlFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not _QUIET_HTTP_LOGS.get()
+
+
+# HTTPX and httpcore log addresses and request details internally. Suppress
+# those messages only in the coroutine handling a write-only destination.
+_sensitive_url_filter = _SensitiveUrlFilter()
+for _logger_name in (
+    "httpx",
+    "httpcore.connection",
+    "httpcore.http11",
+    "httpcore.http2",
+    "httpcore.proxy",
+    "httpcore.socks",
+):
+    logging.getLogger(_logger_name).addFilter(_sensitive_url_filter)
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 Resolver = Callable[[str, int], Awaitable[list[str]]]
@@ -415,6 +437,7 @@ class SafeFetcher:
         headers: dict[str, str] | None = None,
         read_body: bool = True,
         max_body: int | None = None,
+        sensitive_url: bool = False,
     ) -> FetchResult:
         try:
             url = validate_url(url)
@@ -427,6 +450,7 @@ class SafeFetcher:
         sem, stamps = self._user_slot(user_id)
         self._take_rate(stamps, user_id)
         limit = self._max_body if max_body is None else max_body
+        quiet_logs = _QUIET_HTTP_LOGS.set(True) if sensitive_url else None
         try:
             async with sem, self._global:
                 with anyio.fail_after(self._total):
@@ -463,8 +487,11 @@ class SafeFetcher:
         except Exception:
             # Anything unexpected (parser edge cases, library bugs) becomes our
             # own error type so callers never see a raw exception.
-            log.warning("outbound request failed unexpectedly", exc_info=True)
+            log.warning("outbound request failed unexpectedly", exc_info=not sensitive_url)
             raise FetchError("protocol") from None
+        finally:
+            if quiet_logs is not None:
+                _QUIET_HTTP_LOGS.reset(quiet_logs)
 
 
 def _classify_connect(exc: BaseException) -> str:

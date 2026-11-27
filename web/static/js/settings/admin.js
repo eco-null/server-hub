@@ -7,6 +7,7 @@ import { openDialog, confirmDialog } from '../dialog.js';
 import { openInputDialog } from '../features/input-dialog.js';
 import { icon } from '../icons.js';
 import { toastSuccess, toastError } from '../toast.js';
+import { mountMonitorWebhook } from './monitor-webhook.js';
 
 /** @typedef {import('../types.js').User & { created_at?: string }} AdminUser */
 
@@ -63,6 +64,7 @@ export function mountAdmin(root, env) {
   });
   monitor.root.hidden = true;
   monitor.input.disabled = true;
+  const webhook = mountMonitorWebhook(api);
 
   const list = h('ul', { class: 'list', 'aria-label': 'Users' });
   const loadNote = h('p', { class: 'muted', role: 'status' }, 'Loading users…');
@@ -73,6 +75,7 @@ export function mountAdmin(root, env) {
     h('div', { class: 'stack' },
       h('h3', { class: 'card-title-sm' }, 'Service monitoring'),
       h('div', null, monitor.root, monitorNote, monitorRetry),
+      webhook.root,
     ),
     h('h3', { class: 'card-title-sm' }, 'Users'),
     loadNote,
@@ -280,6 +283,7 @@ export function mountAdmin(root, env) {
       started = true;
       void load();
       void loadMonitoring();
+      webhook.start();
     },
   };
 }

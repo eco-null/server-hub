@@ -27,6 +27,11 @@ const MAX_USER_MONITORS = 10;
 const INCIDENT_PAGE_SIZE = 20;
 /** @type {S.Model} */
 const MONITORING_TOGGLE = { name: 'MonitoringToggle', fields: { enabled: { t: 'bool', required: true } } };
+/** @type {S.Model} */
+const WEBHOOK_DESTINATION = {
+  name: 'WebhookDestination',
+  fields: { url: { t: 'str', max: 2000, after: S.serviceUrl, required: true } },
+};
 const GENERIC_BESZEL_ERROR = 'Could not reach Beszel or sign in; check the URL and credentials';
 
 export class HttpError extends Error {
@@ -132,12 +137,15 @@ export function createBackend(opts = {}) {
   // documents gain it only if they still contain the original seeded service.
   /** @param {any} st */
   function withMonitoring(st) {
-    if (typeof st.monitoring?.enabled === 'boolean' && st.monitoring.services) return st;
+    if (typeof st.monitoring?.enabled === 'boolean' && st.monitoring.services) {
+      st.monitoring.webhook_configured = st.monitoring.webhook_configured === true;
+      return st;
+    }
     const demo = st.users.find((/** @type {any} */ u) => u.username === DEMO_USERNAME && u.fixed_password);
     const jellyfin = st.data[demo?.id]?.services.find(
       (/** @type {any} */ s) => s.name === 'Jellyfin' && s.url === 'https://jellyfin.home.arpa' && s.check,
     );
-    st.monitoring = { enabled: true, services: {} };
+    st.monitoring = { enabled: true, services: {}, webhook_configured: false };
     if (jellyfin) {
       const seed = monitorSlot();
       const start = seed - MONITOR_RETENTION;
@@ -864,6 +872,25 @@ export function createBackend(opts = {}) {
       st.monitoring.enabled = enabled;
     }
     return { enabled };
+  });
+  route('GET', '/api/admin/monitoring/webhook', ({ st }) => {
+    requireAdmin(st);
+    return { configured: st.monitoring.webhook_configured, last_delivery: null };
+  });
+  route('PUT', '/api/admin/monitoring/webhook', ({ st, body }) => {
+    requireAdmin(st);
+    const { url } = parse(() => S.validate(WEBHOOK_DESTINATION, body));
+    if (!/^https:\/\//i.test(url) || url.includes('#')) {
+      throw new HttpError(400, 'validation', 'Invalid input', { url: 'must be an HTTPS URL without a fragment' });
+    }
+    // The demo stores only whether a destination was configured.
+    st.monitoring.webhook_configured = true;
+    return { configured: true, last_delivery: null };
+  });
+  route('DELETE', '/api/admin/monitoring/webhook', ({ st }) => {
+    requireAdmin(st);
+    st.monitoring.webhook_configured = false;
+    return { configured: false, last_delivery: null };
   });
   route('GET', '/api/stats', ({ st }) => {
     requireAdmin(st);

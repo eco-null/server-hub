@@ -305,6 +305,54 @@ test('monitoring limit and cleanup follow pause, edit, delete, and JSON restore'
   assert.equal((await call('GET', path)).status, 404);
 });
 
+test('monitoring webhook demo persists only the configured flag and never sends a request', async (t) => {
+  const fetch = t.mock.method(globalThis, 'fetch', async () => { throw new Error('demo contacted the network'); });
+  const { call, storage } = setup();
+  const path = '/api/admin/monitoring/webhook';
+  const empty = { configured: false, last_delivery: null };
+  const configured = { configured: true, last_delivery: null };
+  assert.deepEqual((await call('GET', path)).body, empty);
+
+  const older = JSON.parse(storage.getItem(STATE_KEY));
+  delete older.monitoring.webhook_configured;
+  storage.setItem(STATE_KEY, JSON.stringify(older));
+  assert.deepEqual((await setup(storage).call('GET', path)).body, empty);
+
+  const url = 'https://hook.example.test/incoming?token=demo-webhook-token';
+  assert.deepEqual((await call('PUT', path, { url })).body, configured);
+  assert.deepEqual((await setup(storage).call('GET', path)).body, configured);
+  const stored = storage.getItem(STATE_KEY);
+  assert.equal(JSON.parse(stored).monitoring.webhook_configured, true);
+  assert.doesNotMatch(stored, /hook\.example\.test|demo-webhook-token/);
+  assert.deepEqual((await call('DELETE', path)).body, empty);
+  assert.deepEqual((await setup(storage).call('GET', path)).body, empty);
+  assert.equal(fetch.mock.callCount(), 0);
+});
+
+test('monitoring webhook demo enforces admin access and a strict HTTPS destination', async () => {
+  const { call } = setup();
+  const path = '/api/admin/monitoring/webhook';
+  const url = 'https://hook.example.test/incoming';
+  for (const body of [
+    {}, { url: null }, { url: true }, { url, extra: true },
+    { url: 'http://hook.example.test/incoming' }, { url: 'https:///incoming' },
+    { url: url + '#' }, { url: 'https://user:pass@hook.example.test/incoming' },
+  ]) {
+    const response = await call('PUT', path, body);
+    assert.equal(response.status, 400);
+    assert.equal(response.body.error.code, 'validation');
+  }
+  assert.deepEqual((await call('GET', path)).body, { configured: false, last_delivery: null });
+  assert.equal((await call('POST', '/api/auth/login', { identifier: 'jordan', password: 'jordan-password-1' })).status, 200);
+  for (const method of ['GET', 'PUT', 'DELETE']) {
+    assert.equal((await call(method, path, method === 'PUT' ? { url } : undefined)).status, 403);
+  }
+  await call('POST', '/api/auth/logout');
+  for (const method of ['GET', 'PUT', 'DELETE']) {
+    assert.equal((await call(method, path, method === 'PUT' ? { url } : undefined)).status, 401);
+  }
+});
+
 test('beszel: two hubs with three systems, drifting within bounds, CRUD and test', async () => {
   const { call } = setup();
   const sys1 = (await call('GET', '/api/beszel/systems')).body.instances;
