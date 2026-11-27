@@ -52,6 +52,10 @@ deploys to GitHub Pages on pushes to `main` that touch `web/` or `demo/`.
 
 - No server: status checks, Beszel hubs and host stats are simulated. Service
   links point at `*.home.arpa` and do not resolve.
+- Jellyfin has sample monitoring history with simulated incidents. Monitoring
+  settings stay in this browser. The webhook form accepts a sample HTTPS URL
+  and stores only whether a destination was configured. It sends no webhook
+  requests and reports no deliveries.
 - Changing your own password is checked but not applied, so the demo
   credentials keep working. Resetting the demo account's password from
   Administration is ignored for the same reason.

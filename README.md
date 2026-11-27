@@ -39,6 +39,7 @@ Use **Settings → Backup → Import links** to preview and merge services and b
 
 **Monitoring**
 - Server-side status checks (`up`, `down`, `unknown`) with a short cache and a hard time limit; admins also see the HTTP status and latency.
+- Optional background monitoring for services you add yourself. It runs once a minute, even with the dashboard closed, and shows seven days of measured uptime, gaps and incidents. An administrator can enable it under Settings → Administration and add an HTTPS webhook for outages and recoveries. See [Background monitoring](docs/DEPLOYMENT.md#background-monitoring).
 - Host CPU, memory and disk figures for admins, read from `/proc` (Linux only).
 - Beszel integration: list the systems of one or more Beszel hubs on the dashboard.
 - Docker discovery (optional, off by default): containers you label become service cards, and admins get one-click suggestions for other containers that publish a port. Server Hub never mounts the Docker socket; it reads the container list through a proxy that allows nothing else. See [Docker discovery](#docker-discovery).
@@ -68,6 +69,7 @@ Use **Settings → Backup → Import links** to preview and merge services and b
 What is simulated, and how the demo differs from a real install:
 
 - There is no server. Status checks, Beszel hubs and host statistics are generated in the browser. The sample services point at `*.home.arpa` names that do not resolve.
+- Open Monitoring on the Jellyfin card to see simulated uptime and incidents. The webhook settings can be tried with a sample address. The demo stores only the configured state and makes no deliveries.
 - Docker discovery runs against a made-up Docker host with a fixed list of containers, so you can see cards, skipped containers, warnings and suggestions, and try the "Show discovered services to all users" switch. No Docker API or socket proxy is involved.
 - A Beszel hub you add always connects and reports one or two made-up systems.
 - Changing your own password is checked but not applied, so the demo credentials keep working. Resetting the demo account's password is ignored for the same reason.

@@ -4,9 +4,15 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in background monitoring for manually added services, with a one-minute check interval, seven days of measured uptime and coverage, and outage and recovery history. The dashboard and service settings open the same history view.
+- Optional administrator-configured HTTPS webhook for incident transitions. Destination URLs are encrypted, deliveries use a persistent queue, and retries keep the same event ID.
+
 ### Changed
 
 - Stable releases also publish `ghcr.io/eco-null/server-hub:latest`. An existing release tag can be published again by running the `Docker images` workflow by hand.
+- Upgrade from 2.2.0 adds SQLite schema 3 and leaves background monitoring off. Roll back with a pre-upgrade SQLite snapshot. Restoring a snapshot skips its pending webhook deliveries. See [Upgrades and rollback](docs/DEPLOYMENT.md#upgrades-and-rollback).
 
 ## [2.2.0] - 2026-11-23
 
