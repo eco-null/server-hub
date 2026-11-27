@@ -68,10 +68,12 @@ class StatusChecker:
         self._user_locks: OrderedDict[str, anyio.Lock] = OrderedDict()
         self._inflight: dict[tuple[str, str], anyio.Event] = {}
 
-    def _cached(self, key: tuple[str, str]) -> dict | None:
+    def _cached(self, key: tuple[str, str], checked_since: str | None = None) -> dict | None:
         hit = self._cache.get(key)
         if hit and time.monotonic() - hit[0] < self._ttl:
-            return hit[1]
+            result = hit[1]
+            if checked_since is None or (result["checked_at"] or "") >= checked_since:
+                return result
         return None
 
     def _store(self, key: tuple[str, str], result: dict) -> None:
@@ -88,15 +90,16 @@ class StatusChecker:
                 self._user_locks.popitem(last=False)
         return lock
 
-    async def check_one(self, url: str, user_id: str) -> dict:
+    async def check_one(self, url: str, user_id: str, *, checked_since: str | None = None) -> dict:
+        """Reuse a result within the TTL and, if provided, the UTC timestamp floor."""
         key = (user_id, url)
-        cached = self._cached(key)
+        cached = self._cached(key, checked_since)
         if cached is not None:
             return cached
         pending = self._inflight.get(key)
         if pending is not None:  # somebody is already checking this key
             await pending.wait()
-            return self._cached(key) or unknown()
+            return self._cached(key, checked_since) or unknown()
         done = self._inflight[key] = anyio.Event()
         try:
             return await self._check(key)

@@ -34,6 +34,7 @@ from serverhub.hub import Hub
 from serverhub.integrations.beszel import BeszelClient
 from serverhub.integrations.docker import DockerClient
 from serverhub.integrations.fetcher import SafeFetcher
+from serverhub.integrations.monitoring import MonitoringWorker
 from serverhub.integrations.status import DISCOVERY_IDENTITY, DISCOVERY_LIMITS, StatusChecker
 from serverhub.middleware import SecurityMiddleware
 from serverhub.web import routes as web_routes
@@ -200,6 +201,7 @@ def create_app(
         try:
             async with anyio.create_task_group() as tg:
                 tg.start_soon(housekeeping)
+                tg.start_soon(MonitoringWorker(db, hub.status).run)
                 if hub.docker is not None:
                     hub.docker.attach(tg)  # background refreshes, never inside a request
                 yield
