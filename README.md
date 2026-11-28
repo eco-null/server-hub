@@ -128,11 +128,11 @@ Screenshots use sample data from the live demo. Select a preview to open it at f
 You need a Linux host with Docker, the Compose plugin, Git and OpenSSL. The published image runs on AMD64 and ARM64.
 
 ```bash
-git clone --branch v2.2.0 https://github.com/eco-null/server-hub.git
+git clone --branch v2.3.0 https://github.com/eco-null/server-hub.git
 cd server-hub
 cp .env.example .env
 sed -i "s|^SERVERHUB_SECRET_KEY=.*|SERVERHUB_SECRET_KEY=$(openssl rand -hex 24)|" .env
-printf '\nSERVERHUB_IMAGE=ghcr.io/eco-null/server-hub:v2.2.0\n' >> .env
+printf '\nSERVERHUB_IMAGE=ghcr.io/eco-null/server-hub:v2.3.0\n' >> .env
 docker compose pull server-hub
 docker compose up -d --no-build --wait
 ```
