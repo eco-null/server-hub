@@ -2,7 +2,7 @@
 
 This guide is for the person who runs Server Hub. The short version is in the [README](../README.md); this page explains the choices behind it. Every variable is listed in the [configuration table](../README.md#configuration) and in [`.env.example`](../.env.example).
 
-Contents: [Compose file](#the-compose-file) · [Data volume](#data-volume-and-bind-mounts) · [Port](#changing-the-port) · [TLS](#tls) · [Tunnel or proxy](#running-behind-a-tunnel-or-proxy) · [First run and users](#first-run-and-users) · [Backups](#backups) · [Upgrades](#upgrades-and-rollback) · [Secret key](#secret-key) · [Outbound requests](#outbound-request-policy) · [Docker discovery](#docker-discovery) · [Connection limits](#connection-limits) · [Health check and logs](#health-check-and-logs) · [Troubleshooting](#troubleshooting)
+Contents: [Compose file](#the-compose-file) · [Data volume](#data-volume-and-bind-mounts) · [Port](#changing-the-port) · [TLS](#tls) · [Tunnel or proxy](#running-behind-a-tunnel-or-proxy) · [First run and users](#first-run-and-users) · [Backups](#backups) · [Upgrades](#upgrades-and-rollback) · [Secret key](#secret-key) · [Outbound requests](#outbound-request-policy) · [Background monitoring](#background-monitoring) · [Docker discovery](#docker-discovery) · [Connection limits](#connection-limits) · [Health check and logs](#health-check-and-logs) · [Troubleshooting](#troubleshooting)
 
 ## The compose file
 
@@ -174,7 +174,7 @@ docker compose exec server-hub python -m serverhub create-admin --email you@exam
 
 ## Backups
 
-Everything (accounts, settings, services, bookmarks, encrypted 2FA secrets and Beszel passwords) is in the SQLite database. The `backup` command writes a consistent copy even while the server is running. The output file must not exist yet unless you pass `--force`.
+Everything (accounts, settings, services, bookmarks, monitoring settings and history, encrypted 2FA secrets, Beszel passwords and the webhook URL) is in the SQLite database. The `backup` command writes a consistent copy even while the server is running. The output file must not exist yet unless you pass `--force`.
 
 ```bash
 docker compose exec server-hub python -m serverhub backup /data/backup-$(date +%F).db
@@ -192,7 +192,7 @@ A backup is only useful together with `SERVERHUB_SECRET_KEY`: store the key with
 15 3 * * * cd /opt/server-hub && f=backup-$(date +\%F).db && docker compose exec -T server-hub python -m serverhub backup /data/$f --force && docker compose cp server-hub:/data/$f ./backups/ && docker compose exec -T server-hub rm /data/$f && find ./backups -name 'backup-*.db' -mtime +14 -delete
 ```
 
-Users can additionally export their own data (settings, services, bookmarks, no secrets) as JSON from the settings page; that is a per-user convenience and not a replacement for a database backup.
+Users can additionally export their settings, layout, services and bookmarks as JSON from the settings page. Use the SQLite backup to preserve monitoring settings, history and the encrypted webhook URL.
 
 ### Restoring a backup
 
@@ -207,6 +207,8 @@ docker compose up -d --no-build --wait
 ```
 
 Replace the file name with your backup. The command checks SQLite integrity, foreign keys and the schema version before atomically replacing the database. It refuses to proceed if SQLite journal files are present. Stop the running version cleanly so SQLite can close the database before retrying. Check `docker compose logs server-hub` and sign in after the restart.
+
+Restore discards pending webhook deliveries from the snapshot to prevent replay. Monitoring settings, samples, incidents and completed delivery records are restored as of the snapshot.
 
 ## Upgrades and rollback
 
@@ -223,6 +225,11 @@ docker compose logs --tail 50 server-hub
 Schema migrations are numbered SQL files applied automatically at start; each one runs in a transaction. Read [CHANGELOG.md](../CHANGELOG.md) before upgrading.
 
 Migration `0002_layouts.sql` (the optional customizable dashboard layout) adds the `user_layouts` table, so after upgrading to that release a 2.1.x build refuses to start on the database ("schema version is newer"). Take the pre-upgrade backup above and use it for a rollback.
+
+Migration `0003_monitoring.sql` adds the monitoring tables. A v2.2.0 image refuses
+to start on schema version 3. To roll back to v2.2.0, stop the upgraded container
+and restore the pre-upgrade SQLite snapshot with the upgraded image and the same
+secret key. Then start the v2.2.0 image against the restored schema version 2.
 
 If the upgrade applied a migration, an older build refuses to open that database. To roll back, stop the app and restore the pre-upgrade snapshot using the current build as described in [Restoring a backup](#restoring-a-backup). Run the stop and restore commands, then check out the previous version and rebuild:
 
@@ -268,7 +275,7 @@ openssl rand -hex 24
 python -c "import secrets; print(secrets.token_hex(24))"
 ```
 
-Sub-keys are derived from it for two purposes: encrypting TOTP secrets and Beszel passwords, and keying the hashes of 2FA recovery codes. Passwords (Argon2id) and sessions do not depend on it.
+Sub-keys derived from it encrypt TOTP secrets, Beszel passwords and the webhook URL, and key the hashes of 2FA recovery codes. Passwords (Argon2id) and sessions do not depend on it.
 
 If you change or lose the key:
 
@@ -280,13 +287,14 @@ If you change or lose the key:
   ```
 
   An admin can also clear another user's 2FA in the settings page;
-- Beszel instances show "Stored password cannot be decrypted"; re-enter their passwords in the Beszel settings.
+- Beszel instances show "Stored password cannot be decrypted". Re-enter their passwords in the Beszel settings.
+- the stored webhook URL also becomes unreadable. Save the destination again in **Settings → Administration → Service monitoring**.
 
-Rotating the key is therefore a manual, disruptive operation: change the value in `.env`, `docker compose up -d`, then repair 2FA and Beszel entries as above. There is no re-encryption tool.
+To rotate the key, change the value in `.env`, run `docker compose up -d`, then repair 2FA, Beszel and the webhook destination as above.
 
 ## Outbound request policy
 
-Status checks and Beszel requests are made by the server, so they are restricted:
+Status checks, Beszel requests and monitoring webhooks follow the server's outbound policy.
 
 - Only `http` and `https` URLs without embedded credentials. Redirects are never followed and proxy environment variables are ignored.
 - The host name is resolved once per connection and the connection goes to the validated address, which prevents DNS rebinding.
@@ -294,9 +302,49 @@ Status checks and Beszel requests are made by the server, so they are restricted
 - Private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `100.64.0.0/10`, `fc00::/7`) are allowed while `SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS=true` (the default, because a homelab dashboard points at LAN services). Set it to `false` on an internet-facing instance with open registration; status checks of LAN services then show `unknown`.
 - Limits: 4 s connect, 6 s read, 10 s total per request, 2 MiB response cap, at most 8 concurrent and 240 requests per minute per user, 32 concurrent overall.
 
-Docker discovery adds one more rule: the endpoint in `SERVERHUB_DOCKER_HOST` is never contacted by status checks or Beszel, whatever the settings (see [Docker discovery](#docker-discovery)).
+The Docker endpoint in `SERVERHUB_DOCKER_HOST` is excluded as a target for status
+checks, Beszel and monitoring webhooks. See [Docker discovery](#docker-discovery).
 
 Because loopback is always blocked, a service on the same machine cannot be checked through `localhost`. Use the machine's LAN address. Inside the container, the host is reachable only through its network address, never `127.0.0.1`.
+
+## Background monitoring
+
+Background monitoring is off by default. An admin turns on **Allow background
+checks** under **Settings → Administration → Service monitoring**. A service owner
+then opens **Monitoring** on a service card or in **Settings → Services** and enables
+it for that service. **Check status** must be on. The limits are 10 opted-in services
+per owner and 50 per installation.
+
+The server schedules a check for each opted-in service every minute, even while
+the dashboard is closed. The history shows seven days of samples and incidents.
+Three adjacent down samples start an incident, and the first up sample closes it.
+Unknown samples and gaps break an unconfirmed run of failures. Uptime is computed
+from conclusive samples. Coverage shows missed slots, including while the server
+was down. An older or missing snapshot shows as unknown on the dashboard.
+
+Pausing an individual service closes its open incident as paused and preserves its
+history. Changing the service URL removes its monitor and history, so opt in again
+for the new address. Turning off **Allow background checks** pauses the whole
+installation and keeps each owner's selections.
+
+### Webhook notifications
+
+An admin can save one HTTPS destination under **Service monitoring** to receive
+outage and recovery events. The server encrypts the URL with `SERVERHUB_SECRET_KEY`
+and shows only configuration and delivery status after saving. The destination
+receives the service's ID and name, transition and timestamp, incident ID and
+delivery ID.
+
+Use **Refresh status** to read the latest delivery outcome.
+Failures retry after 15 seconds, 60 seconds and 5 minutes, up to four attempts
+within an hour. A recovery waits while the corresponding outage is pending.
+Receivers can use the `Idempotency-Key` header to deduplicate attempts.
+
+Replacing or removing the destination discards pending deliveries. Turning
+off background monitoring discards the installation's pending deliveries.
+Pausing or removing an individual monitor discards that service's pending
+deliveries. See the [monitoring API](API.md#service-monitoring) for the payload
+and delivery status fields.
 
 ## Docker discovery
 

@@ -5,6 +5,7 @@ import { h } from '../dom.js';
 import { icon, serviceIcon } from '../icons.js';
 import { resolveCategory } from '../categorize.js';
 import { hostOf } from '../lib/url.js';
+import { openMonitoring } from '../features/monitoring.js';
 import { openAddService, openEditService, removeService } from '../features/service-dialogs.js';
 
 /**
@@ -65,6 +66,16 @@ export function mountLinks(root, env) {
               }),
           },
           'Edit',
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-sm',
+            'aria-label': 'Monitoring for ' + s.name,
+            onclick: () => openMonitoring({ api, service: s }),
+          },
+          'Monitoring',
         ),
         h(
           'button',

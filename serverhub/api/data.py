@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from functools import partial
 
@@ -23,7 +24,7 @@ from serverhub.api.serialize import (
     service_out,
 )
 from serverhub.auth.sessions import require_user
-from serverhub.db import repo
+from serverhub.db import monitoring, repo
 from serverhub.errors import not_found, validation
 from serverhub.http import hub, json_response, no_content, parse, read_json, validation_from
 
@@ -199,13 +200,21 @@ async def delete_bookmark(request: Request) -> Response:
 async def get_status(request: Request) -> Response:
     user = await require_user(request)
     h = hub(request)
-    rows = await h.db.run(repo.list_owned, "services", user["id"])
-    targets = [(r["id"], r["url"]) for r in rows if r["check_enabled"]]
-    statuses: dict[str, dict] = {}
+    user_id = user["id"]
+
+    def _load(conn):
+        rows = repo.list_owned(conn, "services", user_id)
+        statuses = monitoring.latest_statuses(conn, user_id, monitoring.minute_slot(time.time()))
+        targets = [
+            (r["id"], r["url"]) for r in rows if r["check_enabled"] and r["id"] not in statuses
+        ]
+        return targets, statuses
+
+    targets, statuses = await h.db.run(_load)
 
     async def own() -> None:
-        # The user's own services: their own fetcher budget and cache.
-        statuses.update(await h.status.check_many(user["id"], targets))
+        # Services without background monitoring still use the per-user cache and budget.
+        statuses.update(await h.status.check_many(user_id, targets))
 
     async def discovered() -> None:
         # Discovered Docker services (keyed "docker:<name>"), for users who may see

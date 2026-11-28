@@ -31,7 +31,7 @@ errors as `{"error": {"code": "<machine_code>", "message": "<human text>"}}`
   32 levels, or not valid JSON, is `400 invalid_json`.
 - **No state change on GET.**
 - **Roles:** `admin` and `user`. The first account created through setup is the admin.
-- **IDs** are UUID strings. Timestamps are ISO-8601 UTC.
+- **IDs** are UUID strings. Timestamps are ISO-8601 UTC unless the endpoint specifies Unix seconds.
 - **Rate limits:** password, setup-token and 2FA checks are counted *before* they are
   evaluated. Over a limit: `429 rate_limited` with `Retry-After` (seconds). Also `429`
   (with `Retry-After: 1`) when more than 2 password checks from the same client
@@ -66,6 +66,10 @@ errors as `{"error": {"code": "<machine_code>", "message": "<human text>"}}`
 | 409 | `twofa_enabled` | 2FA already on (setup / enable) |
 | 409 | `twofa_disabled` | 2FA is not on (disable) |
 | 409 | `twofa_setup_expired` | `enable` without a live `setup` (10 min) |
+| 409 | `monitoring_disabled` | An admin must enable background monitoring before a service can opt in |
+| 409 | `checks_disabled` | The service needs status checks enabled before it can opt in |
+| 409 | `owner_limit` | The service owner already monitors 10 services |
+| 409 | `monitor_limit` | The installation already monitors 50 services |
 | 413 | `payload_too_large` | Body over the size cap |
 | 415 | `unsupported_media_type` | Unsafe `/api/*` request with a non-JSON body |
 | 429 | `rate_limited` | Throttled; see `Retry-After` |
@@ -211,7 +215,12 @@ Same four routes as services under `/api/bookmarks`, with `{"bookmark": …}` / 
 `GET /api/status` →
 `{"statuses": {"<service_id>": {"state": "up" | "down" | "unknown", "http_status": 200 | null, "latency_ms": 42 | null, "checked_at": "…" | null}}}`
 
-Checks run server-side with a concurrency cap, a timeout and a short (20 s) TTL cache.
+On-demand checks run server-side with a concurrency cap, a timeout and a short (20 s)
+TTL cache. For a service with active [background monitoring](#service-monitoring),
+the response uses its stored sample from the current or preceding UTC minute slot.
+An older or missing sample gives `unknown` with all other fields `null`. Reading a
+monitored service's snapshot makes no outbound request for that service. Paused
+monitors use on-demand checks while the service's `check` flag is true.
 `up` means the target answered with a status below 500. `http_status` and `latency_ms`
 are always `null` for non-admin users (state only), and `null` whenever no response
 was received. A service whose check fails unexpectedly, or whose URL is not allowed
@@ -238,11 +247,127 @@ in the same map, keyed by their `docker:<name>` id, with the same per-role detai
   once it is too old to be served (`GET /api/docker` then says `available: false`).
   Treat a missing id as `unknown`.
 
-Outbound targets: status checks (and Beszel) never contact loopback, link-local /
-metadata, multicast or reserved addresses, private ranges only while
-`SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS` is on, and never the Docker API endpoint of
-`SERVERHUB_DOCKER_HOST` (its host name and every address it resolves to, on any port),
-whatever that setting says.
+Status checks, Beszel and monitoring webhooks block loopback, link-local / metadata,
+multicast and reserved addresses. Private ranges are allowed while
+`SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS` is on. The server also blocks the
+`SERVERHUB_DOCKER_HOST` endpoint by host name and resolved address on every port.
+
+## Service monitoring
+
+Background monitoring starts disabled for the installation. An admin enables it
+installation-wide, then owners can opt ordinary services in individually. An opted-in
+service needs `check: true`. Limits are 10 opted-in services per owner and 50 per
+installation. The server schedules at most one check per opted-in service per UTC minute
+while monitoring is active and keeps a seven-day history. Docker discovery cards
+use on-demand status checks.
+
+### Owner controls and history
+
+| Method | Path | Body | Result |
+|---|---|---|---|
+| GET | `/api/services/{id}/monitoring` | – | `Monitoring`, with optional `?before=<cursor>` |
+| PUT | `/api/services/{id}/monitoring` | `{"enabled": bool}` | `Monitoring`, first page after applying the setting |
+
+Both routes require the service owner's session. A missing, foreign or Docker
+service ID gives `404 not_found`. The PUT body accepts only `enabled` as a JSON
+boolean. A request to enable a service can return one of the four monitoring
+conflicts in [Error codes](#error-codes).
+
+```jsonc
+Monitoring = {
+  "available": bool, "enabled": bool, "check_enabled": bool,
+  "last_check": Status | null,
+  "summary": {
+    "uptime_pct": number | null, "checked": int, "expected": int,
+    "unknown": int, "missing": int
+  },
+  "incidents": [{ "id": string, "started_at": int, "ended_at": int | null,
+                  "end_reason": "recovered" | "paused" | null }],
+  "next_before": int | null
+}
+```
+
+The flags report installation availability, the owner's opt-in and the service's
+ordinary check setting, respectively. `last_check` is the latest stored sample in
+the window, with the same fields and per-role detail rules as a [status entry](#status-checks).
+`checked` counts `up` and `down` samples. `uptime_pct` is the percentage of those samples
+that were `up`, rounded to two decimal places, or `null` when `checked` is zero.
+`expected` counts elapsed minute slots from the later of initial opt-in and the
+seven-day cutoff, plus the current slot once it has a sample. `unknown` counts
+inconclusive samples and `missing` counts slots with no sample, including gaps during
+pauses and server downtime.
+
+Three `down` samples in adjacent slots open an incident starting at the first of those
+slots. An `unknown` or missing slot breaks the run. An open incident closes on the first
+`up` sample. Pausing a service or changing its `check` flag closes its open incident as
+`paused`. Changing the service's URL or deleting the service removes its monitor and
+history.
+
+Incident timestamps use integer Unix seconds in UTC. Open incidents carry `null`
+for both end fields. The response includes open incidents and those that ended
+within the window, newest start first, up to 20 at a time. If `next_before` is present,
+pass it as the single positive integer `before` query parameter to continue. Each page
+contains starts strictly before that cursor. `next_before: null` marks the last page.
+The cursor affects the incident list. The summary and last sample use the rolling
+window at request time.
+
+### Installation controls and notifications
+
+All routes in this table require an admin session.
+
+| Method | Path | Body | Result |
+|---|---|---|---|
+| GET | `/api/admin/monitoring` | – | `{"enabled": bool}` |
+| PUT | `/api/admin/monitoring` | `{"enabled": bool}` | `{"enabled": bool}` |
+| GET | `/api/admin/monitoring/webhook` | – | `WebhookConfig` |
+| PUT | `/api/admin/monitoring/webhook` | `{"url": string}` | `WebhookConfig` |
+| DELETE | `/api/admin/monitoring/webhook` | – | `WebhookConfig` with `configured: false` and `last_delivery: null` |
+
+```jsonc
+WebhookConfig = {
+  "configured": bool,
+  "last_delivery": {
+    "status": "pending" | "delivered" | "failed",
+    "kind": "down" | "recovered",
+    "occurred_at": int,
+    "attempts": int,
+    "last_error": string | null
+  } | null
+}
+```
+
+The installation flag defaults to `false`. Turning it off pauses background checks,
+clears consecutive failure counts and discards pending deliveries. Owners keep their
+opt-in, and open incidents can close after monitoring resumes.
+
+A webhook URL must use HTTPS, be at most 2000 characters and have no embedded
+credentials or fragment. A query string is accepted. The URL is encrypted at rest
+and is write-only. `last_delivery` describes the latest queued event for the current
+destination, or is `null` when there is none. `occurred_at` is the incident transition's
+minute slot in integer UTC Unix seconds. An outage transition occurs on the third
+consecutive down sample. `last_error` is a delivery error code, such
+as `timeout`, `http_503` or `invalid_destination`. Replacing or removing the destination
+discards pending deliveries.
+
+With a destination set, the server queues each outage and recovery transition
+with the incident update. The HTTPS POST has this body.
+
+```jsonc
+{
+  "id": "<delivery id>",
+  "event": "down" | "recovered",
+  "occurred_at": 1795813860,
+  "service": { "id": "<service UUID>", "name": "<service name>" },
+  "incident_id": "<incident id>"
+}
+```
+
+Receivers can deduplicate retries using `id`, also sent as the `Idempotency-Key`
+header. A 2xx status marks delivery successful. Failed attempts are retried after
+15, 60 and 300 seconds, up to four attempts total and within a one-hour delivery
+window. Recovery waits while the outage for the same incident is pending. Requests
+use the same outbound target policy as status checks. Redirect responses count as
+failed attempts.
 
 ## Beszel
 
@@ -421,6 +546,9 @@ Discovered services are read-only: `PATCH`/`DELETE /api/services/docker:…` ans
 `POST /api/backup` body: the same document (≤ 4 MiB); `layout` is optional, and a backup
 without it resets the layout to the default. Replaces the caller's settings, layout,
 services and bookmarks in one transaction. Returns the same shape as `/api/bootstrap`.
+Use a SQLite backup for monitoring settings, history and webhook configuration.
+Replacing a service collection through JSON import also removes its existing
+monitoring records.
 
 ### Bulk link import
 
@@ -463,11 +591,12 @@ user, not only admins. It has no effect while Docker discovery is not configured
 
 ## Secret key changes
 
-`SERVERHUB_SECRET_KEY` encrypts TOTP secrets and Beszel passwords and keys the
-recovery-code hashes; passwords (argon2id) and sessions do not depend on it. After a
-key change, accounts with 2FA cannot finish signing in (`/api/auth/2fa` answers
+`SERVERHUB_SECRET_KEY` encrypts TOTP secrets, Beszel passwords and the webhook URL.
+It also keys the recovery-code hashes. Passwords use Argon2id hashes and sessions
+use opaque tokens. After a key change, accounts with 2FA cannot finish signing in
+(`/api/auth/2fa` answers
 `401 invalid_code`) and Beszel instances report "Stored password cannot be decrypted"
 (admins; generic message for others). Recovery: `python -m serverhub reset-password
 --user NAME --disable-2fa` (new password, 2FA off, sessions revoked), or an admin
 `PATCH /api/admin/users/{id}` with `{"disable_twofa": true}`; then re-enrol 2FA and
-re-enter Beszel passwords.
+re-enter Beszel passwords and the webhook URL.

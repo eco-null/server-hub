@@ -1,12 +1,60 @@
 from __future__ import annotations
 
 import ipaddress
+import logging
 
+import anyio
 import pytest
 
 from serverhub.integrations.fetcher import FetchError, SafeFetcher, address_allowed
 
 pytestmark = pytest.mark.anyio
+
+
+async def test_shared_fetcher_does_not_keep_response_cookies(stub):
+    stub.route("GET", "/first", headers={"Set-Cookie": "test_context=first; Path=/"})
+    stub.route("POST", "/next", 204)
+    fetcher = SafeFetcher(allow_private=False, extra_allowed=("127.0.0.1/32",))
+    try:
+        await fetcher.request("GET", stub.url + "/first", user_id="service-owner")
+        await fetcher.request("POST", stub.url + "/next", user_id="monitoring-webhook")
+    finally:
+        await fetcher.aclose()
+    assert [request["path"] for request in stub.log] == ["/first", "/next"]
+    assert "Cookie" not in stub.log[1]["headers"]
+
+
+async def test_sensitive_url_is_omitted_from_transport_logs_without_hiding_normal_calls(
+    stub, caplog
+):
+    stub.route("POST", "/private-token", 204)
+    stub.route("GET", "/ordinary-service", 200)
+    fetcher = SafeFetcher(allow_private=False, extra_allowed=("127.0.0.1/32",))
+
+    async def secret_request():
+        response = await fetcher.request(
+            "POST",
+            stub.url + "/private-token?key=private-query",
+            user_id="webhook",
+            read_body=False,
+            sensitive_url=True,
+        )
+        assert response.status == 204
+
+    async def ordinary_request():
+        response = await fetcher.request("GET", stub.url + "/ordinary-service", user_id="normal")
+        assert response.status == 200
+
+    try:
+        with caplog.at_level(logging.DEBUG):
+            async with anyio.create_task_group() as tasks:
+                tasks.start_soon(secret_request)
+                tasks.start_soon(ordinary_request)
+    finally:
+        await fetcher.aclose()
+    assert "/ordinary-service" in caplog.text
+    assert "private-token" not in caplog.text
+    assert "private-query" not in caplog.text
 
 
 @pytest.mark.parametrize(

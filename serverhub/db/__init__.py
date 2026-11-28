@@ -28,6 +28,7 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 _MIGRATION_RE = re.compile(r"^(\d{4})_[a-z0-9_]+\.sql$")
+_MONITORING_SCHEMA_VERSION = 3
 
 
 def connect(path: Path) -> sqlite3.Connection:
@@ -181,6 +182,14 @@ def restore_backup(src: Path, dest: Path) -> int:
         staged.touch(mode=0o600)
         shutil.copyfile(src, staged)
         version = verify_backup(staged)
+        if version >= _MONITORING_SCHEMA_VERSION:
+            # A snapshot can predate a successful delivery. Keep its history
+            # without replaying pending events to external receivers.
+            with contextlib.closing(sqlite3.connect(staged)) as conn:
+                conn.setconfig(sqlite3.SQLITE_DBCONFIG_ENABLE_TRIGGER, False)
+                conn.execute("PRAGMA trusted_schema = OFF")
+                with conn:
+                    conn.execute("DELETE FROM monitor_deliveries WHERE status = 'pending'")
         if _has_sidecars(dest):
             raise ValueError("The database became active during restore. Stop the server and retry")
         staged.replace(dest)

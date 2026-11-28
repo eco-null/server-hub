@@ -24,6 +24,8 @@ from serverhub.api import auth as auth_api
 from serverhub.api import beszel as beszel_api
 from serverhub.api import data as data_api
 from serverhub.api import docker as docker_api
+from serverhub.api import monitor_webhooks as webhook_api
+from serverhub.api import monitoring as monitoring_api
 from serverhub.auth.crypto import Keys, Passwords
 from serverhub.auth.ratelimit import LONGEST_WINDOW, RateLimiter
 from serverhub.config import Config, load_config
@@ -34,6 +36,8 @@ from serverhub.hub import Hub
 from serverhub.integrations.beszel import BeszelClient
 from serverhub.integrations.docker import DockerClient
 from serverhub.integrations.fetcher import SafeFetcher
+from serverhub.integrations.monitor_webhooks import WEBHOOK_IDENTITY, WebhookWorker
+from serverhub.integrations.monitoring import MonitoringWorker
 from serverhub.integrations.status import DISCOVERY_IDENTITY, DISCOVERY_LIMITS, StatusChecker
 from serverhub.middleware import SecurityMiddleware
 from serverhub.web import routes as web_routes
@@ -165,7 +169,7 @@ def create_app(
         db = Database(cfg.db_path)
         fetcher = SafeFetcher(
             allow_private=cfg.allow_private_network_targets,
-            identity_limits={DISCOVERY_IDENTITY: DISCOVERY_LIMITS},
+            identity_limits={DISCOVERY_IDENTITY: DISCOVERY_LIMITS, WEBHOOK_IDENTITY: (4, 60)},
             # User- and label-supplied URLs may never reach the Docker API endpoint.
             deny_hosts=[urlsplit(cfg.docker_host).hostname or ""] if cfg.docker_host else (),
             **(fetcher_options or {}),
@@ -200,6 +204,8 @@ def create_app(
         try:
             async with anyio.create_task_group() as tg:
                 tg.start_soon(housekeeping)
+                tg.start_soon(MonitoringWorker(db, hub.status).run)
+                tg.start_soon(WebhookWorker(db, fetcher, hub.keys).run)
                 if hub.docker is not None:
                     hub.docker.attach(tg)  # background refreshes, never inside a request
                 yield
@@ -216,6 +222,8 @@ def create_app(
         *data_api.routes,
         *beszel_api.routes,
         *docker_api.routes,
+        *monitoring_api.routes,
+        *webhook_api.routes,
         *admin_api.routes,
         Route(
             "/api/{rest:path}",

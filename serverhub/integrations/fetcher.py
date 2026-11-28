@@ -10,7 +10,8 @@ Defences:
   IPv4-mapped / NAT64 / 6to4 / Teredo forms of those are always refused;
   RFC 1918 / ULA / CGNAT ranges are allowed only with
   SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS=true (the default);
-- redirects are never followed; environment proxies are ignored;
+- redirects are never followed, environment proxies are ignored, and response cookies are not
+  retained between requests;
 - URLs are parsed with the HTTP client's own parser before use (IDNA, control
   characters, port 0 are rejected), and any unexpected error becomes FetchError;
 - strict timeouts, a total deadline and a response size cap; responses are
@@ -34,7 +35,9 @@ import time
 import unicodedata
 from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable, Iterable
+from contextvars import ContextVar
 from dataclasses import dataclass
+from http.cookiejar import CookieJar, DefaultCookiePolicy
 from urllib.parse import SplitResult, urlsplit
 
 import anyio
@@ -42,6 +45,27 @@ import httpcore
 import httpx
 
 log = logging.getLogger(__name__)
+
+_QUIET_HTTP_LOGS: ContextVar[bool] = ContextVar("quiet_outbound_http_logs", default=False)
+
+
+class _SensitiveUrlFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not _QUIET_HTTP_LOGS.get()
+
+
+# HTTPX and httpcore log addresses and request details internally. Suppress
+# those messages only in the coroutine handling a write-only destination.
+_sensitive_url_filter = _SensitiveUrlFilter()
+for _logger_name in (
+    "httpx",
+    "httpcore.connection",
+    "httpcore.http11",
+    "httpcore.http2",
+    "httpcore.proxy",
+    "httpcore.socks",
+):
+    logging.getLogger(_logger_name).addFilter(_sensitive_url_filter)
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 Resolver = Callable[[str, int], Awaitable[list[str]]]
@@ -292,6 +316,8 @@ class SafeFetcher:
             transport=_GuardedTransport(self, ctx),
             follow_redirects=False,
             trust_env=False,
+            # The connection pool is shared across owners and integrations.
+            cookies=CookieJar(policy=DefaultCookiePolicy(allowed_domains=())),
             timeout=httpx.Timeout(read_timeout, connect=connect_timeout, pool=connect_timeout),
             # identity: the size cap applies to what we actually read, and no
             # decompression bomb can expand behind it.
@@ -415,6 +441,7 @@ class SafeFetcher:
         headers: dict[str, str] | None = None,
         read_body: bool = True,
         max_body: int | None = None,
+        sensitive_url: bool = False,
     ) -> FetchResult:
         try:
             url = validate_url(url)
@@ -427,6 +454,7 @@ class SafeFetcher:
         sem, stamps = self._user_slot(user_id)
         self._take_rate(stamps, user_id)
         limit = self._max_body if max_body is None else max_body
+        quiet_logs = _QUIET_HTTP_LOGS.set(True) if sensitive_url else None
         try:
             async with sem, self._global:
                 with anyio.fail_after(self._total):
@@ -463,8 +491,11 @@ class SafeFetcher:
         except Exception:
             # Anything unexpected (parser edge cases, library bugs) becomes our
             # own error type so callers never see a raw exception.
-            log.warning("outbound request failed unexpectedly", exc_info=True)
+            log.warning("outbound request failed unexpectedly", exc_info=not sensitive_url)
             raise FetchError("protocol") from None
+        finally:
+            if quiet_logs is not None:
+                _QUIET_HTTP_LOGS.reset(quiet_logs)
 
 
 def _classify_connect(exc: BaseException) -> str:

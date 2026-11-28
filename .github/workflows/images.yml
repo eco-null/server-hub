@@ -54,11 +54,14 @@ jobs:
       - name: Boot, back up and rehearse recovery
         env:
           IMAGE_PLATFORM: linux/${{ matrix.arch }}
+          REPUBLISH_TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
           export SERVERHUB_SECRET_KEY="$(openssl rand -hex 24)"
           container=serverhub-smoke
           image=server-hub:smoke
+          # v2.2.0 multi-platform index, pinned so a moved tag cannot change the fixture.
+          legacy_image=ghcr.io/eco-null/server-hub@sha256:e55af9fda2af8e088d294208b57412b3612598450895c48edfa1ea61ded01db2
           docker volume create serverhub-smoke-data
           opts=(--platform "$IMAGE_PLATFORM" -e SERVERHUB_SECRET_KEY -v serverhub-smoke-data:/data
                 --read-only --tmpfs /tmp:size=16m,mode=1777 --cap-drop ALL --security-opt no-new-privileges)
@@ -70,19 +73,69 @@ jobs:
             docker logs "$container"
             return 1
           }
-          printf '%s\n' 'smoke-test-password' | docker run --rm -i "${opts[@]}" "$image" \
+          boot() {
+            docker run -d --name "$container" "${opts[@]}" "$1"
+            wait_ready
+          }
+          stop_and_remove() {
+            docker stop "$container"
+            docker rm "$container"
+          }
+          assert_database() {
+            docker exec "$container" python -c '
+          import sqlite3
+          import sys
+
+          db = sqlite3.connect("file:/data/serverhub.db?mode=ro", uri=True)
+          schema = db.execute("PRAGMA user_version").fetchone()[0]
+          assert schema == int(sys.argv[1]), schema
+          users = db.execute("SELECT username, email, role FROM users").fetchall()
+          assert users == [("before", "before@example.org", "admin")], users
+          ' "$1"
+          }
+          assert_backup() {
+            docker exec "$container" python -m serverhub verify-backup "$1" \
+              | grep -Fx "Verified SQLite backup (schema version $2)"
+          }
+
+          # An explicit republish can target a release older than the migration under test.
+          baseline="$image"
+          if [[ -z "${REPUBLISH_TAG:-}" ]]; then
+            docker pull --platform "$IMAGE_PLATFORM" "$legacy_image"
+            baseline="$legacy_image"
+          fi
+          printf '%s\n' 'smoke-test-password' | docker run --rm -i "${opts[@]}" "$baseline" \
             create-admin --email before@example.org --username before --password-stdin
-          docker run -d --name "$container" "${opts[@]}" "$image"
-          wait_ready
-          docker exec "$container" python -m serverhub backup /data/pre-upgrade.db
-          docker exec "$container" python -m serverhub verify-backup /data/pre-upgrade.db
+          boot "$baseline"
+          if [[ "$baseline" == "$legacy_image" ]]; then
+            assert_database 2
+            docker exec "$container" python -m serverhub backup /data/pre-upgrade.db
+            assert_backup /data/pre-upgrade.db 2
+            stop_and_remove
+            boot "$image"
+          fi
+          current_schema=$(docker exec "$container" python -c \
+            'from serverhub.db import _migrations; print(len(_migrations()))')
+          if [[ "$baseline" == "$legacy_image" ]]; then
+            test "$current_schema" -ge 3
+          fi
+          assert_database "$current_schema"
+          docker exec "$container" python -m serverhub backup /data/current-version.db
+          assert_backup /data/current-version.db "$current_schema"
           printf '%s\n' 'smoke-test-password' | docker exec -i "$container" python -m serverhub \
             create-admin --email after@example.org --username after --password-stdin
           docker stop "$container"
-          docker run --rm "${opts[@]}" "$image" restore /data/pre-upgrade.db
+          docker run --rm "${opts[@]}" "$image" restore /data/current-version.db
           docker start "$container"
           wait_ready
-          docker exec "$container" python -c 'import sqlite3; db = sqlite3.connect("/data/serverhub.db"); assert db.execute("SELECT username FROM users").fetchall() == [("before",)]'
+          assert_database "$current_schema"
+
+          if [[ "$baseline" == "$legacy_image" ]]; then
+            stop_and_remove
+            docker run --rm "${opts[@]}" "$image" restore /data/pre-upgrade.db
+            boot "$legacy_image"
+            assert_database 2
+          fi
 
   publish:
     name: Publish versioned image to GHCR

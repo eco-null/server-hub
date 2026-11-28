@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import json
+import time
+from contextlib import aclosing
 
+import anyio
 import httpx
 import pytest
 
+from serverhub.db import monitoring
 from serverhub.integrations.beszel import BeszelClient, Target, normalize_system
 from serverhub.integrations.fetcher import FetchError, FetchResult, SafeFetcher
+from serverhub.integrations.monitoring import MonitoringWorker
 from serverhub.integrations.status import StatusChecker
-from tests.conftest import LOCAL_OK, running, setup_admin
+from tests.conftest import LOCAL_OK, create_user, new_session, running, setup_admin
 
 pytestmark = pytest.mark.anyio
 
@@ -66,6 +71,48 @@ async def test_status_unreachable_is_down(client):
     assert st[sid]["state"] == "down"
 
 
+async def test_status_reads_monitored_results_without_probing_or_exposing_details(
+    tmp_path, stub, monkeypatch
+):
+    stub.route("GET", "/live", 200)
+
+    async def idle(_self):
+        await anyio.sleep_forever()
+
+    monkeypatch.setattr(MonitoringWorker, "run", idle)
+    async with running(tmp_path, fetcher_options=LOCAL_OK) as client:
+        await setup_admin(client)
+        user = await create_user(client, "monitor_owner")
+        async with aclosing(await new_session(client.app, user["username"])) as owner:
+            db = client.app.state.hub.db
+            await db.run(monitoring.set_global_enabled, True)
+            live = await owner.post(
+                "/api/services", json={"name": "Live", "url": stub.url + "/live"}
+            )
+            monitored = await owner.post(
+                "/api/services", json={"name": "Tracked", "url": stub.url + "/tracked"}
+            )
+            live_id = live.json()["service"]["id"]
+            tracked_id = monitored.json()["service"]["id"]
+            now = time.time()
+            slot = monitoring.minute_slot(now)
+            await db.run(monitoring.set_service_enabled, user["id"], tracked_id, True, now)
+            epoch, targets = await db.run(monitoring.due_targets, slot)
+            observed = {
+                "state": "down",
+                "checked_at": "2026-11-27T07:00:00Z",
+                "http_status": 503,
+                "latency_ms": 8,
+            }
+            assert await db.run(monitoring.record_result, epoch, targets[0], slot, observed)
+
+            statuses = (await owner.get("/api/status")).json()["statuses"]
+            assert statuses[live_id]["state"] == "up"
+            assert statuses[tracked_id] == {**observed, "http_status": None, "latency_ms": None}
+            assert [entry["path"] for entry in stub.log] == ["/live"]
+            assert (await client.get("/api/status")).json() == {"statuses": {}}
+
+
 async def test_status_checks_rotate_when_the_budget_cannot_cover_all_targets(monkeypatch):
     checked = []
     remaining = 0
@@ -89,6 +136,37 @@ async def test_status_checks_rotate_when_the_budget_cannot_cover_all_targets(mon
     finally:
         await f.aclose()
     assert checked == [url for _, url in targets] + [targets[0][1]]
+
+
+async def test_status_cache_can_require_a_current_slot_observation(monkeypatch):
+    checks = []
+
+    async def check(_method, url, **_options):
+        checks.append(url)
+        return FetchResult(200, httpx.Headers(), b"")
+
+    url = "https://monitor.example/"
+    fetcher = SafeFetcher(allow_private=False)
+    monkeypatch.setattr(fetcher, "request", check)
+    checker = StatusChecker(fetcher)
+    checker._store(
+        ("owner", url),
+        {
+            "state": "down",
+            "http_status": 503,
+            "latency_ms": 10,
+            "checked_at": "2000-01-01T00:00:00Z",
+        },
+    )
+    try:
+        assert (await checker.check_one(url, "owner"))["state"] == "down"
+        assert (await checker.check_one(url, "owner", checked_since="2000-01-01T00:01:00Z"))[
+            "state"
+        ] == "up"
+        assert (await checker.check_one(url, "owner"))["state"] == "up"
+    finally:
+        await fetcher.aclose()
+    assert checks == [url]
 
 
 async def test_status_loopback_blocked_in_default_config(tmp_path, stub):

@@ -1123,10 +1123,19 @@ dialog.dlg-palette {
   }
 }
 
-/* Very narrow phones: the date gives its room to the title. */
+/* Very narrow phones: leave more room for titles and service names. */
 @media (max-width: 359px) {
   .clock-date {
     display: none;
+  }
+
+  .card:not(.card-docker),
+  html.has-wallpaper .card:not(.card-docker) {
+    column-gap: 0.375rem;
+  }
+
+  .card:not(.card-docker) .card-action {
+    width: 2rem;
   }
 }
 
