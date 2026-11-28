@@ -10,7 +10,8 @@ Defences:
   IPv4-mapped / NAT64 / 6to4 / Teredo forms of those are always refused;
   RFC 1918 / ULA / CGNAT ranges are allowed only with
   SERVERHUB_ALLOW_PRIVATE_NETWORK_TARGETS=true (the default);
-- redirects are never followed; environment proxies are ignored;
+- redirects are never followed, environment proxies are ignored, and response cookies are not
+  retained between requests;
 - URLs are parsed with the HTTP client's own parser before use (IDNA, control
   characters, port 0 are rejected), and any unexpected error becomes FetchError;
 - strict timeouts, a total deadline and a response size cap; responses are
@@ -36,6 +37,7 @@ from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable, Iterable
 from contextvars import ContextVar
 from dataclasses import dataclass
+from http.cookiejar import CookieJar, DefaultCookiePolicy
 from urllib.parse import SplitResult, urlsplit
 
 import anyio
@@ -314,6 +316,8 @@ class SafeFetcher:
             transport=_GuardedTransport(self, ctx),
             follow_redirects=False,
             trust_env=False,
+            # The connection pool is shared across owners and integrations.
+            cookies=CookieJar(policy=DefaultCookiePolicy(allowed_domains=())),
             timeout=httpx.Timeout(read_timeout, connect=connect_timeout, pool=connect_timeout),
             # identity: the size cap applies to what we actually read, and no
             # decompression bomb can expand behind it.
